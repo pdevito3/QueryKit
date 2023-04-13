@@ -61,6 +61,8 @@ public static class FilterParser
             .XOr(Parse.Regex(@"\d{2}:\d{2}:\d{2}").Text()) // Matches time format
             .XOr(Parse.Decimal)
             .XOr(Parse.Number)
+            // rule to capture strings wrapped in double quotes
+            .XOr(Parse.Char('"').Then(_ => Parse.AnyChar.Except(Parse.Char('"')).Many().Text().Then(innerValue => Parse.Char('"').Return(innerValue))))
         from trailingSpaces in Parse.WhiteSpace.Many()
         select atSign.IsDefined ? "@" + value : value;
 
