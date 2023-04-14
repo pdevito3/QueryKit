@@ -1,4 +1,5 @@
-﻿namespace QueryKit;
+﻿
+namespace QueryKit;
 
 using System.Linq.Expressions;
 using Sprache;
@@ -52,6 +53,15 @@ public static class FilterParser
         from op in Parse.String("&&").Text().Or(Parse.String("||").Text())
         from trailingSpaces in Parse.WhiteSpace.Many()
         select LogicalOperator.GetByOperatorString(op);
+    
+    private static Parser<string> DoubleQuoteParser
+        => Parse.Char('"').Then(_ => Parse.AnyChar.Except(Parse.Char('"')).Many().Text().Then(innerValue => Parse.Char('"').Return(innerValue)));
+
+    private static Parser<string> RawStringLiteralParser =>
+        from openingQuotes in Parse.String("\"\"\"")
+        from content in Parse.AnyChar.Except(Parse.String("\"\"\"")).Many().Text()
+        from closingQuotes in Parse.String("\"\"\"")
+        select content;
 
     private static Parser<string> RightSideValueParser =>
         from atSign in Parse.Char('@').Optional()
@@ -61,11 +71,10 @@ public static class FilterParser
             .XOr(Parse.Regex(@"\d{2}:\d{2}:\d{2}").Text()) // Matches time format
             .XOr(Parse.Decimal)
             .XOr(Parse.Number)
-            // rule to capture strings wrapped in double quotes
-            .XOr(Parse.Char('"').Then(_ => Parse.AnyChar.Except(Parse.Char('"')).Many().Text().Then(innerValue => Parse.Char('"').Return(innerValue))))
+            .XOr(RawStringLiteralParser.Or(DoubleQuoteParser))
         from trailingSpaces in Parse.WhiteSpace.Many()
         select atSign.IsDefined ? "@" + value : value;
-
+    
     private static Parser<Expression> AtomicExprParser<T>(ParameterExpression parameter)
     {
         return
@@ -104,12 +113,18 @@ public static class FilterParser
 
         if (TypeConversionFunctions.TryGetValue(targetType, out var conversionFunction))
         {
+            if (targetType == typeof(string))
+            {
+                right = right.Replace("\"", "\\\"");
+            }
+
             var convertedValue = conversionFunction(right);
             return Expression.Constant(convertedValue, targetType);
         }
 
         throw new InvalidOperationException($"Unsupported value '{right}' for type '{targetType.Name}'");
     }
+
     
     private static Parser<Expression> AndExprParser<T>(ParameterExpression parameter)
     {
