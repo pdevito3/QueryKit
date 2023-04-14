@@ -59,7 +59,8 @@ public static class FilterParser
 
     private static Parser<string> TimeFormatParser => Parse.Regex(@"\d{2}:\d{2}:\d{2}").Text();
     private static Parser<string> DateTimeFormatParser => Parse.Regex(@"\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}Z)?").Text();
-
+    private static Parser<string> GuidFormatParser => Parse.Regex(@"[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}").Text();
+    
     private static Parser<string> RawStringLiteralParser =>
         from openingQuotes in Parse.String("\"\"\"")
         from content in Parse.AnyChar.Except(Parse.String("\"\"\"")).Many().Text()
@@ -71,6 +72,7 @@ public static class FilterParser
         from leadingSpaces in Parse.WhiteSpace.Many()
         from value in Parse.String("null").Text()
             .Or(Identifier)
+            .XOr(GuidFormatParser)
             .XOr(DateTimeFormatParser)
             .XOr(TimeFormatParser)
             .XOr(Parse.Decimal)
@@ -78,18 +80,13 @@ public static class FilterParser
             .XOr(RawStringLiteralParser.Or(DoubleQuoteParser))
         from trailingSpaces in Parse.WhiteSpace.Many()
         select atSign.IsDefined ? "@" + value : value;
-    
-    private static Parser<Expression> AtomicExprParser<T>(ParameterExpression parameter)
-    {
-        return
-            ComparisonExprParser<T>(parameter)
-                .Or(Parse.Ref(() => ExprParser<T>(parameter)).Contained(Parse.Char('('), Parse.Char(')')));
-    }
 
+    private static Parser<Expression> AtomicExprParser<T>(ParameterExpression parameter)
+        => ComparisonExprParser<T>(parameter)
+                .Or(Parse.Ref(() => ExprParser<T>(parameter)).Contained(Parse.Char('('), Parse.Char(')')));
+    
     private static Parser<Expression> ExprParser<T>(ParameterExpression parameter)
-    {
-        return OrExprParser<T>(parameter);
-    }
+        => OrExprParser<T>(parameter);
 
     private static readonly Dictionary<Type, Func<string, object>> TypeConversionFunctions = new()
     {
@@ -117,17 +114,24 @@ public static class FilterParser
 
         if (TypeConversionFunctions.TryGetValue(targetType, out var conversionFunction))
         {
-            if (targetType == typeof(string))
-            {
-                right = right.Replace("\"", "\\\"");
-            }
-
             if (right == "null")
             {
                 return Expression.Constant(null, targetType);
             }
 
+            if (targetType == typeof(string))
+            {
+                right = right.Replace("\"", "\\\"");
+            }
+
             var convertedValue = conversionFunction(right);
+
+            if (targetType == typeof(Guid))
+            {
+                var guidParseMethod = typeof(Guid).GetMethod("Parse", new[] { typeof(string) });
+                return Expression.Call(guidParseMethod, Expression.Constant(convertedValue.ToString(), typeof(string)));
+            }
+
             return Expression.Constant(convertedValue, targetType);
         }
 
@@ -135,21 +139,18 @@ public static class FilterParser
     }
 
 
+
     private static Parser<Expression> AndExprParser<T>(ParameterExpression parameter)
-    {
-        return Parse.ChainOperator(
+        => Parse.ChainOperator(
             LogicalOperatorParser.Where(x => x.Name == "&&"),
             AtomicExprParser<T>(parameter),
             (op, left, right) => op.GetExpression<T>(left, right)
         );
-    }
 
     private static Parser<Expression> OrExprParser<T>(ParameterExpression parameter)
-    {
-        return Parse.ChainOperator(
-            LogicalOperatorParser.Where(x => x.Name == "||"),
-            AndExprParser<T>(parameter),
-            (op, left, right) => op.GetExpression<T>(left, right)
-        );
-    }
+        => Parse.ChainOperator(
+                LogicalOperatorParser.Where(x => x.Name == "||"),
+                AndExprParser<T>(parameter),
+                (op, left, right) => op.GetExpression<T>(left, right)
+            );
 }

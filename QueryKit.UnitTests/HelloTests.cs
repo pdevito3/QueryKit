@@ -14,6 +14,7 @@ public class HelloTests
         public bool Favorite { get; set; }
         public DateTimeOffset SpecificDate { get; set; }
         public TimeOnly Time { get; set; }
+        public Guid Id { get; set; }
     }
     
     [Fact]
@@ -36,7 +37,6 @@ public class HelloTests
         var filterExpression = FilterParser.ParseFilter<Person>(input);
         filterExpression.ToString().Should()
             .Be(""""x => ((((((x.Title.ToLower().Contains("waffle & chicken".ToLower()) AndAlso (x.Age > 30)) OrElse (x.Title == "lamb")) OrElse (x.Title == null)) AndAlso ((x.Age < 18) OrElse ((x.BirthMonth == "January") AndAlso x.Title.StartsWith("ally")))) OrElse (x.Rating > 3.5)) OrElse ((x.SpecificDate == 7/1/2022 12:00:03 AM +00:00) AndAlso ((x.Date == 7/1/2022) OrElse (x.Time == 12:00 AM))))"""");
-
     }
     
     [Fact]
@@ -62,5 +62,23 @@ public class HelloTests
         var input = "Title == null";
         var filterExpression = FilterParser.ParseFilter<Person>(input);
         filterExpression.ToString().Should().Be("x => (x.Title == null)");
+    }
+    
+    [Fact]
+    public void can_handle_guid_with_double_quotes()
+    {
+        var guid = Guid.NewGuid();
+        var input = $"""Id == "{guid}" """;
+        var filterExpression = FilterParser.ParseFilter<Person>(input);
+        filterExpression.ToString().Should().Be($"x => (x.Id == Parse(\"{guid}\"))");
+    }
+    
+    [Fact]
+    public void can_handle_guid_without_double_quotes()
+    {
+        var guid = Guid.NewGuid();
+        var input = $"""Id == {guid} """;
+        var filterExpression = FilterParser.ParseFilter<Person>(input);
+        filterExpression.ToString().Should().Be($"x => (x.Id == Parse(\"{guid}\"))");
     }
 }
