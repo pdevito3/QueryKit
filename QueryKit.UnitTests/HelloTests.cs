@@ -81,4 +81,108 @@ public class HelloTests
         var filterExpression = FilterParser.ParseFilter<Person>(input);
         filterExpression.ToString().Should().Be($"x => (x.Id == Parse(\"{guid}\"))");
     }
+    
+    [Fact]
+    public void equality_operator()
+    {
+        var input = """Title == "lamb" """;
+        var filterExpression = FilterParser.ParseFilter<Person>(input);
+        filterExpression.ToString().Should().Be("x => (x.Title == \"lamb\")");
+    }
+
+    [Fact]
+    public void inequality_operator()
+    {
+        var input = """Title != "lamb" """;
+        var filterExpression = FilterParser.ParseFilter<Person>(input);
+        filterExpression.ToString().Should().Be("x => (x.Title != \"lamb\")");
+    }
+
+    [Fact]
+    public void greater_than_operator()
+    {
+        var input = """Age > 30""";
+        var filterExpression = FilterParser.ParseFilter<Person>(input);
+        filterExpression.ToString().Should().Be("x => (x.Age > 30)");
+    }
+
+    [Fact]
+    public void greater_than_or_equal_to_operator()
+    {
+        var input = """Age >= 30""";
+        var filterExpression = FilterParser.ParseFilter<Person>(input);
+        filterExpression.ToString().Should().Be("x => (x.Age >= 30)");
+    }
+
+    [Fact]
+    public void less_than_operator()
+    {
+        var input = """Age < 30""";
+        var filterExpression = FilterParser.ParseFilter<Person>(input);
+        filterExpression.ToString().Should().Be("x => (x.Age < 30)");
+    }
+
+    [Fact]
+    public void less_than_or_equal_to_operator()
+    {
+        var input = """Age <= 30""";
+        var filterExpression = FilterParser.ParseFilter<Person>(input);
+        filterExpression.ToString().Should().Be("x => (x.Age <= 30)");
+    }
+
+    [Fact]
+    public void and_operator()
+    {
+        var input = """Title == "lamb" && Age > 30""";
+        var filterExpression = FilterParser.ParseFilter<Person>(input);
+        filterExpression.ToString().Should().Be("x => ((x.Title == \"lamb\") AndAlso (x.Age > 30))");
+    }
+
+    [Fact]
+    public void or_operator()
+    {
+        var input = """Title == "lamb" || Age > 30""";
+        var filterExpression = FilterParser.ParseFilter<Person>(input);
+        filterExpression.ToString().Should().Be("x => ((x.Title == \"lamb\") OrElse (x.Age > 30))");
+    }
+
+    [Fact]
+    public void contains_operator()
+    {
+        var input = """Title @=* "waffle" """;
+        var filterExpression = FilterParser.ParseFilter<Person>(input);
+        filterExpression.ToString().Should().Be("x => x.Title.ToLower().Contains(\"waffle\".ToLower())");
+    }
+
+    [Fact]
+    public void starts_with_operator()
+    {
+        var input = """Title _= "lam" """;
+        var filterExpression = FilterParser.ParseFilter<Person>(input);
+        filterExpression.ToString().Should().Be("x => x.Title.StartsWith(\"lam\")");
+    }
+
+    [Fact]
+    public void ends_with_operator_case_insensitive()
+    {
+        var input = """Title _-=* "b" """;
+        var filterExpression = FilterParser.ParseFilter<Person>(input);
+        filterExpression.ToString().Should().Be("x => x.Title.ToLower().EndsWith(\"b\".ToLower())");
+    }
+
+    [Fact]
+    public void ends_with_operator()
+    {
+        var input = """Title _-= "b" """;
+        var filterExpression = FilterParser.ParseFilter<Person>(input);
+        filterExpression.ToString().Should().Be("x => x.Title.EndsWith(\"b\")");
+    }
+    [Fact]
+    public void test_logical_operators()
+    {
+        var input = """(Age == 35) && (Favorite == true) || (Age < 18)""";
+        var filterExpression = FilterParser.ParseFilter<Person>(input);
+        filterExpression.ToString().Should()
+            .Be(""""x => (((x.Age == 35) AndAlso (x.Favorite == True)) OrElse (x.Age < 18))"""");
+    }
 }
