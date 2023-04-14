@@ -57,6 +57,9 @@ public static class FilterParser
     private static Parser<string> DoubleQuoteParser
         => Parse.Char('"').Then(_ => Parse.AnyChar.Except(Parse.Char('"')).Many().Text().Then(innerValue => Parse.Char('"').Return(innerValue)));
 
+    private static Parser<string> TimeFormatParser => Parse.Regex(@"\d{2}:\d{2}:\d{2}").Text();
+    private static Parser<string> DateTimeFormatParser => Parse.Regex(@"\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}Z)?").Text();
+
     private static Parser<string> RawStringLiteralParser =>
         from openingQuotes in Parse.String("\"\"\"")
         from content in Parse.AnyChar.Except(Parse.String("\"\"\"")).Many().Text()
@@ -68,8 +71,8 @@ public static class FilterParser
         from leadingSpaces in Parse.WhiteSpace.Many()
         from value in Parse.String("null").Text()
             .Or(Identifier)
-            .XOr(Parse.Regex(@"\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}Z)?").Text()) // match date and date-time formats
-            .XOr(Parse.Regex(@"\d{2}:\d{2}:\d{2}").Text()) // Matches time format
+            .XOr(DateTimeFormatParser)
+            .XOr(TimeFormatParser)
             .XOr(Parse.Decimal)
             .XOr(Parse.Number)
             .XOr(RawStringLiteralParser.Or(DoubleQuoteParser))
