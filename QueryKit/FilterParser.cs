@@ -62,9 +62,10 @@ public static class FilterParser
     private static Parser<string> GuidFormatParser => Parse.Regex(@"[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}").Text();
     
     private static Parser<string> RawStringLiteralParser =>
-        from openingQuotes in Parse.String("\"\"\"")
-        from content in Parse.AnyChar.Except(Parse.String("\"\"\"")).Many().Text()
-        from closingQuotes in Parse.String("\"\"\"")
+        from openingQuotes in Parse.Regex("\"{3,}").Text()
+        let count = openingQuotes.Length
+        from content in Parse.AnyChar.Except(Parse.Repeat(Parse.Char('"'), count)).Many().Text()
+        from closingQuotes in Parse.Repeat(Parse.Char('"'), count).Text()
         select content;
 
     private static Parser<string> RightSideValueParser =>
