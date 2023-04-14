@@ -16,10 +16,6 @@ public class HelloTests
         public TimeOnly Time { get; set; }
     }
     
-    // var input = """""((Title @=* "waffle & chicken" && Age > 30) || Title == """lamb is great on a "gee-ro" not a "gyro" sandwich""") && (Age < 18 || (BirthMonth == "January" && Title _= "ally")) || Rating > 3.5 || SpecificDate == 2022-07-01T00:00:03Z && (Date == 2022-07-01 || Time == 00:00:03)""""";
-
-    
-    
     [Fact]
     public void escaped_double_quote()
     {
@@ -35,11 +31,12 @@ public class HelloTests
     public void complex_with_lots_of_types()
     {
         var input =
-            """""((Title @=* "waffle & chicken" && Age > 30) || Title == "lamb") && (Age < 18 || (BirthMonth == "January" && Title _= "ally")) || Rating > 3.5 || SpecificDate == 2022-07-01T00:00:03Z && (Date == 2022-07-01 || Time == 00:00:03)""""";
+            """""((Title @=* "waffle & chicken" && Age > 30) || Title == "lamb" || Title == null) && (Age < 18 || (BirthMonth == "January" && Title _= "ally")) || Rating > 3.5 || SpecificDate == 2022-07-01T00:00:03Z && (Date == 2022-07-01 || Time == 00:00:03)""""";
 
         var filterExpression = FilterParser.ParseFilter<Person>(input);
         filterExpression.ToString().Should()
-            .Be(""""x => (((((x.Title.ToLower().Contains("waffle & chicken".ToLower()) AndAlso (x.Age > 30)) OrElse (x.Title == "lamb")) AndAlso ((x.Age < 18) OrElse ((x.BirthMonth == "January") AndAlso x.Title.StartsWith("ally")))) OrElse (x.Rating > 3.5)) OrElse ((x.SpecificDate == 7/1/2022 12:00:03 AM +00:00) AndAlso ((x.Date == 7/1/2022) OrElse (x.Time == 12:00 AM))))"""");
+            .Be(""""x => ((((((x.Title.ToLower().Contains("waffle & chicken".ToLower()) AndAlso (x.Age > 30)) OrElse (x.Title == "lamb")) OrElse (x.Title == null)) AndAlso ((x.Age < 18) OrElse ((x.BirthMonth == "January") AndAlso x.Title.StartsWith("ally")))) OrElse (x.Rating > 3.5)) OrElse ((x.SpecificDate == 7/1/2022 12:00:03 AM +00:00) AndAlso ((x.Date == 7/1/2022) OrElse (x.Time == 12:00 AM))))"""");
+
     }
     
     [Fact]
@@ -52,10 +49,18 @@ public class HelloTests
     }
     
     [Fact]
-    public void simple_waffle()
+    public void simple_string()
     {
         var input = """"Title @=* "waffle" """";
         var filterExpression = FilterParser.ParseFilter<Person>(input);
         filterExpression.ToString().Should().Be(""""x => x.Title.ToLower().Contains("waffle".ToLower())"""");
+    }
+    
+    [Fact]
+    public void can_handle_null()
+    {
+        var input = "Title == null";
+        var filterExpression = FilterParser.ParseFilter<Person>(input);
+        filterExpression.ToString().Should().Be("x => (x.Title == null)");
     }
 }

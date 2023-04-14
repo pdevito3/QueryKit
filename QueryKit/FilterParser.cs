@@ -66,7 +66,8 @@ public static class FilterParser
     private static Parser<string> RightSideValueParser =>
         from atSign in Parse.Char('@').Optional()
         from leadingSpaces in Parse.WhiteSpace.Many()
-        from value in Identifier
+        from value in Parse.String("null").Text()
+            .Or(Identifier)
             .XOr(Parse.Regex(@"\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}Z)?").Text()) // match date and date-time formats
             .XOr(Parse.Regex(@"\d{2}:\d{2}:\d{2}").Text()) // Matches time format
             .XOr(Parse.Decimal)
@@ -118,6 +119,11 @@ public static class FilterParser
                 right = right.Replace("\"", "\\\"");
             }
 
+            if (right == "null")
+            {
+                return Expression.Constant(null, targetType);
+            }
+
             var convertedValue = conversionFunction(right);
             return Expression.Constant(convertedValue, targetType);
         }
@@ -125,7 +131,7 @@ public static class FilterParser
         throw new InvalidOperationException($"Unsupported value '{right}' for type '{targetType.Name}'");
     }
 
-    
+
     private static Parser<Expression> AndExprParser<T>(ParameterExpression parameter)
     {
         return Parse.ChainOperator(
