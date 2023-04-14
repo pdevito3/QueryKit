@@ -72,8 +72,8 @@ public static class FilterParser
         from atSign in Parse.Char('@').Optional()
         from leadingSpaces in Parse.WhiteSpace.Many()
         from value in Parse.String("null").Text()
-            .Or(Identifier)
-            .XOr(GuidFormatParser)
+            .Or(GuidFormatParser)
+            .XOr(Identifier)
             .XOr(DateTimeFormatParser)
             .XOr(TimeFormatParser)
             .XOr(Parse.Decimal)
@@ -138,8 +138,6 @@ public static class FilterParser
 
         throw new InvalidOperationException($"Unsupported value '{right}' for type '{targetType.Name}'");
     }
-
-
 
     private static Parser<Expression> AndExprParser<T>(ParameterExpression parameter)
         => Parse.ChainOperator(
