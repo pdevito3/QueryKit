@@ -13,7 +13,7 @@ public static class FilterParser
         return Expression.Lambda<Func<T, bool>>(expr, parameter);
     }
     
-    private static readonly Parser<string> Identifier =
+    internal static readonly Parser<string> Identifier =
         from first in Parse.Letter.Once()
         from rest in Parse.LetterOrDigit.XOr(Parse.Char('_')).Many()
         select new string(first.Concat(rest).ToArray());
