@@ -6,13 +6,13 @@ using Sprache;
 
 public static class FilterParser
 {
-    public static Expression<Func<T, bool>> ParseFilter<T>(string input)
+    public static Expression<Func<T, bool>> ParseFilter<T>(string input, QueryKitProcessorConfiguration config = null)
     {
         var parameter = Expression.Parameter(typeof(T), "x");
-        var expr = ExprParser<T>(parameter).End().Parse(input);
+        var expr = ExprParser<T>(parameter, config).End().Parse(input);
         return Expression.Lambda<Func<T, bool>>(expr, parameter);
     }
-    
+
     internal static readonly Parser<string> Identifier =
         from first in Parse.Letter.Once()
         from rest in Parse.LetterOrDigit.XOr(Parse.Char('_')).Many()
@@ -37,13 +37,15 @@ public static class FilterParser
         from caseInsensitive in Parse.Char('*').Optional()
         select ComparisonOperator.GetByOperatorString(op, caseInsensitive.IsDefined);
 
-    private static Parser<Expression> ComparisonExprParser<T>(ParameterExpression parameter)
+    private static Parser<Expression> ComparisonExprParser<T>(ParameterExpression parameter, QueryKitProcessorConfiguration config)
     {
         return
             from left in Identifier.Token()
             from op in ComparisonOperatorParser.Token()
             from right in RightSideValueParser.Token()
-            let leftExpr = Expression.PropertyOrField(parameter, left)
+            let propertyInfo = config?.PropertyMappings?.GetPropertyInfoByQueryName(left)
+            let actualPropertyName = propertyInfo != null ? propertyInfo.Name : left
+            let leftExpr = Expression.PropertyOrField(parameter, actualPropertyName)
             let rightExpr = CreateRightExpr(leftExpr, right)
             select op.GetExpression<T>(leftExpr, rightExpr);
     }
@@ -82,12 +84,12 @@ public static class FilterParser
         from trailingSpaces in Parse.WhiteSpace.Many()
         select atSign.IsDefined ? "@" + value : value;
 
-    private static Parser<Expression> AtomicExprParser<T>(ParameterExpression parameter)
-        => ComparisonExprParser<T>(parameter)
-                .Or(Parse.Ref(() => ExprParser<T>(parameter)).Contained(Parse.Char('('), Parse.Char(')')));
-    
-    private static Parser<Expression> ExprParser<T>(ParameterExpression parameter)
-        => OrExprParser<T>(parameter);
+    private static Parser<Expression> AtomicExprParser<T>(ParameterExpression parameter, QueryKitProcessorConfiguration config = null)
+        => ComparisonExprParser<T>(parameter, config)
+            .Or(Parse.Ref(() => ExprParser<T>(parameter, config)).Contained(Parse.Char('('), Parse.Char(')')));
+
+    private static Parser<Expression> ExprParser<T>(ParameterExpression parameter, QueryKitProcessorConfiguration config = null)
+        => OrExprParser<T>(parameter, config);
 
     private static readonly Dictionary<Type, Func<string, object>> TypeConversionFunctions = new()
     {
@@ -139,17 +141,18 @@ public static class FilterParser
         throw new InvalidOperationException($"Unsupported value '{right}' for type '{targetType.Name}'");
     }
 
-    private static Parser<Expression> AndExprParser<T>(ParameterExpression parameter)
+
+    private static Parser<Expression> AndExprParser<T>(ParameterExpression parameter, QueryKitProcessorConfiguration config = null)
         => Parse.ChainOperator(
             LogicalOperatorParser.Where(x => x.Name == "&&"),
-            AtomicExprParser<T>(parameter),
+            AtomicExprParser<T>(parameter, config),
             (op, left, right) => op.GetExpression<T>(left, right)
         );
 
-    private static Parser<Expression> OrExprParser<T>(ParameterExpression parameter)
+    private static Parser<Expression> OrExprParser<T>(ParameterExpression parameter, QueryKitProcessorConfiguration config = null)
         => Parse.ChainOperator(
-                LogicalOperatorParser.Where(x => x.Name == "||"),
-                AndExprParser<T>(parameter),
-                (op, left, right) => op.GetExpression<T>(left, right)
-            );
+            LogicalOperatorParser.Where(x => x.Name == "||"),
+            AndExprParser<T>(parameter, config),
+            (op, left, right) => op.GetExpression<T>(left, right)
+        );
 }

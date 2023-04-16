@@ -2,27 +2,26 @@ namespace QueryKit;
 
 using System.Linq.Expressions;
 
-public interface IQueryKitPropertyConfiguration
+public class QueryKitProcessorConfiguration
 {
-    void Configure(QueryKitPropertyMappings mappings);
-}
+    public QueryKitPropertyMappings PropertyMappings { get; }
 
+    public QueryKitProcessorConfiguration(Action<QueryKitPropertyMappings> configure)
+    {
+        PropertyMappings = new QueryKitPropertyMappings();
+        configure(PropertyMappings);
+    }
+}
 
 public class QueryKitPropertyMappings
 {
-    private readonly Dictionary<string, QueryKitPropertyInfo> _propertyMappings;
-
-    public QueryKitPropertyMappings()
-    {
-        _propertyMappings = new Dictionary<string, QueryKitPropertyInfo>();
-    }
+    private readonly Dictionary<string, QueryKitPropertyInfo> _propertyMappings = new();
 
     public QueryKitPropertyMapping<TModel> Property<TModel>(Expression<Func<TModel, object>> propertySelector)
     {
-        if (propertySelector.Body is not MemberExpression memberExpression)
-        {
-            throw new ArgumentException("Invalid expression: must be a member access expression.");
-        }
+        var memberExpression = propertySelector.Body is UnaryExpression unary
+            ? (MemberExpression)unary.Operand
+            : (MemberExpression)propertySelector.Body;
 
         var propertyName = memberExpression.Member.Name;
         var propertyInfo = new QueryKitPropertyInfo
@@ -37,11 +36,10 @@ public class QueryKitPropertyMappings
 
         return new QueryKitPropertyMapping<TModel>(propertyInfo, this);
     }
-
     public QueryKitPropertyInfo? GetPropertyInfo(string propertyName)
-    {
-        return _propertyMappings.TryGetValue(propertyName, out var info) ? info : null;
-    }
+        =>  _propertyMappings.TryGetValue(propertyName, out var info) ? info : null;    
+    public QueryKitPropertyInfo? GetPropertyInfoByQueryName(string queryName)
+        =>  _propertyMappings.Values.FirstOrDefault(info => info.QueryName == queryName);    
 }
 
 public class QueryKitPropertyMapping<TModel>
