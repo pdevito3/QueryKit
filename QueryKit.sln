@@ -4,6 +4,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QueryKit", "QueryKit\QueryK
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QueryKit.UnitTests", "QueryKit.UnitTests\QueryKit.UnitTests.csproj", "{44664CB7-E20F-40BA-A3D8-D201BD45FC58}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QueryKit.IntegrationTests", "QueryKit.IntegrationTests\QueryKit.IntegrationTests.csproj", "{131BD804-0139-46F0-B070-526C37DB8F91}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QueryKit.WebApiTestProject", "QueryKit.WebApiTestProject\QueryKit.WebApiTestProject.csproj", "{83532293-BFBD-434F-8DAD-FBE2A734CB16}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -18,5 +22,13 @@ Global
 		{44664CB7-E20F-40BA-A3D8-D201BD45FC58}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{44664CB7-E20F-40BA-A3D8-D201BD45FC58}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{44664CB7-E20F-40BA-A3D8-D201BD45FC58}.Release|Any CPU.Build.0 = Release|Any CPU
+		{131BD804-0139-46F0-B070-526C37DB8F91}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{131BD804-0139-46F0-B070-526C37DB8F91}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{131BD804-0139-46F0-B070-526C37DB8F91}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{131BD804-0139-46F0-B070-526C37DB8F91}.Release|Any CPU.Build.0 = Release|Any CPU
+		{83532293-BFBD-434F-8DAD-FBE2A734CB16}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{83532293-BFBD-434F-8DAD-FBE2A734CB16}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{83532293-BFBD-434F-8DAD-FBE2A734CB16}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{83532293-BFBD-434F-8DAD-FBE2A734CB16}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
