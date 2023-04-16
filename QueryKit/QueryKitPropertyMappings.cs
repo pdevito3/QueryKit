@@ -39,7 +39,7 @@ public class QueryKitPropertyMappings
     public QueryKitPropertyInfo? GetPropertyInfo(string propertyName)
         =>  _propertyMappings.TryGetValue(propertyName, out var info) ? info : null;    
     public QueryKitPropertyInfo? GetPropertyInfoByQueryName(string queryName)
-        =>  _propertyMappings.Values.FirstOrDefault(info => info.QueryName == queryName);    
+        =>  _propertyMappings.Values.FirstOrDefault(info => info.QueryName != null && info.QueryName.Equals(queryName, StringComparison.InvariantCultureIgnoreCase));    
 }
 
 public class QueryKitPropertyMapping<TModel>

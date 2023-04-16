@@ -188,10 +188,20 @@ public class FilterParserTests
         var filterExpression = FilterParser.ParseFilter<Person>(input);
         filterExpression.ToString().Should().Be("x => x.Title.EndsWith(\"b\")");
     }
+    
     [Fact]
     public void test_logical_operators()
     {
         var input = """(Age == 35) && (Favorite == true) || (Age < 18)""";
+        var filterExpression = FilterParser.ParseFilter<Person>(input);
+        filterExpression.ToString().Should()
+            .Be(""""x => (((x.Age == 35) AndAlso (x.Favorite == True)) OrElse (x.Age < 18))"""");
+    }
+    
+    [Fact]
+    public void can_handle_case_insensitive_props()
+    {
+        var input = """(age == 35) && (favorite == true) || (age < 18)""";
         var filterExpression = FilterParser.ParseFilter<Person>(input);
         filterExpression.ToString().Should()
             .Be(""""x => (((x.Age == 35) AndAlso (x.Favorite == True)) OrElse (x.Age < 18))"""");

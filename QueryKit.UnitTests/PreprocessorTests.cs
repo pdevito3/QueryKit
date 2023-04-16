@@ -65,4 +65,19 @@ public class PreprocessorTests
         var filterExpression = FilterParser.ParseFilter<Person>(input, config);
         filterExpression.ToString().Should().Be($"""x => ((x.Title == "{stringValue}") OrElse (x.Id == Parse("{guidValue}")))""");
     }
+    
+    [Fact]
+    public void can_handle_case_insensitive_custom_props()
+    {
+        var faker = new Faker();
+        var value = faker.Lorem.Word();
+        var input = $"""SPECIALtitle == "{value}" """;
+
+        var config = new QueryKitProcessorConfiguration(config =>
+        {
+            config.Property<Person>(x => x.Title).HasQueryName("specialtitle");
+        });
+        var filterExpression = FilterParser.ParseFilter<Person>(input, config);
+        filterExpression.ToString().Should().Be($"""x => (x.Title == "{value}")""");
+    }
 }

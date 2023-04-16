@@ -2,6 +2,7 @@
 namespace QueryKit;
 
 using System.Linq.Expressions;
+using System.Reflection;
 using Sprache;
 
 public static class FilterParser
@@ -43,11 +44,17 @@ public static class FilterParser
             from left in Identifier.Token()
             from op in ComparisonOperatorParser.Token()
             from right in RightSideValueParser.Token()
-            let propertyInfo = config?.PropertyMappings?.GetPropertyInfoByQueryName(left)
-            let actualPropertyName = propertyInfo != null ? propertyInfo.Name : left
+            let leftPropertyInfo = GetPropertyInfo(typeof(T), left)
+            let mappedPropertyInfo = config?.PropertyMappings?.GetPropertyInfoByQueryName(left)
+            let actualPropertyName = leftPropertyInfo?.Name ?? mappedPropertyInfo?.Name ?? left
             let leftExpr = Expression.PropertyOrField(parameter, actualPropertyName)
             let rightExpr = CreateRightExpr(leftExpr, right)
             select op.GetExpression<T>(leftExpr, rightExpr);
+    }
+
+    private static PropertyInfo? GetPropertyInfo(Type type, string propertyName)
+    {
+        return type.GetProperty(propertyName, BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance);
     }
 
     public static Parser<LogicalOperator> LogicalOperatorParser =>
