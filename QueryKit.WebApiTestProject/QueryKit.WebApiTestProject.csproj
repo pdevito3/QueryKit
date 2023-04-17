@@ -19,5 +19,9 @@
         </PackageReference>
 
     </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\QueryKit\QueryKit.csproj" />
+    </ItemGroup>
     
 </Project>

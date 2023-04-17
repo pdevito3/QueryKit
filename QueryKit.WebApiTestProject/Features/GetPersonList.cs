@@ -9,12 +9,14 @@ public static class GetPersonList
 {
     public sealed class Query : IRequest<List<Person>>
     {
-        // public readonly PersonParametersDto QueryParameters;
-        //
-        // public Query(PersonParametersDto queryParameters)
-        // {
-        //     QueryParameters = queryParameters;
-        // }
+        public readonly string Input;
+        public readonly IQueryKitProcessorConfiguration FilterConfig;
+
+        public Query(string input, IQueryKitProcessorConfiguration filterConfig = default)
+        {
+            Input = input;
+            FilterConfig = filterConfig;
+        }
     }
 
     public sealed class Handler : IRequestHandler<Query, List<Person>>
@@ -30,9 +32,9 @@ public static class GetPersonList
         {
             var queryablePeople = _testingDbContext.People;
             
-            // TODO add filtering
-
-            return await queryablePeople.ToListAsync(cancellationToken);
+            var appliedQueryable = queryablePeople.ApplyQueryKitFilter(request.Input, request.FilterConfig);
+            
+            return await appliedQueryable.ToListAsync(cancellationToken);
         }
     }
 }

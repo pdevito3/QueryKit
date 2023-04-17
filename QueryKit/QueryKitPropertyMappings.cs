@@ -2,7 +2,12 @@ namespace QueryKit;
 
 using System.Linq.Expressions;
 
-public class QueryKitProcessorConfiguration
+public interface IQueryKitProcessorConfiguration
+{
+    QueryKitPropertyMappings PropertyMappings { get; }
+}
+
+public class QueryKitProcessorConfiguration : IQueryKitProcessorConfiguration
 {
     public QueryKitPropertyMappings PropertyMappings { get; }
 

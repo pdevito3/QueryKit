@@ -10,5 +10,5 @@ public class Person
     public bool Favorite { get; set; }
     public DateTimeOffset SpecificDate { get; set; }
     public TimeOnly Time { get; set; }
-    public Guid Id { get; set; }
+    public Guid Id { get; set; } = Guid.NewGuid();
 }
