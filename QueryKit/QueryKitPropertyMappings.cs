@@ -5,6 +5,7 @@ using System.Linq.Expressions;
 public interface IQueryKitProcessorConfiguration
 {
     QueryKitPropertyMappings PropertyMappings { get; }
+    string GetPropertyPathByQueryName(string propPath);
 }
 
 public class QueryKitProcessorConfiguration : IQueryKitProcessorConfiguration
@@ -16,6 +17,11 @@ public class QueryKitProcessorConfiguration : IQueryKitProcessorConfiguration
         PropertyMappings = new QueryKitPropertyMappings();
         configure(PropertyMappings);
     }
+    
+    public string GetPropertyPathByQueryName(string queryName)
+    {
+        return PropertyMappings.GetPropertyPathByQueryName(queryName);
+    }
 }
 
 public class QueryKitPropertyMappings
@@ -24,27 +30,55 @@ public class QueryKitPropertyMappings
 
     public QueryKitPropertyMapping<TModel> Property<TModel>(Expression<Func<TModel, object>> propertySelector)
     {
-        var memberExpression = propertySelector.Body is UnaryExpression unary
-            ? (MemberExpression)unary.Operand
-            : (MemberExpression)propertySelector.Body;
-
-        var propertyName = memberExpression.Member.Name;
+        var fullPath = GetFullPropertyPath(propertySelector);
         var propertyInfo = new QueryKitPropertyInfo
         {
-            Name = propertyName,
+            Name = fullPath,
             CanFilter = true,
             CanSort = true,
-            QueryName = propertyName
+            QueryName = fullPath
         };
 
-        _propertyMappings[propertyName] = propertyInfo;
+        _propertyMappings[fullPath] = propertyInfo;
 
         return new QueryKitPropertyMapping<TModel>(propertyInfo, this);
     }
+
+    private static string GetFullPropertyPath(Expression expression)
+    {
+        if (expression.NodeType == ExpressionType.Lambda)
+        {
+            var lambda = (LambdaExpression)expression;
+            return GetFullPropertyPath(lambda.Body);
+        }
+        if (expression.NodeType == ExpressionType.Convert)
+        {
+            var unary = (UnaryExpression)expression;
+            return GetFullPropertyPath(unary.Operand);
+        }
+        if (expression.NodeType == ExpressionType.MemberAccess)
+        {
+            var memberExpression = (MemberExpression)expression;
+            if (memberExpression.Expression.NodeType == ExpressionType.Parameter)
+            {
+                return memberExpression.Member.Name;
+            }
+            else
+            {
+                return $"{GetFullPropertyPath(memberExpression.Expression)}.{memberExpression.Member.Name}";
+            }
+        }
+        throw new NotSupportedException($"Expression type '{expression.NodeType}' is not supported.");
+    }
+
     public QueryKitPropertyInfo? GetPropertyInfo(string propertyName)
-        =>  _propertyMappings.TryGetValue(propertyName, out var info) ? info : null;    
+        =>  _propertyMappings.TryGetValue(propertyName, out var info) ? info : null;
+
     public QueryKitPropertyInfo? GetPropertyInfoByQueryName(string queryName)
-        =>  _propertyMappings.Values.FirstOrDefault(info => info.QueryName != null && info.QueryName.Equals(queryName, StringComparison.InvariantCultureIgnoreCase));    
+        => _propertyMappings.Values.FirstOrDefault(info => info.QueryName != null && info.QueryName.Equals(queryName, StringComparison.InvariantCultureIgnoreCase));
+
+    public string? GetPropertyPathByQueryName(string queryName)
+        => GetPropertyInfoByQueryName(queryName)?.Name ?? null;
 }
 
 public class QueryKitPropertyMapping<TModel>

@@ -40,16 +40,50 @@ public static class FilterParser
 
     private static Parser<Expression> ComparisonExprParser<T>(ParameterExpression parameter, IQueryKitProcessorConfiguration config)
     {
-        return
-            from left in Identifier.Token()
-            from op in ComparisonOperatorParser.Token()
-            from right in RightSideValueParser.Token()
-            let leftPropertyInfo = GetPropertyInfo(typeof(T), left)
-            let mappedPropertyInfo = config?.PropertyMappings?.GetPropertyInfoByQueryName(left)
-            let actualPropertyName = leftPropertyInfo?.Name ?? mappedPropertyInfo?.Name ?? left
-            let leftExpr = Expression.PropertyOrField(parameter, actualPropertyName)
-            let rightExpr = CreateRightExpr(leftExpr, right)
-            select op.GetExpression<T>(leftExpr, rightExpr);
+        var comparisonOperatorParser = ComparisonOperatorParser.Token();
+        var rightSideValueParser = RightSideValueParser.Token();
+
+        return CreateLeftExprParser(parameter, config)
+            .SelectMany(leftExpr => comparisonOperatorParser, (leftExpr, op) => new { leftExpr, op })
+            .SelectMany(temp => rightSideValueParser, (temp, right) => new { temp.leftExpr, temp.op, right })
+            .Select(temp =>
+            {
+                var rightExpr = CreateRightExpr(temp.leftExpr, temp.right);
+                return temp.op.GetExpression<T>(temp.leftExpr, rightExpr);
+            });
+    }
+
+    private static Parser<Expression> CreateLeftExprParser(ParameterExpression parameter, IQueryKitProcessorConfiguration config)
+    {
+        var leftIdentifierParser = Identifier.DelimitedBy(Parse.Char('.')).Token();
+
+        return leftIdentifierParser.Select(left =>
+        {
+            // If only a single identifier is present
+            var leftList = left.ToList();
+            if (leftList.Count == 1)
+            {
+                var propName = leftList?.First();
+                var fullPropPath = config?.GetPropertyPathByQueryName(propName) ?? propName;
+                var propNames = fullPropPath?.Split('.');
+
+                return propNames?.Aggregate((Expression)parameter, (expr, pn) =>
+                {
+                    var propertyInfo = GetPropertyInfo(expr.Type, pn);
+                    var actualPropertyName = propertyInfo?.Name ?? pn;
+                    return Expression.PropertyOrField(expr, actualPropertyName);
+                });
+            }
+
+            // If the property is nested with a dot ('.') separator
+            return leftList.Aggregate((Expression)parameter, (expr, propName) =>
+            {
+                var propertyInfo = GetPropertyInfo(expr.Type, propName);
+                var mappedPropertyInfo = config?.PropertyMappings?.GetPropertyInfoByQueryName(propName);
+                var actualPropertyName = mappedPropertyInfo?.Name ?? propertyInfo?.Name ?? propName;
+                return Expression.PropertyOrField(expr, actualPropertyName);
+            });
+        });
     }
 
     private static PropertyInfo? GetPropertyInfo(Type type, string propertyName)

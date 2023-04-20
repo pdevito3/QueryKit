@@ -6,6 +6,50 @@ using Person = FilterParserTests.Person;
 
 public class PreprocessorTests
 {
+    public class Person
+    {
+        public string Title { get; set; }
+        public int Age { get; set; }
+        public string BirthMonth { get; set; }
+        public decimal Rating { get; set; }
+        public DateOnly Date { get; set; }
+        public bool Favorite { get; set; }
+        public DateTimeOffset SpecificDate { get; set; }
+        public TimeOnly Time { get; set; }
+        public Guid Id { get; set; }
+        public EmailAddress Email { get; set; }
+    }
+
+    public record EmailAddress(string Value)
+    {
+        public string Value { get; init; }
+    }
+    
+    [Fact]
+    public void can_have_child_prop_name()
+    {
+        var faker = new Faker();
+        var value = faker.Lorem.Word();
+        var input = $"""Email.Value == "{value}" """;
+        var filterExpression = FilterParser.ParseFilter<Person>(input);
+        filterExpression.ToString().Should().Be($"""x => (x.Email.Value == "{value}")""");
+    }
+    
+    [Fact]
+    public void can_have_custom_child_prop_name()
+    {
+        var faker = new Faker();
+        var value = faker.Lorem.Word();
+        var input = $"""email == "{value}" """;
+    
+        var config = new QueryKitProcessorConfiguration(config =>
+        {
+            config.Property<Person>(x => x.Email.Value).HasQueryName("email");
+        });
+        var filterExpression = FilterParser.ParseFilter<Person>(input, config);
+        filterExpression.ToString().Should().Be($"""x => (x.Email.Value == "{value}")""");
+    }
+    
     [Fact]
     public void can_have_custom_prop_name_for_string()
     {
