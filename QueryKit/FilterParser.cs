@@ -48,6 +48,11 @@ public static class FilterParser
             .SelectMany(temp => rightSideValueParser, (temp, right) => new { temp.leftExpr, temp.op, right })
             .Select(temp =>
             {
+                if (temp.leftExpr.NodeType == ExpressionType.Constant && ((ConstantExpression)temp.leftExpr).Value!.Equals(true))
+                {
+                    return Expression.Equal(Expression.Constant(true), Expression.Constant(true));
+                }
+
                 var rightExpr = CreateRightExpr(temp.leftExpr, temp.right);
                 return temp.op.GetExpression<T>(temp.leftExpr, rightExpr);
             });
@@ -67,22 +72,40 @@ public static class FilterParser
                 var fullPropPath = config?.GetPropertyPathByQueryName(propName) ?? propName;
                 var propNames = fullPropPath?.Split('.');
 
-                return propNames?.Aggregate((Expression)parameter, (expr, pn) =>
+                var propertyExpression = propNames?.Aggregate((Expression)parameter, (expr, pn) =>
                 {
                     var propertyInfo = GetPropertyInfo(expr.Type, pn);
                     var actualPropertyName = propertyInfo?.Name ?? pn;
                     return Expression.PropertyOrField(expr, actualPropertyName);
                 });
+
+                // Check if property is filterable
+                var propertyConfig = config?.PropertyMappings?.GetPropertyInfo(fullPropPath);
+                if (propertyConfig != null && !propertyConfig.CanFilter)
+                {
+                    return Expression.Constant(true, typeof(bool));
+                }
+
+                return propertyExpression;
             }
 
             // If the property is nested with a dot ('.') separator
-            return leftList.Aggregate((Expression)parameter, (expr, propName) =>
+            var nestedPropertyExpression = leftList.Aggregate((Expression)parameter, (expr, propName) =>
             {
                 var propertyInfo = GetPropertyInfo(expr.Type, propName);
                 var mappedPropertyInfo = config?.PropertyMappings?.GetPropertyInfoByQueryName(propName);
                 var actualPropertyName = mappedPropertyInfo?.Name ?? propertyInfo?.Name ?? propName;
                 return Expression.PropertyOrField(expr, actualPropertyName);
             });
+
+            // Check if nested property is filterable
+            var nestedPropertyConfig = config?.PropertyMappings?.GetPropertyInfo(leftList.Last());
+            if (nestedPropertyConfig != null && !nestedPropertyConfig.CanFilter)
+            {
+                return Expression.Constant(true, typeof(bool));
+            }
+
+            return nestedPropertyExpression;
         });
     }
 
@@ -166,6 +189,11 @@ public static class FilterParser
             if (targetType == typeof(string))
             {
                 right = right.Replace("\"", "\\\"");
+            }
+            
+            if (targetType == typeof(bool) && !bool.TryParse(right, out _))
+            {
+                return Expression.Constant(true, typeof(bool));
             }
 
             var convertedValue = conversionFunction(right);

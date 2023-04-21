@@ -112,4 +112,54 @@ public class PreprocessorTests
         var filterExpression = FilterParser.ParseFilter<Person>(input, config);
         filterExpression.ToString().Should().Be($"""x => (x.Title == "{value}")""");
     }
+    
+    [Fact]
+    public void can_have_custom_prop_excluded_from_filter()
+    {
+        var faker = new Faker();
+        var stringValue = faker.Lorem.Word();
+        var guidValue = Guid.NewGuid();
+        var input = $"""special_title == "{stringValue}" || Id == "{guidValue}" """;
+
+        var config = new QueryKitProcessorConfiguration(config =>
+        {
+            config.Property<Person>(x => x.Title).HasQueryName("special_title");
+            config.Property<Person>(x => x.Id).PreventFilter();
+        });
+        var filterExpression = FilterParser.ParseFilter<Person>(input, config);
+        filterExpression.ToString().Should().Be($"""x => ((x.Title == "{stringValue}") OrElse (True == True))""");
+    }
+    
+    [Fact]
+    public void can_have_custom_prop_excluded_from_filter_with_custom_propname()
+    {
+        var faker = new Faker();
+        var stringValue = faker.Lorem.Word();
+        var guidValue = Guid.NewGuid();
+        var input = $"""special_title == "{stringValue}" || identifier == "{guidValue}" """;
+
+        var config = new QueryKitProcessorConfiguration(config =>
+        {
+            config.Property<Person>(x => x.Title).HasQueryName("special_title");
+            config.Property<Person>(x => x.Id).PreventFilter().HasQueryName("identifier");
+        });
+        var filterExpression = FilterParser.ParseFilter<Person>(input, config);
+        filterExpression.ToString().Should().Be($"""x => ((x.Title == "{stringValue}") OrElse (True == True))""");
+    }
+    
+    [Fact]
+    public void filter_prevented_props_always_have_true_equals_true_regardless_of_comparison()
+    {
+        var faker = new Faker();
+        var filterOperator = faker.PickRandom(ComparisonOperator.List.Where(x => x != ComparisonOperator.EqualsOperator()).ToList());
+        var guidValue = Guid.NewGuid();
+        var input = $"""Id {filterOperator} "{guidValue}" """;
+
+        var config = new QueryKitProcessorConfiguration(config =>
+        {
+            config.Property<Person>(x => x.Id).PreventFilter();
+        });
+        var filterExpression = FilterParser.ParseFilter<Person>(input, config);
+        filterExpression.ToString().Should().Be($"""x => (True == True)""");
+    }
 }
