@@ -14,4 +14,10 @@ public class FakeTestingPersonBuilder
     }
 
     public TestingPerson Build() => _baseTestingPerson;
+
+    public FakeTestingPersonBuilder WithAge(int age)
+    {
+        _baseTestingPerson.Age = age;
+        return this;
+    }
 }

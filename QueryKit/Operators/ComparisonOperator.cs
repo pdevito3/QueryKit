@@ -1,4 +1,4 @@
-namespace QueryKit;
+namespace QueryKit.Operators;
 
 using System.Linq.Expressions;
 using Ardalis.SmartEnum;

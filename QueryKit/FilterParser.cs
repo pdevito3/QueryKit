@@ -4,6 +4,7 @@ namespace QueryKit;
 using System.Globalization;
 using System.Linq.Expressions;
 using System.Reflection;
+using Operators;
 using Sprache;
 
 public static class FilterParser

@@ -2,6 +2,7 @@ namespace QueryKit.UnitTests;
 
 using Bogus;
 using FluentAssertions;
+using Operators;
 using WebApiTestProject.Entities;
 
 public class CustomFilterPropertyTests
