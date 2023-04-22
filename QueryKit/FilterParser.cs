@@ -185,18 +185,23 @@ public static class FilterParser
     {
         var targetType = leftExpr.Type;
 
+        if (targetType.IsGenericType && targetType.GetGenericTypeDefinition() == typeof(Nullable<>))
+        {
+            targetType = Nullable.GetUnderlyingType(targetType);
+        }
+
         if (TypeConversionFunctions.TryGetValue(targetType, out var conversionFunction))
         {
             if (right == "null")
             {
-                return Expression.Constant(null, targetType);
+                return Expression.Constant(null, leftExpr.Type);
             }
 
             if (targetType == typeof(string))
             {
                 right = right.Replace("\"", "\\\"");
             }
-            
+
             if (targetType == typeof(bool) && !bool.TryParse(right, out _))
             {
                 return Expression.Constant(true, typeof(bool));
@@ -210,7 +215,7 @@ public static class FilterParser
                 return Expression.Call(guidParseMethod, Expression.Constant(convertedValue.ToString(), typeof(string)));
             }
 
-            return Expression.Constant(convertedValue, targetType);
+            return Expression.Constant(convertedValue, leftExpr.Type);
         }
 
         throw new InvalidOperationException($"Unsupported value '{right}' for type '{targetType.Name}'");
