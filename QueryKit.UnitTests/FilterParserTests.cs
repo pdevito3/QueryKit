@@ -194,4 +194,77 @@ public class FilterParserTests
         filterExpression.ToString().Should()
             .Be(""""x => (((x.Age == 35) AndAlso (x.Favorite == True)) OrElse (x.Age < 18))"""");
     }
+
+    [Fact]
+    public void can_handle_parentheses_and_logical_operators()
+    {
+        var input = """(Title == "lamb") && (Age > 30) || (Title == "chicken") && (Age < 18)""";
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
+        filterExpression.ToString().Should().Be("x => (((x.Title == \"lamb\") AndAlso (x.Age > 30)) OrElse ((x.Title == \"chicken\") AndAlso (x.Age < 18)))");
+    }
+    
+    [Fact]
+    public void can_handle_decimal_comparison()
+    {
+        var input = """Rating >= 3.5""";
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
+        filterExpression.ToString().Should().Be("x => (x.Rating >= 3.5)");
+    }
+
+    [Fact]
+    public void can_handle_datetime_comparison()
+    {
+        var input = """SpecificDate == 2022-07-01T00:00:03Z""";
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
+        filterExpression.ToString().Should().Be("x => (x.SpecificDate == 7/1/2022 12:00:03 AM +00:00)");
+    }
+    
+    [Fact]
+    public void can_handle_childproperty()
+    {
+        var input = """Email.Value == "john@example.com" """;
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
+        filterExpression.ToString().Should().Be("x => (x.Email.Value == \"john@example.com\")");
+    }
+
+    [Fact]
+    public void can_handle_childproperty_contains()
+    {
+        var input = """Email.Value @=* "example" """;
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
+        filterExpression.ToString().Should().Be("x => x.Email.Value.ToLower().Contains(\"example\".ToLower())");
+    }
+
+    [Fact]
+    public void can_handle_time_comparison()
+    {
+        var input = """Time == 00:00:03""";
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
+        filterExpression.ToString().Should().Be("x => (x.Time == 12:00 AM)");
+    }
+
+    [Fact]
+    public void multiple_properties_and_operators()
+    {
+        var input = """Title _= "lamb" && Age >= 25 && Rating < 4.5 && SpecificDate <= 2022-07-01T00:00:03Z && Time == 00:00:03""";
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
+        filterExpression.ToString().Should().Be("x => ((((x.Title.StartsWith(\"lamb\") AndAlso (x.Age >= 25)) AndAlso (x.Rating < 4.5)) AndAlso (x.SpecificDate <= 7/1/2022 12:00:03 AM +00:00)) AndAlso (x.Time == 12:00 AM))");
+    }
+
+    [Fact]
+    public void complex_filter_with_nested_parentheses()
+    {
+        var input = """(Title == "lamb" && ((Age >= 25 && Rating < 4.5) || (SpecificDate <= 2022-07-01T00:00:03Z && Time == 00:00:03)) && (Favorite == true || Email.Value _= "example"))""";
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
+        filterExpression.ToString().Should().Be("x => (((x.Title == \"lamb\") AndAlso (((x.Age >= 25) AndAlso (x.Rating < 4.5)) OrElse ((x.SpecificDate <= 7/1/2022 12:00:03 AM +00:00) AndAlso (x.Time == 12:00 AM)))) AndAlso ((x.Favorite == True) OrElse x.Email.Value.StartsWith(\"example\")))");
+    }
+
+    [Fact]
+    public void can_handle_null_childproperty()
+    {
+        var input = """Email.Value == null""";
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
+        filterExpression.ToString().Should().Be("x => (x.Email.Value == null)");
+    }
+
 }

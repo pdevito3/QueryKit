@@ -4,7 +4,7 @@ using Bogus;
 using FluentAssertions;
 using WebApiTestProject.Entities;
 
-public class PreprocessorTests
+public class CustomFilterPropertyTests
 {
     
     [Fact]
