@@ -60,11 +60,11 @@ public static class FilterParser
             });
     }
 
-    private static Parser<Expression> CreateLeftExprParser(ParameterExpression parameter, IQueryKitProcessorConfiguration? config)
+    private static Parser<Expression?>? CreateLeftExprParser(ParameterExpression parameter, IQueryKitProcessorConfiguration? config)
     {
         var leftIdentifierParser = Identifier.DelimitedBy(Parse.Char('.')).Token();
 
-        return leftIdentifierParser.Select(left =>
+        return leftIdentifierParser?.Select(left =>
         {
             // If only a single identifier is present
             var leftList = left.ToList();
