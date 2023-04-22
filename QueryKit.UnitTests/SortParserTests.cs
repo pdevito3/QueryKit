@@ -52,6 +52,32 @@ public class SortParserTests
     }
 
     [Fact]
+    public void test_sort_parser_multiple_properties_with_minus()
+    {
+        // Arrange
+        var input = "Title, -Age";
+
+        // Act
+        var sortExpressions = SortParser.ParseSort<TestingPerson>(input);
+
+        // Assert
+        sortExpressions.Should().HaveCount(2);
+
+        var firstSortExpression = sortExpressions[0].Expression;
+        var directionOne = sortExpressions[0].IsAscending;
+        firstSortExpression.Body.Should().BeOfType<UnaryExpression>();
+        GetMemberName(firstSortExpression).Should().Be("Title");
+        directionOne.Should().BeTrue();
+
+        var secondSortExpression = sortExpressions[1].Expression;
+        var directionTwo = sortExpressions[1].IsAscending;
+        
+        secondSortExpression.Body.Should().BeOfType<UnaryExpression>();
+        GetMemberName(secondSortExpression).Should().Be("Age");
+        directionTwo.Should().BeFalse();
+    }
+
+    [Fact]
     public void can_have_no_space_on_comma()
     {
         // Arrange

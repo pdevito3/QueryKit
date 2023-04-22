@@ -44,6 +44,11 @@ public static class SortParser
 
         var propertyName = parts[0];
         var direction = parts.Length > 1 ? parts[1].ToLowerInvariant() : Ascending;
+        if (sortClause.StartsWith("-"))
+        {
+            direction = Descending;
+            propertyName = propertyName.Substring(1);
+        }
 
         if (direction != Ascending && direction != Descending)
         {
