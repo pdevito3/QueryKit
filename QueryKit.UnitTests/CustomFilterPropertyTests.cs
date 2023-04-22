@@ -124,7 +124,7 @@ public class CustomFilterPropertyTests
         var config = new QueryKitProcessorConfiguration(config =>
         {
             config.Property<TestingPerson>(x => x.Title).HasQueryName("special_title");
-            config.Property<TestingPerson>(x => x.Id).PreventFilter().HasQueryName("identifier");
+            config.Property<TestingPerson>(x => x.Id).HasQueryName("identifier").PreventFilter();
         });
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
         filterExpression.ToString().Should().Be($"""x => ((x.Title == "{stringValue}") OrElse (True == True))""");

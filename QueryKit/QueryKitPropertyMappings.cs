@@ -77,10 +77,10 @@ public class QueryKitPropertyMapping<TModel>
         return this;
     }
 
-    public QueryKitPropertyMappings HasQueryName(string queryName)
+    public QueryKitPropertyMapping<TModel> HasQueryName(string queryName)
     {
         _propertyInfo.QueryName = queryName;
-        return _mappings;
+        return this;
     }
 }
 
