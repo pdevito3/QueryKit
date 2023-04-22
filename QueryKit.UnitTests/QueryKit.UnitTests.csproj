@@ -24,6 +24,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\QueryKit.WebApiTestProject\QueryKit.WebApiTestProject.csproj" />
       <ProjectReference Include="..\QueryKit\QueryKit.csproj" />
     </ItemGroup>
 

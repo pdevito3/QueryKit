@@ -17,13 +17,14 @@ namespace QueryKit.WebApiTestProject.Migrations
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
                     title = table.Column<string>(type: "text", nullable: true),
-                    age = table.Column<int>(type: "integer", nullable: false),
+                    age = table.Column<int>(type: "integer", nullable: true),
                     birth_month = table.Column<string>(type: "text", nullable: true),
-                    rating = table.Column<decimal>(type: "numeric", nullable: false),
-                    date = table.Column<DateOnly>(type: "date", nullable: false),
-                    favorite = table.Column<bool>(type: "boolean", nullable: false),
-                    specific_date = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                    time = table.Column<TimeOnly>(type: "time without time zone", nullable: false)
+                    rating = table.Column<decimal>(type: "numeric", nullable: true),
+                    date = table.Column<DateOnly>(type: "date", nullable: true),
+                    favorite = table.Column<bool>(type: "boolean", nullable: true),
+                    specific_date = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
+                    time = table.Column<TimeOnly>(type: "time without time zone", nullable: true),
+                    email = table.Column<string>(type: "text", nullable: true)
                 },
                 constraints: table =>
                 {

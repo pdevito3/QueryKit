@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 public static class GetPersonList
 {
-    public sealed class Query : IRequest<List<Person>>
+    public sealed class Query : IRequest<List<TestingPerson>>
     {
         public readonly string Input;
         public readonly IQueryKitProcessorConfiguration FilterConfig;
@@ -19,7 +19,7 @@ public static class GetPersonList
         }
     }
 
-    public sealed class Handler : IRequestHandler<Query, List<Person>>
+    public sealed class Handler : IRequestHandler<Query, List<TestingPerson>>
     {
         private readonly TestingDbContext _testingDbContext;
 
@@ -28,7 +28,7 @@ public static class GetPersonList
             _testingDbContext = testingDbContext;
         }
 
-        public async Task<List<Person>> Handle(Query request, CancellationToken cancellationToken)
+        public async Task<List<TestingPerson>> Handle(Query request, CancellationToken cancellationToken)
         {
             var queryablePeople = _testingDbContext.People;
             

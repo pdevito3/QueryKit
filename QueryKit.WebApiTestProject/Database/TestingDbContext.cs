@@ -10,7 +10,7 @@ public class TestingDbContext : DbContext
     {
     }
 
-    public DbSet<Person> People { get; set; }
+    public DbSet<TestingPerson> People { get; set; }
     
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

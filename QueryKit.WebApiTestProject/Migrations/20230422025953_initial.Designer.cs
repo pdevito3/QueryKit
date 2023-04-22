@@ -12,7 +12,7 @@ using QueryKit.WebApiTestProject.Database;
 namespace QueryKit.WebApiTestProject.Migrations
 {
     [DbContext(typeof(TestingDbContext))]
-    [Migration("20230416233705_initial")]
+    [Migration("20230422025953_initial")]
     partial class initial
     {
         /// <inheritdoc />
@@ -25,14 +25,14 @@ namespace QueryKit.WebApiTestProject.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("QueryKit.WebApiTestProject.Entities.Person", b =>
+            modelBuilder.Entity("QueryKit.WebApiTestProject.Entities.TestingPerson", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
-                    b.Property<int>("Age")
+                    b.Property<int?>("Age")
                         .HasColumnType("integer")
                         .HasColumnName("age");
 
@@ -40,23 +40,27 @@ namespace QueryKit.WebApiTestProject.Migrations
                         .HasColumnType("text")
                         .HasColumnName("birth_month");
 
-                    b.Property<DateOnly>("Date")
+                    b.Property<DateOnly?>("Date")
                         .HasColumnType("date")
                         .HasColumnName("date");
 
-                    b.Property<bool>("Favorite")
+                    b.Property<string>("Email")
+                        .HasColumnType("text")
+                        .HasColumnName("email");
+
+                    b.Property<bool?>("Favorite")
                         .HasColumnType("boolean")
                         .HasColumnName("favorite");
 
-                    b.Property<decimal>("Rating")
+                    b.Property<decimal?>("Rating")
                         .HasColumnType("numeric")
                         .HasColumnName("rating");
 
-                    b.Property<DateTimeOffset>("SpecificDate")
+                    b.Property<DateTimeOffset?>("SpecificDate")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("specific_date");
 
-                    b.Property<TimeOnly>("Time")
+                    b.Property<TimeOnly?>("Time")
                         .HasColumnType("time without time zone")
                         .HasColumnName("time");
 

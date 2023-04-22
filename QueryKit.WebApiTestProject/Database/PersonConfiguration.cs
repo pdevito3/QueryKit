@@ -4,15 +4,15 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using QueryKit.WebApiTestProject.Entities;
 
-public sealed class PersonConfiguration : IEntityTypeConfiguration<Person>
+public sealed class PersonConfiguration : IEntityTypeConfiguration<TestingPerson>
 {
-    public void Configure(EntityTypeBuilder<Person> builder)
+    public void Configure(EntityTypeBuilder<TestingPerson> builder)
     {
         builder.HasKey(x => x.Id);
-
-        // example for a simple 1:1 value object
-        // builder.Property(x => x.Percent)
-        //     .HasConversion(x => x.Value, x => new Percent(x))
-        //     .HasColumnName("percent");
+        
+        builder.Property(x => x.Email)
+            .HasConversion(x => x.Value, x => new EmailAddress(x))
+            .HasColumnName("email")
+            .IsRequired(false);
     }
 }

@@ -2,28 +2,10 @@ namespace QueryKit.UnitTests;
 
 using Bogus;
 using FluentAssertions;
-using Person = FilterParserTests.Person;
+using WebApiTestProject.Entities;
 
 public class PreprocessorTests
 {
-    public class Person
-    {
-        public string Title { get; set; }
-        public int Age { get; set; }
-        public string BirthMonth { get; set; }
-        public decimal Rating { get; set; }
-        public DateOnly Date { get; set; }
-        public bool Favorite { get; set; }
-        public DateTimeOffset SpecificDate { get; set; }
-        public TimeOnly Time { get; set; }
-        public Guid Id { get; set; }
-        public EmailAddress Email { get; set; }
-    }
-
-    public record EmailAddress(string Value)
-    {
-        public string Value { get; init; }
-    }
     
     [Fact]
     public void can_have_child_prop_name()
@@ -31,7 +13,7 @@ public class PreprocessorTests
         var faker = new Faker();
         var value = faker.Lorem.Word();
         var input = $"""Email.Value == "{value}" """;
-        var filterExpression = FilterParser.ParseFilter<Person>(input);
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
         filterExpression.ToString().Should().Be($"""x => (x.Email.Value == "{value}")""");
     }
     
@@ -44,9 +26,9 @@ public class PreprocessorTests
     
         var config = new QueryKitProcessorConfiguration(config =>
         {
-            config.Property<Person>(x => x.Email.Value).HasQueryName("email");
+            config.Property<TestingPerson>(x => x.Email.Value).HasQueryName("email");
         });
-        var filterExpression = FilterParser.ParseFilter<Person>(input, config);
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
         filterExpression.ToString().Should().Be($"""x => (x.Email.Value == "{value}")""");
     }
     
@@ -59,9 +41,9 @@ public class PreprocessorTests
 
         var config = new QueryKitProcessorConfiguration(config =>
         {
-            config.Property<Person>(x => x.Title).HasQueryName("special_title");
+            config.Property<TestingPerson>(x => x.Title).HasQueryName("special_title");
         });
-        var filterExpression = FilterParser.ParseFilter<Person>(input, config);
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
         filterExpression.ToString().Should().Be($"""x => (x.Title == "{value}")""");
     }
     
@@ -75,10 +57,10 @@ public class PreprocessorTests
 
         var config = new QueryKitProcessorConfiguration(config =>
         {
-            config.Property<Person>(x => x.Title).HasQueryName("special_title");
-            config.Property<Person>(x => x.Id).HasQueryName("identifier");
+            config.Property<TestingPerson>(x => x.Title).HasQueryName("special_title");
+            config.Property<TestingPerson>(x => x.Id).HasQueryName("identifier");
         });
-        var filterExpression = FilterParser.ParseFilter<Person>(input, config);
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
         filterExpression.ToString().Should().Be($"""x => ((x.Title == "{stringValue}") OrElse (x.Id == Parse("{guidValue}")))""");
     }
     
@@ -92,9 +74,9 @@ public class PreprocessorTests
 
         var config = new QueryKitProcessorConfiguration(config =>
         {
-            config.Property<Person>(x => x.Title).HasQueryName("special_title");
+            config.Property<TestingPerson>(x => x.Title).HasQueryName("special_title");
         });
-        var filterExpression = FilterParser.ParseFilter<Person>(input, config);
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
         filterExpression.ToString().Should().Be($"""x => ((x.Title == "{stringValue}") OrElse (x.Id == Parse("{guidValue}")))""");
     }
     
@@ -107,9 +89,9 @@ public class PreprocessorTests
 
         var config = new QueryKitProcessorConfiguration(config =>
         {
-            config.Property<Person>(x => x.Title).HasQueryName("specialtitle");
+            config.Property<TestingPerson>(x => x.Title).HasQueryName("specialtitle");
         });
-        var filterExpression = FilterParser.ParseFilter<Person>(input, config);
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
         filterExpression.ToString().Should().Be($"""x => (x.Title == "{value}")""");
     }
     
@@ -123,10 +105,10 @@ public class PreprocessorTests
 
         var config = new QueryKitProcessorConfiguration(config =>
         {
-            config.Property<Person>(x => x.Title).HasQueryName("special_title");
-            config.Property<Person>(x => x.Id).PreventFilter();
+            config.Property<TestingPerson>(x => x.Title).HasQueryName("special_title");
+            config.Property<TestingPerson>(x => x.Id).PreventFilter();
         });
-        var filterExpression = FilterParser.ParseFilter<Person>(input, config);
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
         filterExpression.ToString().Should().Be($"""x => ((x.Title == "{stringValue}") OrElse (True == True))""");
     }
     
@@ -140,10 +122,10 @@ public class PreprocessorTests
 
         var config = new QueryKitProcessorConfiguration(config =>
         {
-            config.Property<Person>(x => x.Title).HasQueryName("special_title");
-            config.Property<Person>(x => x.Id).PreventFilter().HasQueryName("identifier");
+            config.Property<TestingPerson>(x => x.Title).HasQueryName("special_title");
+            config.Property<TestingPerson>(x => x.Id).PreventFilter().HasQueryName("identifier");
         });
-        var filterExpression = FilterParser.ParseFilter<Person>(input, config);
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
         filterExpression.ToString().Should().Be($"""x => ((x.Title == "{stringValue}") OrElse (True == True))""");
     }
     
@@ -157,9 +139,9 @@ public class PreprocessorTests
 
         var config = new QueryKitProcessorConfiguration(config =>
         {
-            config.Property<Person>(x => x.Id).PreventFilter();
+            config.Property<TestingPerson>(x => x.Id).PreventFilter();
         });
-        var filterExpression = FilterParser.ParseFilter<Person>(input, config);
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
         filterExpression.ToString().Should().Be($"""x => (True == True)""");
     }
 }

@@ -3,8 +3,8 @@ namespace QueryKit.IntegrationTests.Tests;
 using Bogus;
 using Fakes;
 using FluentAssertions;
+using WebApiTestProject.Entities;
 using WebApiTestProject.Features;
-using Person = WebApiTestProject.Entities.Person;
 
 public class HelloIntegrationTests : TestBase
 {
@@ -20,7 +20,7 @@ public class HelloIntegrationTests : TestBase
         var fakePersonTwo = new FakePersonBuilder().Build();
         await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
         
-        var input = $"""{nameof(Person.Title)} == "{fakePersonOne.Title}" """;
+        var input = $"""{nameof(TestingPerson.Title)} == "{fakePersonOne.Title}" """;
 
         // Act
         var query = new GetPersonList.Query(input);

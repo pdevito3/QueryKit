@@ -1,6 +1,7 @@
 ﻿
 namespace QueryKit;
 
+using System.Globalization;
 using System.Linq.Expressions;
 using System.Reflection;
 using Sprache;
@@ -158,23 +159,28 @@ public static class FilterParser
     private static readonly Dictionary<Type, Func<string, object>> TypeConversionFunctions = new()
     {
         { typeof(string), value => value },
-        { typeof(int), value => int.Parse(value) },
-        { typeof(decimal), value => decimal.Parse(value) },
-        { typeof(DateTime), value => DateTime.Parse(value) },
-        { typeof(DateTimeOffset), value => DateTimeOffset.Parse(value) },
         { typeof(bool), value => bool.Parse(value) },
         { typeof(Guid), value => Guid.Parse(value) },
-        { typeof(TimeSpan), value => TimeSpan.Parse(value) },
-        { typeof(double), value => double.Parse(value) },
-        { typeof(float), value => float.Parse(value) },
-        { typeof(long), value => long.Parse(value) },
-        { typeof(short), value => short.Parse(value) },
-        { typeof(byte), value => byte.Parse(value) },
         { typeof(char), value => char.Parse(value) },
-        { typeof(DateOnly), value => DateOnly.Parse(value) },
-        { typeof(TimeOnly), value => TimeOnly.Parse(value) },
+        { typeof(int), value => int.Parse(value, CultureInfo.InvariantCulture) },
+        { typeof(float), x => float.Parse(x, CultureInfo.InvariantCulture) },
+        { typeof(double), x => double.Parse(x, CultureInfo.InvariantCulture) },
+        { typeof(decimal), x => decimal.Parse(x, CultureInfo.InvariantCulture) },
+        { typeof(long), value => long.Parse(value, CultureInfo.InvariantCulture) },
+        { typeof(short), value => short.Parse(value, CultureInfo.InvariantCulture) },
+        { typeof(byte), value => byte.Parse(value, CultureInfo.InvariantCulture) },
+        { typeof(DateTime), value => DateTime.Parse(value, CultureInfo.InvariantCulture) },
+        { typeof(DateTimeOffset), value => DateTimeOffset.Parse(value, CultureInfo.InvariantCulture) },
+        { typeof(DateOnly), value => DateOnly.Parse(value, CultureInfo.InvariantCulture) },
+        { typeof(TimeOnly), value => TimeOnly.Parse(value, CultureInfo.InvariantCulture) },
+        { typeof(TimeSpan), value => TimeSpan.Parse(value, CultureInfo.InvariantCulture) },
+        { typeof(uint), value => uint.Parse(value, CultureInfo.InvariantCulture) },
+        { typeof(ulong), value => ulong.Parse(value, CultureInfo.InvariantCulture) },
+        { typeof(ushort), value => ushort.Parse(value, CultureInfo.InvariantCulture) },
+        { typeof(sbyte), value => sbyte.Parse(value, CultureInfo.InvariantCulture) },
+        // { typeof(Enum), value => Enum.Parse(typeof(T), value) },
     };
-    
+
     private static Expression CreateRightExpr(Expression leftExpr, string right)
     {
         var targetType = leftExpr.Type;

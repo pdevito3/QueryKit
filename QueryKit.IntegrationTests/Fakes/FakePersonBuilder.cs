@@ -5,13 +5,13 @@ using WebApiTestProject.Entities;
 
 public class FakePersonBuilder
 {
-    private readonly Person _basePerson = new AutoFaker<Person>().Generate();
+    private readonly TestingPerson _baseTestingPerson = new AutoFaker<TestingPerson>().Generate();
     
     public FakePersonBuilder WithTitle(string title)
     {
-        _basePerson.Title = title;
+        _baseTestingPerson.Title = title;
         return this;
     }
 
-    public Person Build() => _basePerson;
+    public TestingPerson Build() => _baseTestingPerson;
 }
