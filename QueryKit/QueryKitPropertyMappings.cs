@@ -6,7 +6,7 @@ public class QueryKitPropertyMappings
 {
     private readonly Dictionary<string, QueryKitPropertyInfo> _propertyMappings = new();
 
-    public QueryKitPropertyMapping<TModel> Property<TModel>(Expression<Func<TModel, object>> propertySelector)
+    public QueryKitPropertyMapping<TModel> Property<TModel>(Expression<Func<TModel, object>>? propertySelector)
     {
         var fullPath = GetFullPropertyPath(propertySelector);
         var propertyInfo = new QueryKitPropertyInfo
@@ -22,7 +22,7 @@ public class QueryKitPropertyMappings
         return new QueryKitPropertyMapping<TModel>(propertyInfo, this);
     }
 
-    private static string GetFullPropertyPath(Expression expression)
+    private static string GetFullPropertyPath(Expression? expression)
     {
         if (expression.NodeType == ExpressionType.Lambda)
         {
@@ -37,14 +37,9 @@ public class QueryKitPropertyMappings
         if (expression.NodeType == ExpressionType.MemberAccess)
         {
             var memberExpression = (MemberExpression)expression;
-            if (memberExpression.Expression.NodeType == ExpressionType.Parameter)
-            {
-                return memberExpression.Member.Name;
-            }
-            else
-            {
-                return $"{GetFullPropertyPath(memberExpression.Expression)}.{memberExpression.Member.Name}";
-            }
+            return memberExpression?.Expression?.NodeType == ExpressionType.Parameter 
+                ? memberExpression.Member.Name 
+                : $"{GetFullPropertyPath(memberExpression?.Expression)}.{memberExpression?.Member?.Name}";
         }
         throw new NotSupportedException($"Expression type '{expression.NodeType}' is not supported.");
     }

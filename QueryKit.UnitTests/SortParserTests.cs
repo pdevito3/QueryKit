@@ -94,6 +94,41 @@ public class SortParserTests
         sortExpression[0].IsAscending.Should().BeTrue();
         sortExpression[1].IsAscending.Should().BeFalse();
     }
+    
+    [Fact]
+    public void can_prevent_sort_for_custom_prop()
+    {
+        var input = "OfficialTitle, Age desc";
+    
+        var config = new QueryKitProcessorConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.Title)
+                .PreventSort()
+                .HasQueryName("OfficialTitle");
+        });
+        var sortExpression = SortParser.ParseSort<TestingPerson>(input, config);
+        
+        sortExpression.Should().HaveCount(1);
+        GetMemberName(sortExpression[0].Expression).Should().Be("Age");
+        sortExpression[0].IsAscending.Should().BeFalse();
+    }
+    
+    [Fact]
+    public void can_prevent_sort()
+    {
+        var input = "Title, Age desc";
+    
+        var config = new QueryKitProcessorConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.Title)
+                .PreventSort();
+        });
+        var sortExpression = SortParser.ParseSort<TestingPerson>(input, config);
+        
+        sortExpression.Should().HaveCount(1);
+        GetMemberName(sortExpression[0].Expression).Should().Be("Age");
+        sortExpression[0].IsAscending.Should().BeFalse();
+    }
 
     private string GetMemberName<T>(Expression<Func<T, object>> expr)
     {

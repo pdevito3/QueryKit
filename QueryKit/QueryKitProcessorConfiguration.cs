@@ -4,6 +4,7 @@ public interface IQueryKitProcessorConfiguration
 {
     QueryKitPropertyMappings PropertyMappings { get; }
     string? GetPropertyPathByQueryName(string propPath);
+    bool IsPropertySortable(string propertyName);
 }
 
 public class QueryKitProcessorConfiguration : IQueryKitProcessorConfiguration
@@ -19,5 +20,10 @@ public class QueryKitProcessorConfiguration : IQueryKitProcessorConfiguration
     public string? GetPropertyPathByQueryName(string queryName)
     {
         return PropertyMappings.GetPropertyPathByQueryName(queryName);
+    }
+
+    public bool IsPropertySortable(string propertyName)
+    {
+        return PropertyMappings.GetPropertyInfo(propertyName)?.CanSort ?? true;
     }
 }

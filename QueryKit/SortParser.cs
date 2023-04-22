@@ -24,7 +24,10 @@ public static class SortParser
         foreach (var sortClause in sortClauses)
         {
             var sortExpression = CreateSortExpression<T>(sortClause.Trim(), config);
-            sortExpressions.Add(sortExpression);
+            if (sortExpression.Expression != null)
+            {
+                sortExpressions.Add(sortExpression);
+            }
         }
 
         return sortExpressions;
@@ -45,6 +48,16 @@ public static class SortParser
         if (direction != Ascending && direction != Descending)
         {
             throw new ArgumentException($"Invalid direction: {direction}. Allowed values are '{Ascending}' and '{Descending}'.");
+        }
+
+        var propertyPath = config?.GetPropertyPathByQueryName(propertyName) ?? propertyName;
+        if (config != null && config.IsPropertySortable(propertyPath) == false)
+        {
+            return new SortExpressionInfo<T>
+            {
+                Expression = null,
+                IsAscending = true
+            };
         }
 
         var parameter = Expression.Parameter(typeof(T), "x");
