@@ -185,10 +185,7 @@ public static class FilterParser
     {
         var targetType = leftExpr.Type;
 
-        if (targetType.IsGenericType && targetType.GetGenericTypeDefinition() == typeof(Nullable<>))
-        {
-            targetType = Nullable.GetUnderlyingType(targetType);
-        }
+        targetType = TransformTargetTypeIfNullable(targetType);
 
         if (TypeConversionFunctions.TryGetValue(targetType, out var conversionFunction))
         {
@@ -197,10 +194,7 @@ public static class FilterParser
                 return Expression.Constant(null, leftExpr.Type);
             }
 
-            if (targetType == typeof(string))
-            {
-                right = right.Replace("\"", "\\\"");
-            }
+            right = EscapeDoubleQuotesForStrings(right, targetType);
 
             if (targetType == typeof(bool) && !bool.TryParse(right, out _))
             {
@@ -221,6 +215,25 @@ public static class FilterParser
         throw new InvalidOperationException($"Unsupported value '{right}' for type '{targetType.Name}'");
     }
 
+    private static Type TransformTargetTypeIfNullable(Type targetType)
+    {
+        if (targetType.IsGenericType && targetType.GetGenericTypeDefinition() == typeof(Nullable<>))
+        {
+            targetType = Nullable.GetUnderlyingType(targetType);
+        }
+
+        return targetType;
+    }
+
+    private static string EscapeDoubleQuotesForStrings(string right, Type targetType)
+    {
+        if (targetType == typeof(string))
+        {
+            right = right.Replace("\"", "\\\"");
+        }
+
+        return right;
+    }
 
     private static Parser<Expression> AndExprParser<T>(ParameterExpression parameter, IQueryKitProcessorConfiguration config = null)
         => Parse.ChainOperator(
