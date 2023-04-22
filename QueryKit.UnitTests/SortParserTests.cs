@@ -50,6 +50,32 @@ public class SortParserTests
         GetMemberName(secondSortExpression).Should().Be("Age");
         directionTwo.Should().BeFalse();
     }
+
+    [Fact]
+    public void can_have_no_space_on_comma()
+    {
+        // Arrange
+        var input = "Title,Age desc";
+
+        // Act
+        var sortExpressions = SortParser.ParseSort<TestingPerson>(input);
+
+        // Assert
+        sortExpressions.Should().HaveCount(2);
+
+        var firstSortExpression = sortExpressions[0].Expression;
+        var directionOne = sortExpressions[0].IsAscending;
+        firstSortExpression.Body.Should().BeOfType<UnaryExpression>();
+        GetMemberName(firstSortExpression).Should().Be("Title");
+        directionOne.Should().BeTrue();
+
+        var secondSortExpression = sortExpressions[1].Expression;
+        var directionTwo = sortExpressions[1].IsAscending;
+        
+        secondSortExpression.Body.Should().BeOfType<UnaryExpression>();
+        GetMemberName(secondSortExpression).Should().Be("Age");
+        directionTwo.Should().BeFalse();
+    }
     
     [Fact]
     public void can_have_custom_child_prop_name()

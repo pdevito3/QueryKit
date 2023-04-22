@@ -11,6 +11,9 @@ public static class SortParser
         public Expression<Func<T, object>> Expression { get; set; }
         public bool IsAscending { get; set; }
     }
+    
+    private const string Ascending = "asc";
+    private const string Descending = "desc";
 
     public static List<SortExpressionInfo<T>> ParseSort<T>(string input, IQueryKitProcessorConfiguration config = null)
     {
@@ -21,10 +24,7 @@ public static class SortParser
         foreach (var sortClause in sortClauses)
         {
             var sortExpression = CreateSortExpression<T>(sortClause.Trim(), config);
-            if (sortExpression.Expression != null)
-            {
-                sortExpressions.Add(sortExpression);
-            }
+            sortExpressions.Add(sortExpression);
         }
 
         return sortExpressions;
@@ -35,27 +35,22 @@ public static class SortParser
         from rest in Parse.LetterOrDigit.XOr(Parse.Char('_')).Many()
         select new string(first.Concat(rest).ToArray());
 
-    private static SortExpressionInfo<T> CreateSortExpression<T>(string sortClause, IQueryKitProcessorConfiguration config)
+    private static SortExpressionInfo<T> CreateSortExpression<T>(string sortClause, IQueryKitProcessorConfiguration config = null)
     {
         var parts = sortClause.Split();
 
         var propertyName = parts[0];
-        var direction = parts.Length > 1 ? parts[1].ToLowerInvariant() : "asc";
+        var direction = parts.Length > 1 ? parts[1].ToLowerInvariant() : Ascending;
 
-        if (direction != "asc" && direction != "desc")
+        if (direction != Ascending && direction != Descending)
         {
-            throw new ArgumentException($"Invalid direction: {direction}. Allowed values are 'asc' and 'desc'.");
+            throw new ArgumentException($"Invalid direction: {direction}. Allowed values are '{Ascending}' and '{Descending}'.");
         }
 
         var parameter = Expression.Parameter(typeof(T), "x");
         var sortExpressionBody = CreateSortExpressionBody(parameter, propertyName, config);
 
-        if (sortExpressionBody == null)
-        {
-            return new SortExpressionInfo<T> { Expression = null, IsAscending = false };
-        }
-
-        var isAscending = direction == "asc";
+        var isAscending = direction == Ascending;
         return new SortExpressionInfo<T>
         {
             Expression = Expression.Lambda<Func<T, object>>(Expression.Convert(sortExpressionBody, typeof(object)), parameter),
