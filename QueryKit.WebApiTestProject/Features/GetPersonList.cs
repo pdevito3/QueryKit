@@ -9,13 +9,15 @@ public static class GetPersonList
 {
     public sealed class Query : IRequest<List<TestingPerson>>
     {
-        public readonly string Input;
-        public readonly IQueryKitProcessorConfiguration FilterConfig;
+        public readonly string FilterInput;
+        public readonly string SortInput;
+        public readonly IQueryKitProcessorConfiguration QueryKitConfig;
 
-        public Query(string input, IQueryKitProcessorConfiguration filterConfig = default)
+        public Query(string filterInput, string sortInput, IQueryKitProcessorConfiguration queryKitConfig = default)
         {
-            Input = input;
-            FilterConfig = filterConfig;
+            FilterInput = filterInput;
+            SortInput = sortInput;
+            QueryKitConfig = queryKitConfig;
         }
     }
 
@@ -31,9 +33,9 @@ public static class GetPersonList
         public async Task<List<TestingPerson>> Handle(Query request, CancellationToken cancellationToken)
         {
             var queryablePeople = _testingDbContext.People;
-            
-            var appliedQueryable = queryablePeople.ApplyQueryKitFilter(request.Input, request.FilterConfig);
-            
+            var appliedQueryable = queryablePeople
+                .ApplyQueryKitFilter(request.FilterInput, request.QueryKitConfig)
+                .ApplyQueryKitSort(request.SortInput, request.QueryKitConfig);
             return await appliedQueryable.ToListAsync(cancellationToken);
         }
     }

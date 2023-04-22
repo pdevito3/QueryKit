@@ -2,6 +2,7 @@ namespace QueryKit.IntegrationTests;
 
 using System.Threading.Tasks;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using WebApiTestProject.Database;
 using static TestFixture;
@@ -60,4 +61,6 @@ public class TestingServiceScope
             return db.SaveChangesAsync();
         });
     }
+
+    public TestingDbContext DbContext() => _scope.ServiceProvider.GetService<TestingDbContext>()!;
 }

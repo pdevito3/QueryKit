@@ -3,6 +3,7 @@ namespace QueryKit.IntegrationTests.Tests;
 using Bogus;
 using Fakes;
 using FluentAssertions;
+using Microsoft.EntityFrameworkCore;
 using WebApiTestProject.Entities;
 using WebApiTestProject.Features;
 
@@ -23,8 +24,9 @@ public class DatabaseFilteringTests : TestBase
         var input = $"""{nameof(TestingPerson.Title)} == "{fakePersonOne.Title}" """;
 
         // Act
-        var query = new GetPersonList.Query(input);
-        var people = await testingServiceScope.SendAsync(query);
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
 
         // Assert
         people.Count.Should().Be(1);
@@ -43,8 +45,9 @@ public class DatabaseFilteringTests : TestBase
         var input = $"""{nameof(TestingPerson.Id)} == "{fakePersonOne.Id}" """;
 
         // Act
-        var query = new GetPersonList.Query(input);
-        var people = await testingServiceScope.SendAsync(query);
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
 
         // Assert
         people.Count.Should().Be(1);
@@ -63,8 +66,9 @@ public class DatabaseFilteringTests : TestBase
         var input = $"""{nameof(TestingPerson.Id)} == "{Guid.NewGuid()}" """;
 
         // Act
-        var query = new GetPersonList.Query(input);
-        var people = await testingServiceScope.SendAsync(query);
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
 
         // Assert
         people.Count.Should().Be(0);

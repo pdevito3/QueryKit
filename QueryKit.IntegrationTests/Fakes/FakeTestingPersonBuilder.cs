@@ -20,4 +20,10 @@ public class FakeTestingPersonBuilder
         _baseTestingPerson.Age = age;
         return this;
     }
+
+    public FakeTestingPersonBuilder WithBirthMonth(string value)
+    {
+        _baseTestingPerson.BirthMonth = value;
+        return this;
+    }
 }
