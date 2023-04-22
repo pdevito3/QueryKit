@@ -130,7 +130,7 @@ public class SortParserTests
         sortExpression[0].IsAscending.Should().BeFalse();
     }
 
-    private string GetMemberName<T>(Expression<Func<T, object>> expr)
+    private string GetMemberName<T>(Expression<Func<T, object>>? expr)
     {
         var body = expr.Body;
 

@@ -8,14 +8,14 @@ public static class SortParser
 {
     public class SortExpressionInfo<T>
     {
-        public Expression<Func<T, object>> Expression { get; set; }
+        public Expression<Func<T, object>>? Expression { get; set; }
         public bool IsAscending { get; set; }
     }
     
     private const string Ascending = "asc";
     private const string Descending = "desc";
 
-    public static List<SortExpressionInfo<T>> ParseSort<T>(string input, IQueryKitProcessorConfiguration config = null)
+    public static List<SortExpressionInfo<T>> ParseSort<T>(string input, IQueryKitProcessorConfiguration? config = null)
     {
         var sortClauses = input.Split(',');
 
@@ -38,7 +38,7 @@ public static class SortParser
         from rest in Parse.LetterOrDigit.XOr(Parse.Char('_')).Many()
         select new string(first.Concat(rest).ToArray());
 
-    private static SortExpressionInfo<T> CreateSortExpression<T>(string sortClause, IQueryKitProcessorConfiguration config = null)
+    private static SortExpressionInfo<T> CreateSortExpression<T>(string sortClause, IQueryKitProcessorConfiguration? config = null)
     {
         var parts = sortClause.Split();
 
@@ -71,7 +71,7 @@ public static class SortParser
         };
     }
 
-    private static Expression CreateSortExpressionBody(Expression parameter, string propertyName, IQueryKitProcessorConfiguration config)
+    private static Expression CreateSortExpressionBody(Expression parameter, string propertyName, IQueryKitProcessorConfiguration? config)
     {
         var propertyPath = config?.GetPropertyPathByQueryName(propertyName) ?? propertyName;
         var propertyNames = propertyPath.Split('.');

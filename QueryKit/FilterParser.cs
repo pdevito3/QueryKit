@@ -9,7 +9,7 @@ using Sprache;
 
 public static class FilterParser
 {
-    public static Expression<Func<T, bool>> ParseFilter<T>(string input, IQueryKitProcessorConfiguration config = null)
+    public static Expression<Func<T, bool>> ParseFilter<T>(string input, IQueryKitProcessorConfiguration? config = null)
     {
         var parameter = Expression.Parameter(typeof(T), "x");
         var expr = ExprParser<T>(parameter, config).End().Parse(input);
@@ -40,7 +40,7 @@ public static class FilterParser
         from caseInsensitive in Parse.Char('*').Optional()
         select ComparisonOperator.GetByOperatorString(op, caseInsensitive.IsDefined);
 
-    private static Parser<Expression> ComparisonExprParser<T>(ParameterExpression parameter, IQueryKitProcessorConfiguration config)
+    private static Parser<Expression> ComparisonExprParser<T>(ParameterExpression parameter, IQueryKitProcessorConfiguration? config)
     {
         var comparisonOperatorParser = ComparisonOperatorParser.Token();
         var rightSideValueParser = RightSideValueParser.Token();
@@ -60,7 +60,7 @@ public static class FilterParser
             });
     }
 
-    private static Parser<Expression> CreateLeftExprParser(ParameterExpression parameter, IQueryKitProcessorConfiguration config)
+    private static Parser<Expression> CreateLeftExprParser(ParameterExpression parameter, IQueryKitProcessorConfiguration? config)
     {
         var leftIdentifierParser = Identifier.DelimitedBy(Parse.Char('.')).Token();
 
@@ -150,11 +150,11 @@ public static class FilterParser
         from trailingSpaces in Parse.WhiteSpace.Many()
         select atSign.IsDefined ? "@" + value : value;
 
-    private static Parser<Expression> AtomicExprParser<T>(ParameterExpression parameter, IQueryKitProcessorConfiguration config = null)
+    private static Parser<Expression> AtomicExprParser<T>(ParameterExpression parameter, IQueryKitProcessorConfiguration? config = null)
         => ComparisonExprParser<T>(parameter, config)
             .Or(Parse.Ref(() => ExprParser<T>(parameter, config)).Contained(Parse.Char('('), Parse.Char(')')));
 
-    private static Parser<Expression> ExprParser<T>(ParameterExpression parameter, IQueryKitProcessorConfiguration config = null)
+    private static Parser<Expression> ExprParser<T>(ParameterExpression parameter, IQueryKitProcessorConfiguration? config = null)
         => OrExprParser<T>(parameter, config);
 
     private static readonly Dictionary<Type, Func<string, object>> TypeConversionFunctions = new()
@@ -236,14 +236,14 @@ public static class FilterParser
         return right;
     }
 
-    private static Parser<Expression> AndExprParser<T>(ParameterExpression parameter, IQueryKitProcessorConfiguration config = null)
+    private static Parser<Expression> AndExprParser<T>(ParameterExpression parameter, IQueryKitProcessorConfiguration? config = null)
         => Parse.ChainOperator(
             LogicalOperatorParser.Where(x => x.Name == "&&"),
             AtomicExprParser<T>(parameter, config),
             (op, left, right) => op.GetExpression<T>(left, right)
         );
 
-    private static Parser<Expression> OrExprParser<T>(ParameterExpression parameter, IQueryKitProcessorConfiguration config = null)
+    private static Parser<Expression> OrExprParser<T>(ParameterExpression parameter, IQueryKitProcessorConfiguration? config = null)
         => Parse.ChainOperator(
             LogicalOperatorParser.Where(x => x.Name == "||"),
             AndExprParser<T>(parameter, config),

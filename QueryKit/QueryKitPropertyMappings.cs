@@ -24,7 +24,7 @@ public class QueryKitPropertyMappings
 
     private static string GetFullPropertyPath(Expression? expression)
     {
-        if (expression.NodeType == ExpressionType.Lambda)
+        if (expression!.NodeType == ExpressionType.Lambda)
         {
             var lambda = (LambdaExpression)expression;
             return GetFullPropertyPath(lambda.Body);
@@ -44,13 +44,13 @@ public class QueryKitPropertyMappings
         throw new NotSupportedException($"Expression type '{expression.NodeType}' is not supported.");
     }
 
-    public QueryKitPropertyInfo? GetPropertyInfo(string propertyName)
+    public QueryKitPropertyInfo? GetPropertyInfo(string? propertyName)
         =>  _propertyMappings.TryGetValue(propertyName, out var info) ? info : null;
 
-    public QueryKitPropertyInfo? GetPropertyInfoByQueryName(string queryName)
+    public QueryKitPropertyInfo? GetPropertyInfoByQueryName(string? queryName)
         => _propertyMappings.Values.FirstOrDefault(info => info.QueryName != null && info.QueryName.Equals(queryName, StringComparison.InvariantCultureIgnoreCase));
 
-    public string? GetPropertyPathByQueryName(string queryName)
+    public string? GetPropertyPathByQueryName(string? queryName)
         => GetPropertyInfoByQueryName(queryName)?.Name ?? null;
 }
 

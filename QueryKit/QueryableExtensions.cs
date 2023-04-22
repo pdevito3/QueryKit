@@ -2,7 +2,7 @@ namespace QueryKit;
 
 public static class QueryableExtensions
 {
-    public static IQueryable<T> ApplyQueryKitFilter<T>(this IQueryable<T> source, string filter, IQueryKitProcessorConfiguration config = null)
+    public static IQueryable<T> ApplyQueryKitFilter<T>(this IQueryable<T> source, string filter, IQueryKitProcessorConfiguration? config = null)
     {
         if (string.IsNullOrWhiteSpace(filter))
         {
@@ -13,7 +13,7 @@ public static class QueryableExtensions
         return source.Where(expression);
     }
 
-    public static IOrderedQueryable<T> ApplyQueryKitSort<T>(this IQueryable<T> queryable, string sortExpression, IQueryKitProcessorConfiguration config = null)
+    public static IOrderedQueryable<T> ApplyQueryKitSort<T>(this IQueryable<T> queryable, string sortExpression, IQueryKitProcessorConfiguration? config = null)
     {
         var sortLambdas = SortParser.ParseSort<T>(sortExpression, config);
 
@@ -23,14 +23,22 @@ public static class QueryableExtensions
         }
 
         var firstSortInfo = sortLambdas[0];
-        var orderedQueryable = firstSortInfo.IsAscending ? queryable.OrderBy(firstSortInfo.Expression) : queryable.OrderByDescending(firstSortInfo.Expression);
-
-        for (var i = 1; i < sortLambdas.Count; i++)
+        if (firstSortInfo.Expression != null)
         {
-            var sortInfo = sortLambdas[i];
-            orderedQueryable = sortInfo.IsAscending ? orderedQueryable.ThenBy(sortInfo.Expression) : orderedQueryable.ThenByDescending(sortInfo.Expression);
-        }
+            var orderedQueryable = firstSortInfo.IsAscending ? queryable.OrderBy(firstSortInfo.Expression) : queryable.OrderByDescending(firstSortInfo.Expression);
 
-        return orderedQueryable;
+            for (var i = 1; i < sortLambdas.Count; i++)
+            {
+                var sortInfo = sortLambdas[i];
+                if (sortInfo.Expression != null)
+                    orderedQueryable = sortInfo.IsAscending
+                        ? orderedQueryable.ThenBy(sortInfo.Expression)
+                        : orderedQueryable.ThenByDescending(sortInfo.Expression);
+            }
+
+            return orderedQueryable;
+        }
+        
+        return queryable.OrderBy(x => x);
     }
 }
