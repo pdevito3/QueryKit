@@ -118,7 +118,7 @@ public static class FilterParser
 
     public static Parser<LogicalOperator> LogicalOperatorParser =>
         from leadingSpaces in Parse.WhiteSpace.Many()
-        from op in Parse.String("&&").Text().Or(Parse.String("||").Text())
+        from op in Parse.String(LogicalOperator.AndOperator.Operator()).Text().Or(Parse.String(LogicalOperator.OrOperator.Operator()).Text())
         from trailingSpaces in Parse.WhiteSpace.Many()
         select LogicalOperator.GetByOperatorString(op);
     
@@ -132,8 +132,8 @@ public static class FilterParser
     private static Parser<string> RawStringLiteralParser =>
         from openingQuotes in Parse.Regex("\"{3,}").Text()
         let count = openingQuotes.Length
-        from content in Parse.AnyChar.Except(Parse.Repeat(Parse.Char('"'), count)).Many().Text()
-        from closingQuotes in Parse.Repeat(Parse.Char('"'), count).Text()
+        from content in Parse.AnyChar.Except(Parse.Char('"').Repeat(count)).Many().Text()
+        from closingQuotes in Parse.Char('"').Repeat(count).Text()
         select content;
 
     private static Parser<string> RightSideValueParser =>
@@ -238,14 +238,14 @@ public static class FilterParser
 
     private static Parser<Expression> AndExprParser<T>(ParameterExpression parameter, IQueryKitProcessorConfiguration? config = null)
         => Parse.ChainOperator(
-            LogicalOperatorParser.Where(x => x.Name == "&&"),
+            LogicalOperatorParser.Where(x => x.Name == LogicalOperator.AndOperator.Operator()),
             AtomicExprParser<T>(parameter, config),
             (op, left, right) => op.GetExpression<T>(left, right)
         );
 
     private static Parser<Expression> OrExprParser<T>(ParameterExpression parameter, IQueryKitProcessorConfiguration? config = null)
         => Parse.ChainOperator(
-            LogicalOperatorParser.Where(x => x.Name == "||"),
+            LogicalOperatorParser.Where(x => x.Name == LogicalOperator.OrOperator.Operator()),
             AndExprParser<T>(parameter, config),
             (op, left, right) => op.GetExpression<T>(left, right)
         );
