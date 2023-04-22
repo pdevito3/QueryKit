@@ -36,11 +36,6 @@ public static class SortParser
         return sortExpressions;
     }
 
-    private static readonly Parser<string> Identifier =
-        from first in Parse.Letter.Once()
-        from rest in Parse.LetterOrDigit.XOr(Parse.Char('_')).Many()
-        select new string(first.Concat(rest).ToArray());
-
     private static SortExpressionInfo<T> CreateSortExpression<T>(string sortClause, IQueryKitProcessorConfiguration? config = null)
     {
         var parts = sortClause.Split();
