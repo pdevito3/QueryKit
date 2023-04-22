@@ -17,6 +17,9 @@ public static class SortParser
 
     public static List<SortExpressionInfo<T>> ParseSort<T>(string input, IQueryKitProcessorConfiguration? config = null)
     {
+        if(string.IsNullOrWhiteSpace(input))
+            return new List<SortExpressionInfo<T>>();
+        
         var sortClauses = input.Split(',');
 
         var sortExpressions = new List<SortExpressionInfo<T>>();
