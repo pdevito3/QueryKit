@@ -96,7 +96,7 @@ public class DatabaseFilteringTests : TestBase
 
         // Act
         var queryablePeople = testingServiceScope.DbContext().People;
-        var config = new QueryKitProcessorConfiguration(config =>
+        var config = new QueryKitConfiguration(config =>
         {
             config.Property<TestingPerson>(x => x.Email.Value).HasQueryName("email");
         });
@@ -126,7 +126,7 @@ public class DatabaseFilteringTests : TestBase
         var input = $"""PhysicalAddress.State == "{fakePersonOne.PhysicalAddress.State}" """;
 
         // Act
-        var config = new QueryKitProcessorConfiguration(config =>
+        var config = new QueryKitConfiguration(config =>
         {
             config.Property<TestingPerson>(x => x.PhysicalAddress.State); //.HasQueryName("PhysicalAddressPostalCode");
         });

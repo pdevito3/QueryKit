@@ -180,7 +180,7 @@ public class SortParserTests
     {
         var input = "OfficialTitle, Age desc";
     
-        var config = new QueryKitProcessorConfiguration(config =>
+        var config = new QueryKitConfiguration(config =>
         {
             config.Property<TestingPerson>(x => x.Title).HasQueryName("OfficialTitle");
         });
@@ -198,7 +198,7 @@ public class SortParserTests
     {
         var input = "PhysicalAddress.State";
     
-        var config = new QueryKitProcessorConfiguration(config =>
+        var config = new QueryKitConfiguration(config =>
         {
             config.Property<TestingPerson>(x => x.PhysicalAddress.State).HasQueryName("state");
         });
@@ -214,7 +214,7 @@ public class SortParserTests
     {
         var input = "PhysicalAddress.State";
     
-        var config = new QueryKitProcessorConfiguration(config =>
+        var config = new QueryKitConfiguration(config =>
         {
             config.Property<TestingPerson>(x => x.PhysicalAddress.State);
         });
@@ -230,7 +230,7 @@ public class SortParserTests
     {
         var input = "OfficialTitle, Age desc";
     
-        var config = new QueryKitProcessorConfiguration(config =>
+        var config = new QueryKitConfiguration(config =>
         {
             config.Property<TestingPerson>(x => x.Title)
                 .PreventSort()
@@ -248,7 +248,7 @@ public class SortParserTests
     {
         var input = "Title, Age desc";
     
-        var config = new QueryKitProcessorConfiguration(config =>
+        var config = new QueryKitConfiguration(config =>
         {
             config.Property<TestingPerson>(x => x.Title)
                 .PreventSort();

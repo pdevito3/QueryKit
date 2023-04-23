@@ -1,17 +1,17 @@
 namespace QueryKit;
 
-public interface IQueryKitProcessorConfiguration
+public interface IQueryKitConfiguration
 {
     QueryKitPropertyMappings PropertyMappings { get; }
     string? GetPropertyPathByQueryName(string? propPath);
     bool IsPropertySortable(string? propertyName);
 }
 
-public class QueryKitProcessorConfiguration : IQueryKitProcessorConfiguration
+public class QueryKitConfiguration : IQueryKitConfiguration
 {
     public QueryKitPropertyMappings PropertyMappings { get; }
 
-    public QueryKitProcessorConfiguration(Action<QueryKitPropertyMappings> configure)
+    public QueryKitConfiguration(Action<QueryKitPropertyMappings> configure)
     {
         PropertyMappings = new QueryKitPropertyMappings();
         configure(PropertyMappings);

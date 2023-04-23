@@ -15,7 +15,7 @@ public static class SortParser
     private const string Ascending = "asc";
     private const string Descending = "desc";
 
-    public static List<SortExpressionInfo<T>> ParseSort<T>(string input, IQueryKitProcessorConfiguration? config = null)
+    public static List<SortExpressionInfo<T>> ParseSort<T>(string input, IQueryKitConfiguration? config = null)
     {
         if(string.IsNullOrWhiteSpace(input))
             return new List<SortExpressionInfo<T>>();
@@ -36,7 +36,7 @@ public static class SortParser
         return sortExpressions;
     }
 
-    private static SortExpressionInfo<T> CreateSortExpression<T>(string sortClause, IQueryKitProcessorConfiguration? config = null)
+    private static SortExpressionInfo<T> CreateSortExpression<T>(string sortClause, IQueryKitConfiguration? config = null)
     {
         var parts = sortClause.Split();
 
@@ -83,7 +83,7 @@ public static class SortParser
         };
     }
 
-    private static Expression? CreateSortExpressionBody(Expression parameter, string propertyName, IQueryKitProcessorConfiguration? config)
+    private static Expression? CreateSortExpressionBody(Expression parameter, string propertyName, IQueryKitConfiguration? config)
     {
         var propertyPath = config?.GetPropertyPathByQueryName(propertyName) ?? propertyName;
         var propertyNames = propertyPath.Split('.');

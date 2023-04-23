@@ -2,7 +2,7 @@ namespace QueryKit;
 
 public static class QueryableExtensions
 {
-    public static IQueryable<T> ApplyQueryKitFilter<T>(this IQueryable<T> source, string filter, IQueryKitProcessorConfiguration? config = null)
+    public static IQueryable<T> ApplyQueryKitFilter<T>(this IQueryable<T> source, string filter, IQueryKitConfiguration? config = null)
     {
         if (string.IsNullOrWhiteSpace(filter))
         {
@@ -13,7 +13,7 @@ public static class QueryableExtensions
         return source.Where(expression);
     }
 
-    public static IOrderedQueryable<T> ApplyQueryKitSort<T>(this IQueryable<T> queryable, string sortExpression, IQueryKitProcessorConfiguration? config = null)
+    public static IOrderedQueryable<T> ApplyQueryKitSort<T>(this IQueryable<T> queryable, string sortExpression, IQueryKitConfiguration? config = null)
     {
         var sortLambdas = SortParser.ParseSort<T>(sortExpression, config);
 

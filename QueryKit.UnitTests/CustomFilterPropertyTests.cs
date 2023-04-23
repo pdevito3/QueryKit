@@ -24,7 +24,7 @@ public class CustomFilterPropertyTests
         var value = faker.Lorem.Word();
         var input = $"""state == "{value}" """;
     
-        var config = new QueryKitProcessorConfiguration(config =>
+        var config = new QueryKitConfiguration(config =>
         {
             config.Property<TestingPerson>(x => x.PhysicalAddress.State).HasQueryName("state");
         });
@@ -49,7 +49,7 @@ public class CustomFilterPropertyTests
         var value = faker.Lorem.Word();
         var input = $"""email == "{value}" """;
     
-        var config = new QueryKitProcessorConfiguration(config =>
+        var config = new QueryKitConfiguration(config =>
         {
             config.Property<TestingPerson>(x => x.Email).HasQueryName("email");
         });
@@ -64,7 +64,7 @@ public class CustomFilterPropertyTests
         var value = faker.Lorem.Word();
         var input = $"""special_title == "{value}" """;
 
-        var config = new QueryKitProcessorConfiguration(config =>
+        var config = new QueryKitConfiguration(config =>
         {
             config.Property<TestingPerson>(x => x.Title).HasQueryName("special_title");
         });
@@ -80,7 +80,7 @@ public class CustomFilterPropertyTests
         var guidValue = Guid.NewGuid();
         var input = $"""special_title == "{stringValue}" || identifier == "{guidValue}" """;
 
-        var config = new QueryKitProcessorConfiguration(config =>
+        var config = new QueryKitConfiguration(config =>
         {
             config.Property<TestingPerson>(x => x.Title).HasQueryName("special_title");
             config.Property<TestingPerson>(x => x.Id).HasQueryName("identifier");
@@ -97,7 +97,7 @@ public class CustomFilterPropertyTests
         var guidValue = Guid.NewGuid();
         var input = $"""special_title == "{stringValue}" || Id == "{guidValue}" """;
 
-        var config = new QueryKitProcessorConfiguration(config =>
+        var config = new QueryKitConfiguration(config =>
         {
             config.Property<TestingPerson>(x => x.Title).HasQueryName("special_title");
         });
@@ -112,7 +112,7 @@ public class CustomFilterPropertyTests
         var value = faker.Lorem.Word();
         var input = $"""SPECIALtitle == "{value}" """;
 
-        var config = new QueryKitProcessorConfiguration(config =>
+        var config = new QueryKitConfiguration(config =>
         {
             config.Property<TestingPerson>(x => x.Title).HasQueryName("specialtitle");
         });
@@ -128,7 +128,7 @@ public class CustomFilterPropertyTests
         var guidValue = Guid.NewGuid();
         var input = $"""special_title == "{stringValue}" || Id == "{guidValue}" """;
 
-        var config = new QueryKitProcessorConfiguration(config =>
+        var config = new QueryKitConfiguration(config =>
         {
             config.Property<TestingPerson>(x => x.Title).HasQueryName("special_title");
             config.Property<TestingPerson>(x => x.Id).PreventFilter();
@@ -145,7 +145,7 @@ public class CustomFilterPropertyTests
         var guidValue = Guid.NewGuid();
         var input = $"""special_title == "{stringValue}" || identifier == "{guidValue}" """;
 
-        var config = new QueryKitProcessorConfiguration(config =>
+        var config = new QueryKitConfiguration(config =>
         {
             config.Property<TestingPerson>(x => x.Title).HasQueryName("special_title");
             config.Property<TestingPerson>(x => x.Id).HasQueryName("identifier").PreventFilter();
@@ -162,7 +162,7 @@ public class CustomFilterPropertyTests
         var guidValue = Guid.NewGuid();
         var input = $"""Id {filterOperator} "{guidValue}" """;
 
-        var config = new QueryKitProcessorConfiguration(config =>
+        var config = new QueryKitConfiguration(config =>
         {
             config.Property<TestingPerson>(x => x.Id).PreventFilter();
         });

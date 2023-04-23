@@ -11,9 +11,9 @@ public static class GetPersonList
     {
         public readonly string FilterInput;
         public readonly string SortInput;
-        public readonly IQueryKitProcessorConfiguration QueryKitConfig;
+        public readonly IQueryKitConfiguration QueryKitConfig;
 
-        public Query(string filterInput, string sortInput, IQueryKitProcessorConfiguration queryKitConfig = default)
+        public Query(string filterInput, string sortInput, IQueryKitConfiguration queryKitConfig = default)
         {
             FilterInput = filterInput;
             SortInput = sortInput;
