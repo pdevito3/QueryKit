@@ -24,7 +24,13 @@ namespace QueryKit.WebApiTestProject.Migrations
                     favorite = table.Column<bool>(type: "boolean", nullable: true),
                     specific_date = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
                     time = table.Column<TimeOnly>(type: "time without time zone", nullable: true),
-                    email = table.Column<string>(type: "text", nullable: true)
+                    email = table.Column<string>(type: "text", nullable: true),
+                    physical_address_line1 = table.Column<string>(type: "text", nullable: false),
+                    physical_address_line2 = table.Column<string>(type: "text", nullable: false),
+                    physical_address_city = table.Column<string>(type: "text", nullable: false),
+                    physical_address_state = table.Column<string>(type: "text", nullable: false),
+                    physical_address_postal_code = table.Column<string>(type: "text", nullable: false),
+                    physical_address_country = table.Column<string>(type: "text", nullable: false)
                 },
                 constraints: table =>
                 {

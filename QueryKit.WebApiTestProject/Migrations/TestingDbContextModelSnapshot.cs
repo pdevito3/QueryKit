@@ -70,6 +70,57 @@ namespace QueryKit.WebApiTestProject.Migrations
 
                     b.ToTable("people", (string)null);
                 });
+
+            modelBuilder.Entity("QueryKit.WebApiTestProject.Entities.TestingPerson", b =>
+                {
+                    b.OwnsOne("QueryKit.WebApiTestProject.Entities.Address", "PhysicalAddress", b1 =>
+                        {
+                            b1.Property<Guid>("TestingPersonId")
+                                .HasColumnType("uuid")
+                                .HasColumnName("id");
+
+                            b1.Property<string>("City")
+                                .IsRequired()
+                                .HasColumnType("text")
+                                .HasColumnName("physical_address_city");
+
+                            b1.Property<string>("Country")
+                                .IsRequired()
+                                .HasColumnType("text")
+                                .HasColumnName("physical_address_country");
+
+                            b1.Property<string>("Line1")
+                                .IsRequired()
+                                .HasColumnType("text")
+                                .HasColumnName("physical_address_line1");
+
+                            b1.Property<string>("Line2")
+                                .IsRequired()
+                                .HasColumnType("text")
+                                .HasColumnName("physical_address_line2");
+
+                            b1.Property<string>("PostalCode")
+                                .IsRequired()
+                                .HasColumnType("text")
+                                .HasColumnName("physical_address_postal_code");
+
+                            b1.Property<string>("State")
+                                .IsRequired()
+                                .HasColumnType("text")
+                                .HasColumnName("physical_address_state");
+
+                            b1.HasKey("TestingPersonId");
+
+                            b1.ToTable("people");
+
+                            b1.WithOwner()
+                                .HasForeignKey("TestingPersonId")
+                                .HasConstraintName("fk_people_people_id");
+                        });
+
+                    b.Navigation("PhysicalAddress")
+                        .IsRequired();
+                });
 #pragma warning restore 612, 618
         }
     }

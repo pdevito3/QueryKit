@@ -13,11 +13,15 @@ public class FakeTestingPersonBuilder
         return this;
     }
 
-    public TestingPerson Build() => _baseTestingPerson;
-
     public FakeTestingPersonBuilder WithAge(int age)
     {
         _baseTestingPerson.Age = age;
+        return this;
+    }
+
+    public FakeTestingPersonBuilder WithEmail(string email)
+    {
+        _baseTestingPerson.Email = new EmailAddress(email);
         return this;
     }
 
@@ -26,4 +30,12 @@ public class FakeTestingPersonBuilder
         _baseTestingPerson.BirthMonth = value;
         return this;
     }
+    
+    public FakeTestingPersonBuilder WithPhysicalAddress(Address address)
+    {
+        _baseTestingPerson.PhysicalAddress = address;
+        return this;
+    }
+
+    public TestingPerson Build() => _baseTestingPerson;
 }
