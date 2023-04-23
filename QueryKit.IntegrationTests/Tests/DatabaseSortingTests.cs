@@ -4,6 +4,7 @@ using Bogus;
 using Fakes;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using WebApiTestProject.Entities;
 
 public class DatabaseSortingTests : TestBase
 {
@@ -55,7 +56,6 @@ public class DatabaseSortingTests : TestBase
     {
         // Arrange
         var testingServiceScope = new TestingServiceScope();
-        var faker = new Faker();
         var fakePersonOne = new FakeTestingPersonBuilder()
             .WithTitle("alpha")
             .WithAge(10)
@@ -78,6 +78,94 @@ public class DatabaseSortingTests : TestBase
         people.Count.Should().Be(2);
         people[0].Id.Should().Be(fakePersonTwo.Id);
         people[1].Id.Should().Be(fakePersonOne.Id);
+    }
+    
+    [Fact]
+    public async Task can_sort_with_child_props_using_ownsone()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var faker = new Faker();
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithPhysicalAddress(new Address(faker.Address.StreetAddress()
+                , faker.Address.SecondaryAddress()
+                , faker.Address.City()
+                , "az"
+                , faker.Address.ZipCode()
+                , faker.Address.Country()))
+            .Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder()
+            .WithPhysicalAddress(new Address(faker.Address.StreetAddress()
+                , faker.Address.SecondaryAddress()
+                , faker.Address.City()
+                , "zulu"
+                , faker.Address.ZipCode()
+                , faker.Address.Country()))
+            .Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+        
+        var input = $"PhysicalAddress.State desc";
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People
+            .Where(x => x.Id == fakePersonOne.Id || x.Id == fakePersonTwo.Id);
+        var appliedQueryable = queryablePeople.ApplyQueryKitSort(input);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert
+        people.Count.Should().Be(2);
+        people[0].Id.Should().Be(fakePersonTwo.Id);
+        people[1].Id.Should().Be(fakePersonOne.Id);
+    }
+    
+    [Fact]
+    public async Task can_sort_with_child_props_using_hasconversion()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithEmail("alpha")
+            .Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder()
+            .WithEmail("bravo")
+            .Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+        
+        // must use email desc because the HasConversion is on the EmailAddress class
+        var input = $"Email desc";
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People
+            .Where(x => x.Id == fakePersonOne.Id || x.Id == fakePersonTwo.Id);
+        var appliedQueryable = queryablePeople.ApplyQueryKitSort(input);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert
+        people.Count.Should().Be(2);
+        people[0].Id.Should().Be(fakePersonTwo.Id);
+        people[1].Id.Should().Be(fakePersonOne.Id);
+    }
+    
+    [Fact]
+    public async Task a_prop_with_hasconversion_must_match_that_configuration()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var fakePersonOne = new FakeTestingPersonBuilder().Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder().Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+        
+        // must use email desc because the HasConversion is on the EmailAddress class
+        var input = $"Email.Value desc";
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People
+            .Where(x => x.Id == fakePersonOne.Id || x.Id == fakePersonTwo.Id);
+        var appliedQueryable = queryablePeople.ApplyQueryKitSort(input);
+        var act = () => appliedQueryable.ToListAsync();
+
+        // Assert
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
     
     [Fact]

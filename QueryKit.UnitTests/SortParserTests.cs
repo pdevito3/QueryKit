@@ -175,7 +175,7 @@ public class SortParserTests
     }
     
     [Fact]
-    public void can_have_custom_child_prop_name()
+    public void can_have_custom_prop_name()
     {
         var input = "OfficialTitle, Age desc";
     
@@ -190,6 +190,38 @@ public class SortParserTests
         GetMemberName(sortExpression[1].Expression).Should().Be("Age");
         sortExpression[0].IsAscending.Should().BeTrue();
         sortExpression[1].IsAscending.Should().BeFalse();
+    }
+
+    [Fact]
+    public void can_have_custom_child_prop_name()
+    {
+        var input = "PhysicalAddress.State";
+    
+        var config = new QueryKitProcessorConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.PhysicalAddress.State).HasQueryName("state");
+        });
+        var sortExpression = SortParser.ParseSort<TestingPerson>(input, config);
+        
+        sortExpression.Should().HaveCount(1);
+        GetMemberName(sortExpression[0].Expression).Should().Be("PhysicalAddress.State");
+        sortExpression[0].IsAscending.Should().BeTrue();
+    }
+
+    [Fact]
+    public void can_have_child_prop_sort()
+    {
+        var input = "PhysicalAddress.State";
+    
+        var config = new QueryKitProcessorConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.PhysicalAddress.State);
+        });
+        var sortExpression = SortParser.ParseSort<TestingPerson>(input, config);
+        
+        sortExpression.Should().HaveCount(1);
+        GetMemberName(sortExpression[0].Expression).Should().Be("PhysicalAddress.State");
+        sortExpression[0].IsAscending.Should().BeTrue();
     }
     
     [Fact]
@@ -229,6 +261,11 @@ public class SortParserTests
 
     private string GetMemberName<T>(Expression<Func<T, object>>? expr)
     {
+        if (expr == null)
+        {
+            throw new ArgumentNullException(nameof(expr));
+        }
+
         var body = expr.Body;
 
         if (body is UnaryExpression unary)
@@ -236,6 +273,21 @@ public class SortParserTests
             body = unary.Operand;
         }
 
-        return (body as MemberExpression)?.Member.Name;
+        return GetMemberNameFromExpression(body);
+    }
+
+    private string GetMemberNameFromExpression(Expression expr)
+    {
+        if (expr is MemberExpression memberExpr)
+        {
+            if (memberExpr.Expression.NodeType == ExpressionType.MemberAccess)
+            {
+                return GetMemberNameFromExpression(memberExpr.Expression) + "." + memberExpr.Member.Name;
+            }
+
+            return memberExpr.Member.Name;
+        }
+
+        throw new ArgumentException("Invalid expression type", nameof(expr));
     }
 }
