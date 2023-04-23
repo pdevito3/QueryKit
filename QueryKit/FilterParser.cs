@@ -78,7 +78,14 @@ public static class FilterParser
                 {
                     var propertyInfo = GetPropertyInfo(expr.Type, pn);
                     var actualPropertyName = propertyInfo?.Name ?? pn;
-                    return Expression.PropertyOrField(expr, actualPropertyName);
+                    try
+                    {
+                        return Expression.PropertyOrField(expr, actualPropertyName);
+                    }
+                    catch
+                    {
+                        return Expression.Constant(true, typeof(bool));
+                    }
                 });
 
                 // Check if property is filterable
@@ -97,7 +104,14 @@ public static class FilterParser
                 var propertyInfo = GetPropertyInfo(expr.Type, propName);
                 var mappedPropertyInfo = config?.PropertyMappings?.GetPropertyInfoByQueryName(propName);
                 var actualPropertyName = mappedPropertyInfo?.Name ?? propertyInfo?.Name ?? propName;
-                return Expression.PropertyOrField(expr, actualPropertyName);
+                try
+                {
+                    return Expression.PropertyOrField(expr, actualPropertyName);
+                }
+                catch
+                {
+                    return Expression.Constant(true, typeof(bool));
+                }
             });
 
             // Check if nested property is filterable

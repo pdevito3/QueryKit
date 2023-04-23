@@ -1,5 +1,6 @@
 namespace QueryKit.UnitTests;
 
+using Bogus;
 using FluentAssertions;
 using WebApiTestProject.Entities;
 
@@ -393,5 +394,14 @@ public class FilterParserTests
         var input = """Age == 25""";
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
         filterExpression.ToString().Should().Be("x => (x.Age == 25)");
+    }
+    
+    [Fact]
+    public void can_handle_nonexistent_property()
+    {
+        var faker = new Faker();
+        var input = $"""{faker.Lorem.Word()} == 25""";
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
+        filterExpression.ToString().Should().Be("x => (True == True)");
     }
 }
