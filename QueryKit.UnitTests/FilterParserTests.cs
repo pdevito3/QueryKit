@@ -306,5 +306,92 @@ public class FilterParserTests
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
         filterExpression.ToString().Should().Be("x => (x.Email.Value == null)");
     }
-
+    
+    [Fact]
+    public void contains_can_be_case_insensitive()
+    {
+        var input = """Title @=* "lamb" """;
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
+        filterExpression.ToString().Should().Be("x => x.Title.ToLower().Contains(\"lamb\".ToLower())");
+    }
+    
+    [Fact]
+    public void not_equals_can_be_case_insensitive()
+    {
+        var input = """Title !=* "lamb" """;
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
+        filterExpression.ToString().Should().Be("x => (x.Title.ToLower() != \"lamb\".ToLower())");
+    }
+    
+    [Fact]
+    public void ends_with_works()
+    {
+        var input = """Title _-= "lamb" """;
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
+        filterExpression.ToString().Should().Be("x => x.Title.EndsWith(\"lamb\")");
+    }
+    
+    [Fact]
+    public void ends_with_can_be_case_insensitive()
+    {
+        var input = """Title _-=* "lamb" """;
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
+        filterExpression.ToString().Should().Be("x => x.Title.ToLower().EndsWith(\"lamb\".ToLower())");
+    }
+    
+    [Fact]
+    public void contains_is_case_sensitive()
+    {
+        var input = """Title @= "lamb" """;
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
+        filterExpression.ToString().Should().Be("x => x.Title.Contains(\"lamb\")");
+    }
+    
+    [Fact]
+    public void not_contains_works()
+    {
+        var input = """Title !@= "lamb" """;
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
+        filterExpression.ToString().Should().Be("x => Not(x.Title.Contains(\"lamb\"))");
+    }
+    
+    [Fact]
+    public void can_filter_bools()
+    {
+        var input = """Favorite == true""";
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
+        filterExpression.ToString().Should().Be("x => (x.Favorite == True)");
+    }
+    
+    [Fact]
+    public void can_filter_nullable_ints()
+    {
+        var input = """Age >= 25""";
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
+        filterExpression.ToString().Should().Be("x => (x.Age >= 25)");
+    }
+    
+    [Fact]
+    public void can_filter_nullable_ints_with_not_equal()
+    {
+        var input = """Age != 25""";
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
+        filterExpression.ToString().Should().Be("x => (x.Age != 25)");
+    }
+    
+    [Fact]
+    public void can_filter_with_comma()
+    {
+        var input = """Title == "lamb, lamb" """;
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
+        filterExpression.ToString().Should().Be("x => (x.Title == \"lamb, lamb\")");
+    }
+    
+    [Fact]
+    public void equals_doesnt_fail_with_non_string_types()
+    {
+        var input = """Age == 25""";
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
+        filterExpression.ToString().Should().Be("x => (x.Age == 25)");
+    }
 }
