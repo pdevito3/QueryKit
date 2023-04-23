@@ -227,14 +227,6 @@ public class FilterParserTests
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
         filterExpression.ToString().Should().Be(""""x => (x.SpecificDate == 7/1/2022 12:00:03 AM +00:00)"""");
     }
-
-    [Fact]
-    public void can_handle_datetime_comparison()
-    {
-        var input = """SpecificDate == 2022-07-01T00:00:03Z""";
-        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be("x => (x.SpecificDate == 7/1/2022 12:00:03 AM +00:00)");
-    }
     
     [Fact]
     public void can_handle_datetime()
