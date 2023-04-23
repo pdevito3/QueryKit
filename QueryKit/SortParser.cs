@@ -65,7 +65,16 @@ public static class SortParser
 
         var parameter = Expression.Parameter(typeof(T), "x");
         var sortExpressionBody = CreateSortExpressionBody(parameter, propertyName, config);
-
+        
+        if (sortExpressionBody == null) // Check if the property doesn't exist
+        {
+            return new SortExpressionInfo<T>
+            {
+                Expression = null,
+                IsAscending = true
+            };
+        }
+        
         var isAscending = direction == Ascending;
         return new SortExpressionInfo<T>
         {
@@ -74,7 +83,7 @@ public static class SortParser
         };
     }
 
-    private static Expression CreateSortExpressionBody(Expression parameter, string propertyName, IQueryKitProcessorConfiguration? config)
+    private static Expression? CreateSortExpressionBody(Expression parameter, string propertyName, IQueryKitProcessorConfiguration? config)
     {
         var propertyPath = config?.GetPropertyPathByQueryName(propertyName) ?? propertyName;
         var propertyNames = propertyPath.Split('.');
@@ -82,6 +91,10 @@ public static class SortParser
         var propertyExpression = propertyNames.Aggregate(parameter, (expr, propName) =>
         {
             var propertyInfo = GetPropertyInfo(expr.Type, propName);
+            if (propertyInfo == null) // Check if the property doesn't exist
+            {
+                return null;
+            }
             var actualPropertyName = propertyInfo?.Name ?? propName;
             return Expression.PropertyOrField(expr, actualPropertyName);
         });
@@ -89,7 +102,7 @@ public static class SortParser
         return propertyExpression;
     }
 
-    private static PropertyInfo GetPropertyInfo(Type type, string propertyName)
+    private static PropertyInfo? GetPropertyInfo(Type type, string propertyName)
     {
         return type.GetProperty(propertyName, BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance);
     }

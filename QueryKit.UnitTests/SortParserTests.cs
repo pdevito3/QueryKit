@@ -1,6 +1,7 @@
 namespace QueryKit.UnitTests;
 
 using System.Linq.Expressions;
+using Bogus;
 using FluentAssertions;
 using WebApiTestProject.Entities;
 
@@ -257,6 +258,28 @@ public class SortParserTests
         sortExpression.Should().HaveCount(1);
         GetMemberName(sortExpression[0].Expression).Should().Be("Age");
         sortExpression[0].IsAscending.Should().BeFalse();
+    }
+    
+    [Fact]
+    public void can_handle_nonexistent_property()
+    {
+        var faker = new Faker();
+        var input = $"""{faker.Lorem.Word()}""";
+        var sortExpression = SortParser.ParseSort<TestingPerson>(input);
+        sortExpression.Should().HaveCount(0);
+    }
+    
+    [Fact]
+    public void can_handle_nonexistent_property_with_others()
+    {
+        var faker = new Faker();
+        var input = $"""Title, {faker.Lorem.Word()}, Age desc""";
+        var sortExpression = SortParser.ParseSort<TestingPerson>(input);
+        sortExpression.Should().HaveCount(2);
+        GetMemberName(sortExpression[0].Expression).Should().Be("Title");
+        sortExpression[0].IsAscending.Should().BeTrue();
+        GetMemberName(sortExpression[1].Expression).Should().Be("Age");
+        sortExpression[1].IsAscending.Should().BeFalse();
     }
 
     private string GetMemberName<T>(Expression<Func<T, object>>? expr)
