@@ -12,7 +12,7 @@ using QueryKit.WebApiTestProject.Database;
 namespace QueryKit.WebApiTestProject.Migrations
 {
     [DbContext(typeof(TestingDbContext))]
-    [Migration("20230422235842_initial")]
+    [Migration("20230423013529_initial")]
     partial class initial
     {
         /// <inheritdoc />
@@ -59,6 +59,10 @@ namespace QueryKit.WebApiTestProject.Migrations
                     b.Property<DateTimeOffset?>("SpecificDate")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("specific_date");
+
+                    b.Property<DateTime>("SpecificDateTime")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("specific_date_time");
 
                     b.Property<TimeOnly?>("Time")
                         .HasColumnType("time without time zone")

@@ -9,6 +9,7 @@ public class TestingPerson
     public DateOnly? Date { get; set; }
     public bool? Favorite { get; set; }
     public DateTimeOffset? SpecificDate { get; set; }
+    public DateTime SpecificDateTime { get; set; }
     public TimeOnly? Time { get; set; }
     public Guid Id { get; set; } = Guid.NewGuid();
     public EmailAddress Email { get; set; }

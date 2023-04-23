@@ -23,6 +23,7 @@ namespace QueryKit.WebApiTestProject.Migrations
                     date = table.Column<DateOnly>(type: "date", nullable: true),
                     favorite = table.Column<bool>(type: "boolean", nullable: true),
                     specific_date = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
+                    specific_date_time = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     time = table.Column<TimeOnly>(type: "time without time zone", nullable: true),
                     email = table.Column<string>(type: "text", nullable: true),
                     physical_address_line1 = table.Column<string>(type: "text", nullable: false),

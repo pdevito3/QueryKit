@@ -57,6 +57,10 @@ namespace QueryKit.WebApiTestProject.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("specific_date");
 
+                    b.Property<DateTime>("SpecificDateTime")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("specific_date_time");
+
                     b.Property<TimeOnly?>("Time")
                         .HasColumnType("time without time zone")
                         .HasColumnName("time");

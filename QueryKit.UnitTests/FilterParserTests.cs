@@ -212,6 +212,22 @@ public class FilterParserTests
     }
 
     [Fact]
+    public void can_handle_date_only()
+    {
+        var input = """Date == 2022-07-01""";
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
+        filterExpression.ToString().Should().Be(""""x => (x.Date == 7/1/2022)"""");
+    }
+    
+    [Fact]
+    public void can_handle_date_time_offset()
+    {
+        var input = """SpecificDate == 2022-07-01T00:00:03Z""";
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
+        filterExpression.ToString().Should().Be(""""x => (x.SpecificDate == 7/1/2022 12:00:03 AM +00:00)"""");
+    }
+
+    [Fact]
     public void can_handle_datetime_comparison()
     {
         var input = """SpecificDate == 2022-07-01T00:00:03Z""";
@@ -219,6 +235,30 @@ public class FilterParserTests
         filterExpression.ToString().Should().Be("x => (x.SpecificDate == 7/1/2022 12:00:03 AM +00:00)");
     }
     
+    [Fact]
+    public void can_handle_datetime()
+    {
+        var input = """SpecificDateTime == 2022-07-01T00:00:03""";
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
+        filterExpression.ToString().Should().Be(""""x => (x.SpecificDateTime == 7/1/2022 12:00:03 AM)"""");
+    }
+
+    [Fact]
+    public void can_handle_datetime_comparison_with_timezone()
+    {
+        var input = """SpecificDate == 2022-07-01T00:00:03+01:00""";
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
+        filterExpression.ToString().Should().Be("x => (x.SpecificDate == 7/1/2022 12:00:03 AM +01:00)");
+    }
+    
+    [Fact]
+    public void can_handle_time_only()
+    {
+        var input = "Time == 12:30:00";
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
+        filterExpression.ToString().Should().Be("x => (x.Time == 12:30 PM)");
+    }
+
     [Fact]
     public void can_handle_childproperty()
     {

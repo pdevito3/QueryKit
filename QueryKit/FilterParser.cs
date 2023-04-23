@@ -126,7 +126,13 @@ public static class FilterParser
         => Parse.Char('"').Then(_ => Parse.AnyChar.Except(Parse.Char('"')).Many().Text().Then(innerValue => Parse.Char('"').Return(innerValue)));
 
     private static Parser<string> TimeFormatParser => Parse.Regex(@"\d{2}:\d{2}:\d{2}").Text();
-    private static Parser<string> DateTimeFormatParser => Parse.Regex(@"\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}Z)?").Text();
+    private static Parser<string> DateTimeFormatParser => 
+        from dateFormat in Parse.Regex(@"\d{4}-\d{2}-\d{2}").Text()
+        from timeFormat in Parse.Regex(@"T\d{2}:\d{2}:\d{2}").Text().Optional().Select(x => x.GetOrElse(""))
+        from timeZone in Parse.Regex(@"(Z|[+-]\d{2}(:\d{2})?)").Text().Optional().Select(x => x.GetOrElse(""))
+        from millis in Parse.Regex(@"\.\d{3}").Text().Optional().Select(x => x.GetOrElse(""))
+        select dateFormat + timeFormat + timeZone + millis;
+
     private static Parser<string> GuidFormatParser => Parse.Regex(@"[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}").Text();
     
     private static Parser<string> RawStringLiteralParser =>
