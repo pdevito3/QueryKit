@@ -7,19 +7,43 @@ using WebApiTestProject.Entities;
 
 public class CustomFilterPropertyTests
 {
+    [Fact]
+    public void can_have_child_prop_name_ownsone()
+    {
+        var faker = new Faker();
+        var value = faker.Lorem.Word();
+        var input = $"""PhysicalAddress.State == "{value}" """;
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
+        filterExpression.ToString().Should().Be($"""x => (x.PhysicalAddress.State == "{value}")""");
+    }
     
     [Fact]
-    public void can_have_child_prop_name()
+    public void can_have_custom_child_prop_name_ownsone()
+    {
+        var faker = new Faker();
+        var value = faker.Lorem.Word();
+        var input = $"""state == "{value}" """;
+    
+        var config = new QueryKitProcessorConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.PhysicalAddress.State).HasQueryName("state");
+        });
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+        filterExpression.ToString().Should().Be($"""x => (x.PhysicalAddress.State == "{value}")""");
+    }
+    
+    [Fact(Skip = "Will need something like this if i want to support HasConversion in efcore.")]
+    public void can_have_child_prop_name_for_efcore_HasConversion()
     {
         var faker = new Faker();
         var value = faker.Lorem.Word();
         var input = $"""Email.Value == "{value}" """;
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be($"""x => (x.Email.Value == "{value}")""");
+        filterExpression.ToString().Should().Be($"""x => (x.Email == "{value}")""");
     }
     
-    [Fact]
-    public void can_have_custom_child_prop_name()
+    [Fact(Skip = "Will need something like this if i want to support HasConversion in efcore.")]
+    public void can_have_custom_child_prop_name_for_efcore_HasConversion()
     {
         var faker = new Faker();
         var value = faker.Lorem.Word();
@@ -27,10 +51,10 @@ public class CustomFilterPropertyTests
     
         var config = new QueryKitProcessorConfiguration(config =>
         {
-            config.Property<TestingPerson>(x => x.Email.Value).HasQueryName("email");
+            config.Property<TestingPerson>(x => x.Email).HasQueryName("email");
         });
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
-        filterExpression.ToString().Should().Be($"""x => (x.Email.Value == "{value}")""");
+        filterExpression.ToString().Should().Be($"""x => (x.Email == "{value}")""");
     }
     
     [Fact]
