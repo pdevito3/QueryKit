@@ -1,6 +1,6 @@
 # QueryKit 🎛️
 
-QueryKit is a .NET library that makes it easier to filter and sort data by providing a fluent and intuitive syntax. It's inspired by the [Sieve](https://github.com/Biarity/Sieve)  library but with some differences.
+QueryKit is a .NET library that makes it easier to query your data by providing a fluent and intuitive syntax for filtering and sorting. It's inspired by the [Sieve](https://github.com/Biarity/Sieve)  library but with some differences.
 
 ## Getting Started
 
@@ -79,6 +79,12 @@ var input = """FirstName == "Jane" && Age < 10""";
 var input = """FirstName == "Jane" || FirstName == "John" """;
 ```
 
+Additionally, you can use `^^` for an `in` operator. You can add an `*` and use `^^*` for case-insensitivity as well:
+
+```c#
+var input = """(Age ^^ [20, 30, 40]) && (BirthMonth ^^* ["January", "February", "March"]) || (Id ^^ ["6d623e92-d2cf-4496-a2df-f49fa77328ee"])""";
+```
+
 ### Order of Operations
 
 You can use order of operation with parentheses like this:
@@ -105,9 +111,6 @@ There's a wide variety of comparison operators that use the same base syntax as 
 | Does Not End With     | !_-=     | !_-=*                     |
 | Contains              | @=       | @=*                       |
 | Does Not Contain      | !@=      | !@=*                      |
-
->**Note**
->🚧 the `in` operator is coming soon
 
 ### Filtering Notes
 
