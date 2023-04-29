@@ -139,6 +139,7 @@ public static class FilterParser
     private static Parser<string> DoubleQuoteParser
         => Parse.Char('"').Then(_ => Parse.AnyChar.Except(Parse.Char('"')).Many().Text().Then(innerValue => Parse.Char('"').Return(innerValue)));
 
+
     private static Parser<string> TimeFormatParser => Parse.Regex(@"\d{2}:\d{2}:\d{2}").Text();
     private static Parser<string> DateTimeFormatParser => 
         from dateFormat in Parse.Regex(@"\d{4}-\d{2}-\d{2}").Text()
@@ -215,8 +216,6 @@ public static class FilterParser
                 return Expression.Constant(null, leftExpr.Type);
             }
 
-            right = EscapeDoubleQuotesForStrings(right, targetType);
-
             if (targetType == typeof(bool) && !bool.TryParse(right, out _))
             {
                 return Expression.Constant(true, typeof(bool));
@@ -244,16 +243,6 @@ public static class FilterParser
         }
 
         return targetType;
-    }
-
-    private static string EscapeDoubleQuotesForStrings(string right, Type targetType)
-    {
-        if (targetType == typeof(string))
-        {
-            right = right.Replace("\"", "\\\"");
-        }
-
-        return right;
     }
 
     private static Parser<Expression> AndExprParser<T>(ParameterExpression parameter, IQueryKitConfiguration? config = null)

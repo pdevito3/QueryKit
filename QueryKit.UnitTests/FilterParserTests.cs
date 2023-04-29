@@ -10,11 +10,10 @@ public class FilterParserTests
     public void escaped_double_quote_with_more_than_3_double_quotes()
     {
         var input = """""""""Title == """"lamb is great on a "gee-ro" not a "gy-ro" sandwich"""" """"""""";
-        var temp = """"Title = ""gyro"" """";
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
         var asString = filterExpression.ToString();
         asString.Should()
-            .Be(""""x => (x.Title == "lamb is great on a \"gee-ro\" not a \"gy-ro\" sandwich")"""");
+            .Be(""""x => (x.Title == "lamb is great on a "gee-ro" not a "gy-ro" sandwich")"""");
     }
     
     [Fact]
@@ -25,7 +24,7 @@ public class FilterParserTests
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
         var asString = filterExpression.ToString();
         asString.Should()
-            .Be(""""x => (x.Title == "lamb is great on a \"gee-ro\" not a \"gy-ro\" sandwich")"""");
+            .Be(""""x => (x.Title == "lamb is great on a "gee-ro" not a "gy-ro" sandwich")"""");
     }
     
     [Fact]
