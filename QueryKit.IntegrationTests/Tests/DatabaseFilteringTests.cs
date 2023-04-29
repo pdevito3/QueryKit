@@ -322,4 +322,23 @@ public class DatabaseFilteringTests : TestBase
         people.FirstOrDefault(x => x.Id == fakePersonOne.Id).Should().NotBeNull();
         people.FirstOrDefault(x => x.Id == fakePersonTwo.Id).Should().BeNull();
     }
+
+    [Fact]
+    public async Task can_handle_case_sensitive_in_for_string()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var fakePersonOne = new FakeTestingPersonBuilder().Build();
+        await testingServiceScope.InsertAsync(fakePersonOne);
+
+        var input = $"""Title ^^ ["{fakePersonOne.Title.ToUpper()}"]""";
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+        
+        // Assert
+        people.FirstOrDefault(x => x.Id == fakePersonOne.Id).Should().BeNull();
+    }
 }
