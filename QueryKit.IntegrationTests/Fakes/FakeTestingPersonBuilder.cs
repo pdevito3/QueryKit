@@ -37,5 +37,29 @@ public class FakeTestingPersonBuilder
         return this;
     }
 
+    public FakeTestingPersonBuilder WithId(Guid newGuid)
+    {
+        _baseTestingPerson.Id = newGuid;
+        return this;
+    }
+
+    public FakeTestingPersonBuilder WithRating(decimal rating)
+    {
+        _baseTestingPerson.Rating = rating;
+        return this;
+    }
+
+    public FakeTestingPersonBuilder WithSpecificDate(DateTimeOffset? dateTime)
+    {
+        _baseTestingPerson.SpecificDate = dateTime;
+        return this;
+    }
+
+    public FakeTestingPersonBuilder WithDate(DateOnly? dateTime)
+    {
+        _baseTestingPerson.Date = dateTime;
+        return this;
+    }
+
     public TestingPerson Build() => _baseTestingPerson;
 }
