@@ -1,7 +1,6 @@
 namespace QueryKit.Operators;
 
 using System.Linq.Expressions;
-using System.Reflection;
 using Ardalis.SmartEnum;
 
 public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
@@ -293,7 +292,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         public override Expression GetExpression<T>(Expression left, Expression right)
         {
             var leftType = left.Type;
-            
+        
             if (right is NewArrayExpression newArrayExpression)
             {
                 var listType = typeof(List<>).MakeGenericType(leftType);
@@ -312,8 +311,21 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
                 .MakeGenericType(leftType)
                 .GetMethod("Contains");
 
-            return Expression.Call(right, containsMethod, left
-            );
+            if (CaseInsensitive && leftType == typeof(string))
+            {
+                var listType = typeof(List<string>);
+                var toLowerList = Activator.CreateInstance(listType);
+            
+                var originalList = ((ConstantExpression)right).Value as IEnumerable<string>;
+                foreach (var value in originalList)
+                {
+                    listType.GetMethod("Add").Invoke(toLowerList, new[] { value.ToLower() });
+                }
+                right = Expression.Constant(toLowerList, listType);
+                left = Expression.Call(left, typeof(string).GetMethod("ToLower", Type.EmptyTypes));
+            }
+
+            return Expression.Call(right, containsMethod, left);
         }
     }
 }
