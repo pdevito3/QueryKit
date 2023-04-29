@@ -37,6 +37,7 @@ public static class FilterParser
                 .Or(Parse.String(ComparisonOperator.NotContainsOperator().Operator()).Text())
                 .Or(Parse.String(ComparisonOperator.NotStartsWithOperator().Operator()).Text())
                 .Or(Parse.String(ComparisonOperator.NotEndsWithOperator().Operator()).Text())
+                .Or(Parse.String(ComparisonOperator.InOperator().Operator()).Text())
         from caseInsensitive in Parse.Char('*').Optional()
         select ComparisonOperator.GetByOperatorString(op, caseInsensitive.IsDefined);
 
@@ -168,8 +169,20 @@ public static class FilterParser
             .XOr(Parse.Decimal)
             .XOr(Parse.Number)
             .XOr(RawStringLiteralParser.Or(DoubleQuoteParser))
+            .XOr(SquareBracketParser) 
         from trailingSpaces in Parse.WhiteSpace.Many()
         select atSign.IsDefined ? "@" + value : value;
+    
+    private static Parser<string> SquareBracketParser =>
+        from openingBracket in Parse.Char('[')
+        from content in DoubleQuoteParser
+            .Or(GuidFormatParser)
+            .Or(Parse.Decimal)
+            .Or(Parse.Number)
+            .Or(Identifier)
+            .DelimitedBy(Parse.Char(',').Token())
+        from closingBracket in Parse.Char(']')
+        select "[" + string.Join(",", content) + "]";
 
     private static Parser<Expression> AtomicExprParser<T>(ParameterExpression parameter, IQueryKitConfiguration? config = null)
         => ComparisonExprParser<T>(parameter, config)
@@ -216,11 +229,31 @@ public static class FilterParser
                 return Expression.Constant(null, leftExpr.Type);
             }
 
-            if (targetType == typeof(bool) && !bool.TryParse(right, out _))
+            if (right.StartsWith("[") && right.EndsWith("]"))
             {
-                return Expression.Constant(true, typeof(bool));
+                var values = right.Trim('[', ']').Split(',').Select(x => x.Trim()).ToList();
+                var elementType = targetType.IsArray ? targetType.GetElementType() : targetType;
+            
+                var expressions = values.Select(x =>
+                {
+                    if (elementType == typeof(string) && x.StartsWith("\"") && x.EndsWith("\""))
+                    {
+                        x = x.Trim('"');
+                    }
+            
+                    var convertedValue = TypeConversionFunctions[elementType](x);
+                    return Expression.Constant(convertedValue, elementType);
+                }).ToArray();
+            
+                var newArrayExpression = Expression.NewArrayInit(elementType, expressions);
+                return newArrayExpression;
             }
 
+            if (targetType == typeof(string))
+            {
+                right = right.Trim('"');
+            }
+            
             var convertedValue = conversionFunction(right);
 
             if (targetType == typeof(Guid))

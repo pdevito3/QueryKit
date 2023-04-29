@@ -1,6 +1,7 @@
 namespace QueryKit.Operators;
 
 using System.Linq.Expressions;
+using System.Reflection;
 using Ardalis.SmartEnum;
 
 public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
@@ -17,6 +18,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
     public static ComparisonOperator CaseSensitiveNotContainsOperator = new NotContainsType();
     public static ComparisonOperator CaseSensitiveNotStartsWithOperator = new NotStartsWithType();
     public static ComparisonOperator CaseSensitiveNotEndsWithOperator = new NotEndsWithType();
+    public static ComparisonOperator CaseSensitiveInOperator = new InType();
     
     public static ComparisonOperator EqualsOperator(bool caseInsensitive = false) => new EqualsType(caseInsensitive);
     public static ComparisonOperator NotEqualsOperator(bool caseInsensitive = false) => new NotEqualsType(caseInsensitive);
@@ -30,6 +32,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
     public static ComparisonOperator NotContainsOperator(bool caseInsensitive = false) => new NotContainsType(caseInsensitive);
     public static ComparisonOperator NotStartsWithOperator(bool caseInsensitive = false) => new NotStartsWithType(caseInsensitive);
     public static ComparisonOperator NotEndsWithOperator(bool caseInsensitive = false) => new NotEndsWithType(caseInsensitive);
+    public static ComparisonOperator InOperator(bool caseInsensitive = false) => new InType(caseInsensitive);
 
     
     public static ComparisonOperator GetByOperatorString(string op, bool caseInsensitive = false)
@@ -277,6 +280,40 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
             }
             
             return Expression.Not(Expression.Call(left, typeof(string).GetMethod("EndsWith", new[] { typeof(string) }), right));
+        }
+    }
+    
+    private class InType : ComparisonOperator
+    {
+        public InType(bool caseInsensitive = false) : base("^^", 12, caseInsensitive)
+        {
+        }
+
+        public override string Operator() => Name;
+        public override Expression GetExpression<T>(Expression left, Expression right)
+        {
+            var leftType = left.Type;
+            
+            if (right is NewArrayExpression newArrayExpression)
+            {
+                var listType = typeof(List<>).MakeGenericType(leftType);
+                var list = Activator.CreateInstance(listType);
+
+                foreach (var value in newArrayExpression.Expressions)
+                {
+                    listType.GetMethod("Add").Invoke(list, new[] { ((ConstantExpression)value).Value });
+                }
+
+                right = Expression.Constant(list, listType);
+            }
+
+            // Get the Contains method with the correct generic type
+            var containsMethod = typeof(ICollection<>)
+                .MakeGenericType(leftType)
+                .GetMethod("Contains");
+
+            return Expression.Call(right, containsMethod, left
+            );
         }
     }
 }

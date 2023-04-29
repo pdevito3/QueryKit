@@ -5,7 +5,9 @@ using WebApiTestProject.Entities;
 
 public class FakeTestingPersonBuilder
 {
-    private readonly TestingPerson _baseTestingPerson = new AutoFaker<TestingPerson>().Generate();
+    private readonly TestingPerson _baseTestingPerson = new AutoFaker<TestingPerson>()
+        .RuleFor(x => x.Title, faker => faker.Lorem.Sentence())
+        .Generate();
     
     public FakeTestingPersonBuilder WithTitle(string title)
     {

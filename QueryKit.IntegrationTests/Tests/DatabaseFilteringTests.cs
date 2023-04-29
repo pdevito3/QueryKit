@@ -226,4 +226,78 @@ public class DatabaseFilteringTests : TestBase
         people[0].Id.Should().Be(fakePersonOne.Id);
         people[0].Title.Should().Be(fakePersonOne.Title);
     }
+
+    [Fact]
+    public async Task can_handle_in_for_int()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithAge(22)
+            .Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder()
+            .WithAge(60)
+            .Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+
+        var input = """Age ^^ [22, 30, 40]""";
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+        
+        // Assert
+        people.Count.Should().BeGreaterOrEqualTo(1);
+        people.FirstOrDefault(x => x.Id == fakePersonOne.Id).Should().NotBeNull();
+        people.FirstOrDefault(x => x.Id == fakePersonTwo.Id).Should().BeNull();
+    }
+
+    [Fact]
+    public async Task can_handle_in_for_guid()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithAge(22)
+            .Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder()
+            .WithAge(60)
+            .Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+
+        var input = $"""Id ^^ ["{fakePersonOne.Id.ToString()}"]""";
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+        
+        // Assert
+        people.Count.Should().BeGreaterOrEqualTo(1);
+        people.FirstOrDefault(x => x.Id == fakePersonOne.Id).Should().NotBeNull();
+        people.FirstOrDefault(x => x.Id == fakePersonTwo.Id).Should().BeNull();
+    }
+
+    [Fact]
+    public async Task can_handle_in_for_string()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var fakePersonOne = new FakeTestingPersonBuilder().Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder().Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+
+        var input = $"""Title ^^ ["{fakePersonOne.Title}"]""";
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+        
+        // Assert
+        people.Count.Should().BeGreaterOrEqualTo(1);
+        people.FirstOrDefault(x => x.Id == fakePersonOne.Id).Should().NotBeNull();
+        people.FirstOrDefault(x => x.Id == fakePersonTwo.Id).Should().BeNull();
+    }
 }
