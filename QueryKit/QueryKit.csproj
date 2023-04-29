@@ -4,7 +4,22 @@
         <TargetFramework>net7.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+        <PackageId>QueryKit</PackageId>
+        <PackageTags>QueryKit</PackageTags>
+        <Version>0.1.0</Version>
+        <Authors>Paul DeVito</Authors>
+        <Summary>QueryKit is a .NET library that makes it easier to query your data by providing a fluent and intuitive syntax for filtering and sorting.</Summary>
+        <Description>QueryKit is a .NET library that makes it easier to query your data by providing a fluent and intuitive syntax for filtering and sorting.</Description>
+        <Repository>https://github.com/pdevito3/QueryKit</Repository>
+
+        <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <PublishRepositoryUrl>true</PublishRepositoryUrl>
     </PropertyGroup>
+    
+    <ItemGroup>
+        <None Include="..\README.md" Pack="true" PackagePath="" Visible="False" />
+    </ItemGroup>
 
     <ItemGroup>
         <PackageReference Include="Ardalis.SmartEnum" Version="7.0.0" />
