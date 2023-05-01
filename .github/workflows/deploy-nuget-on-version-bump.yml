@@ -35,11 +35,16 @@ jobs:
       - name: Check for Version Changes
         run: |
           git fetch origin main
-          VERSION_CHANGED=$(git diff origin/main HEAD --name-only -- 'QueryKit/*.csproj' | xargs -I{} grep -Eo '<Version>([0-9]+\.){2}[0-9]+<\/Version>' {} | grep -Eo '([0-9]+\.){2}[0-9]+')
-          if [ -n "$VERSION_CHANGED" ]; then
-            echo "version_changed=true" >> $GITHUB_ENV
+          CS_PROJ_CHANGED=$(git diff origin/main HEAD --name-only -- 'QueryKit/*.csproj')
+          if [ -n "$CS_PROJ_CHANGED" ]; then
+            VERSION_CHANGED=$(echo "$CS_PROJ_CHANGED" | xargs -I{} grep -Eo '<Version>([0-9]+\.){2}[0-9]+<\/Version>' {} | grep -Eo '([0-9]+\.){2}[0-9]+')
+            if [ -n "$VERSION_CHANGED" ]; then
+              echo "version_changed=true" >> $GITHUB_ENV
+            else
+              echo "No version changes in QueryKit.csproj file. Skipping deployment."
+            fi
           else
-            echo "No version changes in QueryKit.csproj file. Skipping deployment."
+            echo "No changes to QueryKit.csproj file. Skipping deployment."
           fi
 
       - name: Publish NuGet Package
