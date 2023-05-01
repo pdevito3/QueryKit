@@ -189,7 +189,20 @@ public class EmailAddress : ValueObject
 }
 ```
 
-It might have an EF Config like this:
+To actually use the nested properties, you can do something like this:
+
+```c#
+var input = $"""Email.Value == "{value}" """;
+
+// or with an alias...
+var input = $"""email == "hello@gmail.com" """;
+var config = new QueryKitConfiguration(config =>
+{
+    config.Property<SpecialPerson>(x => x.Email.Value).HasQueryName("email");
+});
+```
+
+Note, with EF core, your config might look like this:
 
 ```c#
 public sealed class PersonConfiguration : IEntityTypeConfiguration<SpecialPerson>
@@ -215,21 +228,6 @@ public sealed class PersonConfiguration : IEntityTypeConfiguration<SpecialPerson
 
 > **Warning**
 > EF properties configured with `HasConversion` are not supported at this time -- if this is a blocker for you, i'd love to hear your use case
-
-To actually use the nested properties, you can do something like this:
-
-```c#
-var input = $"""Email.Value == "{value}" """;
-
-// or with an alias...
-var input = $"""email == "hello@gmail.com" """;
-var config = new QueryKitConfiguration(config =>
-{
-    config.Property<SpecialPerson>(x => x.Email.Value).HasQueryName("email");
-});
-```
-
-
 
 ## Sorting
 
