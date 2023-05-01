@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'QueryKit/*.csproj'
 
 jobs:
   build-and-deploy:
@@ -21,22 +23,26 @@ jobs:
         run: dotnet restore
 
       - name: Build
-        run: dotnet build --configuration Release
+        run: dotnet build --configuration Release --no-restore
 
       - name: Get Version
         id: get_version
-        run: echo "::set-output name=version::$(dotnet list package | grep -Eo '([0-9]+\.){2}[0-9]+')"
+        run: echo "version=$(cat QueryKit/*.csproj | grep -Eo '<Version>([0-9]+\.){2}[0-9]+<\/Version>' | grep -Eo '([0-9]+\.){2}[0-9]+')" >> $GITHUB_ENV
 
       - name: Check for Version Changes
         id: version_changed
         run: |
-          if [ "${{ github.event_name }}" = "push" ] && git diff --quiet HEAD~1 HEAD -- QueryKit.csproj; then
-            echo "No changes to QueryKit.csproj file. Skipping deployment."
+          git fetch origin main
+          VERSION_CHANGED=$(git diff origin/main HEAD --name-only -- 'QueryKit/*.csproj' | xargs -I{} grep -Eo '<Version>([0-9]+\.){2}[0-9]+<\/Version>' {} | grep -Eo '([0-9]+\.){2}[0-9]+')
+          if [ -z "$VERSION_CHANGED" ]; then
+            echo "No version changes in QueryKit.csproj file. Skipping deployment."
             exit 0
+          else
+            echo "version_changed=true" >> $GITHUB_ENV
           fi
 
       - name: Publish NuGet Package
-        if: steps.version_changed.outputs.version != ''
-        env:
-          NUGET_API_KEY_QUERYKIT: ${{ secrets.NUGET_API_KEY_QUERYKIT }}
-        run: dotnet nuget push ./QueryKit/bin/Release/*.nupkg --api-key $NUGET_API_KEY_QUERYKIT --source https://api.nuget.org/v3/index.json
+        if: env.version_changed == 'true'
+        run: |
+          dotnet pack --configuration Release --no-restore --no-build --output ./nupkgs
+          dotnet nuget push ./nupkgs/*.nupkg --api-key ${{ secrets.NUGET_API_KEY_QUERYKIT }} --source https://api.nuget.org/v3/index.json
