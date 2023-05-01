@@ -19,7 +19,7 @@ public class QueryKitPropertyMappings
 
         _propertyMappings[fullPath] = propertyInfo;
 
-        return new QueryKitPropertyMapping<TModel>(propertyInfo, this);
+        return new QueryKitPropertyMapping<TModel>(propertyInfo);
     }
 
     private static string GetFullPropertyPath(Expression? expression)
@@ -57,12 +57,10 @@ public class QueryKitPropertyMappings
 public class QueryKitPropertyMapping<TModel>
 {
     private readonly QueryKitPropertyInfo _propertyInfo;
-    private readonly QueryKitPropertyMappings _mappings;
 
-    public QueryKitPropertyMapping(QueryKitPropertyInfo propertyInfo, QueryKitPropertyMappings mappings)
+    public QueryKitPropertyMapping(QueryKitPropertyInfo propertyInfo)
     {
         _propertyInfo = propertyInfo;
-        _mappings = mappings;
     }
 
     public QueryKitPropertyMapping<TModel> PreventFilter()

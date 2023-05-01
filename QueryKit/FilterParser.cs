@@ -9,26 +9,24 @@ using Sprache;
 
 public static class FilterParser
 {
-    public static Expression<Func<T, bool>> ParseFilter<T>(string input, IQueryKitConfiguration? config = null)
+    internal static Expression<Func<T, bool>> ParseFilter<T>(string input, IQueryKitConfiguration? config = null)
     {
         var parameter = Expression.Parameter(typeof(T), "x");
         var expr = ExprParser<T>(parameter, config).End().Parse(input);
         return Expression.Lambda<Func<T, bool>>(expr, parameter);
     }
 
-    internal static readonly Parser<string> Identifier =
+    private static readonly Parser<string> Identifier =
         from first in Parse.Letter.Once()
         from rest in Parse.LetterOrDigit.XOr(Parse.Char('_')).Many()
         select new string(first.Concat(rest).ToArray());
 
-    public static Parser<ComparisonOperator> ComparisonOperatorParser =>
+    private static Parser<ComparisonOperator> ComparisonOperatorParser =>
         from op in
             Parse.String(ComparisonOperator.EqualsOperator().Operator()).Text()
                 .Or(Parse.String(ComparisonOperator.NotEqualsOperator().Operator()).Text())
                 .Or(Parse.String(ComparisonOperator.GreaterThanOrEqualOperator().Operator()).Text())
                 .Or(Parse.String(ComparisonOperator.LessThanOrEqualOperator().Operator()).Text())
-                
-                // > and < must come after >= and <=
                 .Or(Parse.String(ComparisonOperator.GreaterThanOperator().Operator()).Text())
                 .Or(Parse.String(ComparisonOperator.LessThanOperator().Operator()).Text())
                 .Or(Parse.String(ComparisonOperator.ContainsOperator().Operator()).Text())
@@ -89,7 +87,6 @@ public static class FilterParser
                     }
                 });
 
-                // Check if property is filterable
                 var propertyConfig = config?.PropertyMappings?.GetPropertyInfo(fullPropPath);
                 if (propertyConfig != null && !propertyConfig.CanFilter)
                 {
@@ -115,7 +112,6 @@ public static class FilterParser
                 }
             });
 
-            // Check if nested property is filterable
             var nestedPropertyConfig = config?.PropertyMappings?.GetPropertyInfo(leftList.Last());
             if (nestedPropertyConfig != null && !nestedPropertyConfig.CanFilter)
             {

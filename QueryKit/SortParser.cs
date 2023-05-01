@@ -15,7 +15,7 @@ public static class SortParser
     private const string Ascending = "asc";
     private const string Descending = "desc";
 
-    public static List<SortExpressionInfo<T>> ParseSort<T>(string input, IQueryKitConfiguration? config = null)
+    internal static List<SortExpressionInfo<T>> ParseSort<T>(string input, IQueryKitConfiguration? config = null)
     {
         if(string.IsNullOrWhiteSpace(input))
             return new List<SortExpressionInfo<T>>();
@@ -66,7 +66,7 @@ public static class SortParser
         var parameter = Expression.Parameter(typeof(T), "x");
         var sortExpressionBody = CreateSortExpressionBody(parameter, propertyName, config);
         
-        if (sortExpressionBody == null) // Check if the property doesn't exist
+        if (sortExpressionBody == null)
         {
             return new SortExpressionInfo<T>
             {
@@ -91,7 +91,7 @@ public static class SortParser
         var propertyExpression = propertyNames.Aggregate(parameter, (expr, propName) =>
         {
             var propertyInfo = GetPropertyInfo(expr.Type, propName);
-            if (propertyInfo == null) // Check if the property doesn't exist
+            if (propertyInfo == null)
             {
                 return null;
             }
