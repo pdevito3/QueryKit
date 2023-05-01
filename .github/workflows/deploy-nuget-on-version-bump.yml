@@ -37,8 +37,9 @@ jobs:
           git fetch origin main
           CS_PROJ_CHANGED=$(git diff origin/main HEAD --name-only -- 'QueryKit/*.csproj')
           if [ -n "$CS_PROJ_CHANGED" ]; then
-            VERSION_CHANGED=$(echo "$CS_PROJ_CHANGED" | xargs -I{} grep -Eo '<Version>[0-9]+(\.[0-9]+)*(-[a-zA-Z0-9]+)*<\/Version>' {} | grep -Eo '[0-9]+(\.[0-9]+)*(-[a-zA-Z0-9]+)*')
-            if [ -n "$VERSION_CHANGED" ]; then
+            VERSION_OLD=$(git show origin/main:"$CS_PROJ_CHANGED" | grep -Eo '<Version>[0-9]+(\.[0-9]+)*(-[a-zA-Z0-9]+)*<\/Version>' | grep -Eo '[0-9]+(\.[0-9]+)*(-[a-zA-Z0-9]+)*')
+            VERSION_NEW=$(grep -Eo '<Version>[0-9]+(\.[0-9]+)*(-[a-zA-Z0-9]+)*<\/Version>' "$CS_PROJ_CHANGED" | grep -Eo '[0-9]+(\.[0-9]+)*(-[a-zA-Z0-9]+)*')
+            if [ "$VERSION_OLD" != "$VERSION_NEW" ]; then
               echo "version_changed=true" >> $GITHUB_ENV
             else
               echo "No version changes in QueryKit.csproj file. Skipping deployment."
