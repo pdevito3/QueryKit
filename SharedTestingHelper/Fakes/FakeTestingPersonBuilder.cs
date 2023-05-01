@@ -1,7 +1,7 @@
-namespace QueryKit.IntegrationTests.Fakes;
+namespace SharedTestingHelper.Fakes;
 
 using AutoBogus;
-using WebApiTestProject.Entities;
+using QueryKit.WebApiTestProject.Entities;
 
 public class FakeTestingPersonBuilder
 {

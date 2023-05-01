@@ -2,9 +2,9 @@ namespace QueryKit.IntegrationTests.Tests;
 
 using System.Linq.Expressions;
 using Bogus;
-using Fakes;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using SharedTestingHelper.Fakes;
 using WebApiTestProject.Entities;
 using WebApiTestProject.Features;
 

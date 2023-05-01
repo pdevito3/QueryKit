@@ -1,9 +1,9 @@
 namespace QueryKit.IntegrationTests.Tests;
 
 using Bogus;
-using Fakes;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using SharedTestingHelper.Fakes;
 using WebApiTestProject.Entities;
 
 public class DatabaseSortingTests : TestBase

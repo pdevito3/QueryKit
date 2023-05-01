@@ -8,6 +8,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QueryKit.IntegrationTests",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QueryKit.WebApiTestProject", "QueryKit.WebApiTestProject\QueryKit.WebApiTestProject.csproj", "{83532293-BFBD-434F-8DAD-FBE2A734CB16}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharedTestingHelper", "SharedTestingHelper\SharedTestingHelper.csproj", "{2E3FF641-B1CB-4BB8-9E01-A48F97BB7022}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -30,5 +32,9 @@ Global
 		{83532293-BFBD-434F-8DAD-FBE2A734CB16}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{83532293-BFBD-434F-8DAD-FBE2A734CB16}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{83532293-BFBD-434F-8DAD-FBE2A734CB16}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2E3FF641-B1CB-4BB8-9E01-A48F97BB7022}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2E3FF641-B1CB-4BB8-9E01-A48F97BB7022}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2E3FF641-B1CB-4BB8-9E01-A48F97BB7022}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2E3FF641-B1CB-4BB8-9E01-A48F97BB7022}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

@@ -32,6 +32,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\QueryKit.WebApiTestProject\QueryKit.WebApiTestProject.csproj" />
+      <ProjectReference Include="..\SharedTestingHelper\SharedTestingHelper.csproj" />
     </ItemGroup>
 
 </Project>
