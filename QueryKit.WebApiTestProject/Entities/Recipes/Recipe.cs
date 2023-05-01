@@ -61,6 +61,12 @@ public class Recipe : BaseEntity
         HaveMadeItMyself = recipeForUpdate.HaveMadeItMyself;
         return this;
     }
+    
+    public Recipe SetAuthor(Author author)
+    {
+        Author = author;
+        return this;
+    }
 
     protected Recipe() { } // For EF + Mocking
 }

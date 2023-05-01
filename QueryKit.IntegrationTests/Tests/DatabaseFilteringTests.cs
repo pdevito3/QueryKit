@@ -5,7 +5,10 @@ using Bogus;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using SharedTestingHelper.Fakes;
+using SharedTestingHelper.Fakes.Author;
+using SharedTestingHelper.Fakes.Recipes;
 using WebApiTestProject.Entities;
+using WebApiTestProject.Entities.Recipes;
 using WebApiTestProject.Features;
 
 public class DatabaseFilteringTests : TestBase
@@ -340,5 +343,66 @@ public class DatabaseFilteringTests : TestBase
         
         // Assert
         people.FirstOrDefault(x => x.Id == fakePersonOne.Id).Should().BeNull();
+    }
+
+    [Fact]
+    public async Task can_filter_on_child_entity()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var fakeAuthorOne = new FakeAuthorBuilder().Build();
+        var fakeRecipeOne = new FakeRecipeBuilder().Build();
+        fakeRecipeOne.SetAuthor(fakeAuthorOne);
+        
+        var fakeAuthorTwo = new FakeAuthorBuilder().Build();
+        var fakeRecipeTwo = new FakeRecipeBuilder().Build();
+        fakeRecipeTwo.SetAuthor(fakeAuthorTwo);
+        await testingServiceScope.InsertAsync(fakeRecipeOne, fakeRecipeTwo);
+
+        var input = $"""Author.Name == "{fakeAuthorOne.Name}" """;
+
+        // Act
+        var queryableRecipe = testingServiceScope.DbContext().Recipes
+            .Include(x => x.Author);
+        var appliedQueryable = queryableRecipe.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+        
+        // Assert
+        people.Count.Should().Be(1);
+        people.FirstOrDefault(x => x.Id == fakeRecipeOne.Id).Should().NotBeNull();
+        people.FirstOrDefault(x => x.Id == fakeRecipeTwo.Id).Should().BeNull();
+    }
+
+    [Fact]
+    public async Task can_filter_on_child_entity_with_config()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var fakeAuthorOne = new FakeAuthorBuilder().Build();
+        var fakeRecipeOne = new FakeRecipeBuilder().Build();
+        fakeRecipeOne.SetAuthor(fakeAuthorOne);
+        
+        var fakeAuthorTwo = new FakeAuthorBuilder().Build();
+        var fakeRecipeTwo = new FakeRecipeBuilder().Build();
+        fakeRecipeTwo.SetAuthor(fakeAuthorTwo);
+        await testingServiceScope.InsertAsync(fakeRecipeOne, fakeRecipeTwo);
+
+        var input = $"""author == "{fakeAuthorOne.Name}" """;
+
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<Recipe>(x => x.Author.Name).HasQueryName("author");
+        });
+        
+        // Act
+        var queryableRecipe = testingServiceScope.DbContext().Recipes
+            .Include(x => x.Author);
+        var appliedQueryable = queryableRecipe.ApplyQueryKitFilter(input, config);
+        var people = await appliedQueryable.ToListAsync();
+        
+        // Assert
+        people.Count.Should().Be(1);
+        people.FirstOrDefault(x => x.Id == fakeRecipeOne.Id).Should().NotBeNull();
+        people.FirstOrDefault(x => x.Id == fakeRecipeTwo.Id).Should().BeNull();
     }
 }

@@ -1,4 +1,4 @@
-namespace SharedTestingHelper.Fakes;
+namespace SharedTestingHelper.Fakes.Recipes;
 
 using AutoBogus;
 using QueryKit.WebApiTestProject.Entities.Recipes;
