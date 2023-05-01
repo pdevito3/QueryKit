@@ -1,6 +1,6 @@
 # QueryKit 🎛️
 
-QueryKit is a .NET library that makes it easier to query your data by providing a fluent and intuitive syntax for filtering and sorting. It's inspired by the [Sieve](https://github.com/Biarity/Sieve)  library but with some differences.
+QueryKit is a .NET library that makes it easier to query your data by providing a fluent and intuitive syntax for filtering and sorting. The main use case is a lighter weight subset of OData or GraphQL for parsing external filtering and sorting inputs to provide more granular consumption (e.g. a React UI provides filtering controls to filter a worklist). It's inspired by [Sieve](https://github.com/Biarity/Sieve), but with some differences.
 
 ## Getting Started
 
