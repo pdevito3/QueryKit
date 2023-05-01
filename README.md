@@ -262,7 +262,7 @@ var input = $"""Age desc, first"";
 var config = new QueryKitConfiguration(config =>
 {
     config.Property<SpecialPerson>(x => x.FirstName)
-     	 		.HasQueryName("first")
-      		.PreventSort();
+          .HasQueryName("first")
+          .PreventSort();
 });
 ```
