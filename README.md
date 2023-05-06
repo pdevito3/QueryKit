@@ -266,3 +266,11 @@ var config = new QueryKitConfiguration(config =>
           .PreventSort();
 });
 ```
+
+## Error Handling
+
+If you want to capture errors to easily throw a `400`, you can add error handling aronud these exceptions:
+
+* A `FilterParsingException` will be thrown when there is an invalid operator or bad syntax is used (e.g. not using double quotes around a string or guid).
+* An `UnknownFilterPropertyException` will be thrown if a property is not recognized during filtering
+* A `SortParsingException` will be thrown if a property or operation is not recognized during sorting
