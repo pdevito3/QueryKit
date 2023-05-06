@@ -1,6 +1,7 @@
 namespace QueryKit.UnitTests;
 
 using Bogus;
+using Exceptions;
 using FluentAssertions;
 using Operators;
 using WebApiTestProject.Entities;
@@ -168,5 +169,22 @@ public class CustomFilterPropertyTests
         });
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
         filterExpression.ToString().Should().Be($"""x => (True == True)""");
+    }
+    
+    [Fact]
+    public void can_throw_error_when_property_has_space()
+    {
+        var faker = new Faker();
+        var propertyName = faker.Lorem.Sentence();
+        var firstWord = propertyName.Split(' ').First();
+        var input = $"""{propertyName} == 25""";
+
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.Id).PreventFilter();
+        });
+        var act = () => FilterParser.ParseFilter<TestingPerson>(input, config);
+        act.Should().Throw<UnknownFilterPropertyException>()
+            .WithMessage($"The filter property '{firstWord}' was not recognized.");
     }
 }

@@ -4,6 +4,7 @@ namespace QueryKit;
 using System.Globalization;
 using System.Linq.Expressions;
 using System.Reflection;
+using Exceptions;
 using Operators;
 using Sprache;
 
@@ -12,7 +13,15 @@ public static class FilterParser
     internal static Expression<Func<T, bool>> ParseFilter<T>(string input, IQueryKitConfiguration? config = null)
     {
         var parameter = Expression.Parameter(typeof(T), "x");
-        var expr = ExprParser<T>(parameter, config).End().Parse(input);
+        Expression expr; 
+        try
+        {
+            expr = ExprParser<T>(parameter, config).End().Parse(input);
+        }
+        catch (ParseException e)
+        {
+            throw new ParsingException(e);
+        }
         return Expression.Lambda<Func<T, bool>>(expr, parameter);
     }
 
@@ -20,10 +29,12 @@ public static class FilterParser
         from first in Parse.Letter.Once()
         from rest in Parse.LetterOrDigit.XOr(Parse.Char('_')).Many()
         select new string(first.Concat(rest).ToArray());
-
-    private static Parser<ComparisonOperator> ComparisonOperatorParser =>
-        from op in
-            Parse.String(ComparisonOperator.EqualsOperator().Operator()).Text()
+    
+    private static Parser<ComparisonOperator> ComparisonOperatorParser
+    {
+        get
+        {
+            var parsers = Parse.String(ComparisonOperator.EqualsOperator().Operator()).Text()
                 .Or(Parse.String(ComparisonOperator.NotEqualsOperator().Operator()).Text())
                 .Or(Parse.String(ComparisonOperator.GreaterThanOrEqualOperator().Operator()).Text())
                 .Or(Parse.String(ComparisonOperator.LessThanOrEqualOperator().Operator()).Text())
@@ -36,8 +47,13 @@ public static class FilterParser
                 .Or(Parse.String(ComparisonOperator.NotStartsWithOperator().Operator()).Text())
                 .Or(Parse.String(ComparisonOperator.NotEndsWithOperator().Operator()).Text())
                 .Or(Parse.String(ComparisonOperator.InOperator().Operator()).Text())
-        from caseInsensitive in Parse.Char('*').Optional()
-        select ComparisonOperator.GetByOperatorString(op, caseInsensitive.IsDefined);
+                .SelectMany(op => Parse.Char('*').Optional(), (op, caseInsensitive) => new { op, caseInsensitive });
+                
+            var compOperator = parsers
+                .Select(x => ComparisonOperator.GetByOperatorString(x.op, x.caseInsensitive.IsDefined));
+            return compOperator;
+        }
+    }
 
     private static Parser<Expression> ComparisonExprParser<T>(ParameterExpression parameter, IQueryKitConfiguration? config)
     {
@@ -81,10 +97,15 @@ public static class FilterParser
                     {
                         return Expression.PropertyOrField(expr, actualPropertyName);
                     }
-                    catch
+                    catch(ArgumentException)
                     {
-                        return Expression.Constant(true, typeof(bool));
+                        throw new UnknownFilterPropertyException(actualPropertyName);
                     }
+                    // if i want to allow for a property to be missing, i can do this:
+                    // catch
+                    // {
+                    //     return Expression.Constant(true, typeof(bool));
+                    // }
                 });
 
                 var propertyConfig = config?.PropertyMappings?.GetPropertyInfo(fullPropPath);

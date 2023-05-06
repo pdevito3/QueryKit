@@ -2,6 +2,7 @@ namespace QueryKit;
 
 using System.Linq.Expressions;
 using System.Reflection;
+using Exceptions;
 using Sprache;
 
 public static class SortParser
@@ -99,6 +100,9 @@ public static class SortParser
             return Expression.PropertyOrField(expr, actualPropertyName);
         });
 
+        if(propertyExpression == null)
+            throw new SortParsingException(propertyName);
+        
         return propertyExpression;
     }
 
