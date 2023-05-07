@@ -95,11 +95,6 @@ public static class FilterParser
                     var actualPropertyName = propertyInfo?.Name ?? pn;
                     try
                     {
-                        /*
-                         * System.ArgumentException: 'magnam' is not a member of type 'QueryKit.WebApiTestProject.Entities.TestingPerson' (Parameter 'propertyOrFieldName')
-   at System.Linq.Expressions.Expression.PropertyOrField(Expression expression, String propertyOrFieldName)
-   at QueryKit.FilterParser.<>c.<CreateLeftExprParser>b__5_2(Expression expr, String pn) in /Users/paul/repos/QueryKit/QueryKit/FilterParser.cs:line 82
-                         */
                         return Expression.PropertyOrField(expr, actualPropertyName);
                     }
                     catch(ArgumentException)
