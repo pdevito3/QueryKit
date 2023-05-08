@@ -34,8 +34,9 @@ public class Recipe : BaseEntity
     [JsonIgnore, IgnoreDataMember]
     public Author Author { get; private set; }
     
+    private List<Ingredient> _ingredients = new();
     [JsonIgnore, IgnoreDataMember]
-    public ICollection<Ingredient> Ingredients { get; private set; }
+    public IReadOnlyCollection<Ingredient> Ingredients => _ingredients.AsReadOnly();
 
 
     public static Recipe Create(RecipeForCreation recipeForCreation)
@@ -65,6 +66,12 @@ public class Recipe : BaseEntity
     public Recipe SetAuthor(Author author)
     {
         Author = author;
+        return this;
+    }
+    
+    public Recipe SetIngredients(List<Ingredient> ingredients)
+    {
+        _ingredients = ingredients;
         return this;
     }
 

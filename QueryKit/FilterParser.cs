@@ -127,10 +127,15 @@ public static class FilterParser
                 {
                     return Expression.PropertyOrField(expr, actualPropertyName);
                 }
-                catch
+                catch(ArgumentException)
                 {
-                    return Expression.Constant(true, typeof(bool));
+                    throw new UnknownFilterPropertyException(actualPropertyName);
                 }
+                // if i want to allow for a property to be missing, i can do this:
+                // catch
+                // {
+                //     return Expression.Constant(true, typeof(bool));
+                // }
             });
 
             var nestedPropertyConfig = config?.PropertyMappings?.GetPropertyInfo(leftList.Last());
