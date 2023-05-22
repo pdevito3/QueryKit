@@ -30,31 +30,23 @@ public static class FilterParser
         from rest in Parse.LetterOrDigit.XOr(Parse.Char('_')).Many()
         select new string(first.Concat(rest).ToArray());
     
-    private static Parser<ComparisonOperator> ComparisonOperatorParser
-    {
-        get
-        {
-            var parsers = Parse.String(ComparisonOperator.EqualsOperator().Operator()).Text()
-                .Or(Parse.String(ComparisonOperator.NotEqualsOperator().Operator()).Text())
-                .Or(Parse.String(ComparisonOperator.GreaterThanOrEqualOperator().Operator()).Text())
-                .Or(Parse.String(ComparisonOperator.LessThanOrEqualOperator().Operator()).Text())
-                .Or(Parse.String(ComparisonOperator.GreaterThanOperator().Operator()).Text())
-                .Or(Parse.String(ComparisonOperator.LessThanOperator().Operator()).Text())
-                .Or(Parse.String(ComparisonOperator.ContainsOperator().Operator()).Text())
-                .Or(Parse.String(ComparisonOperator.StartsWithOperator().Operator()).Text())
-                .Or(Parse.String(ComparisonOperator.EndsWithOperator().Operator()).Text())
-                .Or(Parse.String(ComparisonOperator.NotContainsOperator().Operator()).Text())
-                .Or(Parse.String(ComparisonOperator.NotStartsWithOperator().Operator()).Text())
-                .Or(Parse.String(ComparisonOperator.NotEndsWithOperator().Operator()).Text())
-                .Or(Parse.String(ComparisonOperator.InOperator().Operator()).Text())
-                .SelectMany(op => Parse.Char('*').Optional(), (op, caseInsensitive) => new { op, caseInsensitive });
-                
-            var compOperator = parsers
-                .Select(x => ComparisonOperator.GetByOperatorString(x.op, x.caseInsensitive.IsDefined));
-            return compOperator;
-        }
-    }
-
+    private static Parser<ComparisonOperator> ComparisonOperatorParser =>
+        Parse.String(ComparisonOperator.EqualsOperator().Operator()).Text()
+            .Or(Parse.String(ComparisonOperator.NotEqualsOperator().Operator()).Text())
+            .Or(Parse.String(ComparisonOperator.GreaterThanOrEqualOperator().Operator()).Text())
+            .Or(Parse.String(ComparisonOperator.LessThanOrEqualOperator().Operator()).Text())
+            .Or(Parse.String(ComparisonOperator.GreaterThanOperator().Operator()).Text())
+            .Or(Parse.String(ComparisonOperator.LessThanOperator().Operator()).Text())
+            .Or(Parse.String(ComparisonOperator.ContainsOperator().Operator()).Text())
+            .Or(Parse.String(ComparisonOperator.StartsWithOperator().Operator()).Text())
+            .Or(Parse.String(ComparisonOperator.EndsWithOperator().Operator()).Text())
+            .Or(Parse.String(ComparisonOperator.NotContainsOperator().Operator()).Text())
+            .Or(Parse.String(ComparisonOperator.NotStartsWithOperator().Operator()).Text())
+            .Or(Parse.String(ComparisonOperator.NotEndsWithOperator().Operator()).Text())
+            .Or(Parse.String(ComparisonOperator.InOperator().Operator()).Text())
+        .SelectMany(op => Parse.Char('*').Optional(), (op, caseInsensitive) => new { op, caseInsensitive })
+        .Select(x => ComparisonOperator.GetByOperatorString(x.op, x.caseInsensitive.IsDefined));
+    
     private static Parser<Expression> ComparisonExprParser<T>(ParameterExpression parameter, IQueryKitConfiguration? config)
     {
         var comparisonOperatorParser = ComparisonOperatorParser.Token();
@@ -117,27 +109,7 @@ public static class FilterParser
                 return propertyExpression;
             }
 
-            // If the property is nested with a dot ('.') separator
-            var nestedPropertyExpression = leftList.Aggregate((Expression)parameter, (expr, propName) =>
-            {
-                var propertyInfo = GetPropertyInfo(expr.Type, propName);
-                var mappedPropertyInfo = config?.PropertyMappings?.GetPropertyInfoByQueryName(propName);
-                var actualPropertyName = mappedPropertyInfo?.Name ?? propertyInfo?.Name ?? propName;
-                try
-                {
-                    return Expression.PropertyOrField(expr, actualPropertyName);
-                }
-                catch(ArgumentException)
-                {
-                    throw new UnknownFilterPropertyException(actualPropertyName);
-                }
-                // if i want to allow for a property to be missing, i can do this:
-                // catch
-                // {
-                //     return Expression.Constant(true, typeof(bool));
-                // }
-            });
-
+            var nestedPropertyExpression = GetNestedPropertyExpression(parameter, leftList, config);
             var nestedPropertyConfig = config?.PropertyMappings?.GetPropertyInfo(leftList.Last());
             if (nestedPropertyConfig != null && !nestedPropertyConfig.CanFilter)
             {
@@ -146,6 +118,30 @@ public static class FilterParser
 
             return nestedPropertyExpression;
         });
+    }
+
+    private static Expression GetNestedPropertyExpression(ParameterExpression parameter, List<string> leftList, IQueryKitConfiguration? config)
+    {
+        var nestedPropertyExpression = leftList.Aggregate((Expression)parameter, (expr, propName) =>
+        {
+            var propertyInfo = GetPropertyInfo(expr.Type, propName);
+            var mappedPropertyInfo = config?.PropertyMappings?.GetPropertyInfoByQueryName(propName);
+            var actualPropertyName = mappedPropertyInfo?.Name ?? propertyInfo?.Name ?? propName;
+            try
+            {
+                return Expression.PropertyOrField(expr, actualPropertyName);
+            }
+            catch (ArgumentException)
+            {
+                throw new UnknownFilterPropertyException(actualPropertyName);
+            }
+            // if i want to allow for a property to be missing, i can do this:
+            // catch
+            // {
+            //     return Expression.Constant(true, typeof(bool));
+            // }
+        });
+        return nestedPropertyExpression;
     }
 
     private static PropertyInfo? GetPropertyInfo(Type type, string propertyName)
