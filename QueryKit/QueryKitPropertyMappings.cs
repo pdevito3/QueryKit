@@ -1,10 +1,13 @@
 namespace QueryKit;
 
 using System.Linq.Expressions;
+using System.Text.RegularExpressions;
+using Operators;
 
 public class QueryKitPropertyMappings
 {
     private readonly Dictionary<string, QueryKitPropertyInfo> _propertyMappings = new();
+    internal IReadOnlyDictionary<string, QueryKitPropertyInfo> PropertyMappings => _propertyMappings;
 
     public QueryKitPropertyMapping<TModel> Property<TModel>(Expression<Func<TModel, object>>? propertySelector)
     {
@@ -20,6 +23,27 @@ public class QueryKitPropertyMappings
         _propertyMappings[fullPath] = propertyInfo;
 
         return new QueryKitPropertyMapping<TModel>(propertyInfo);
+    }
+    
+    public string ReplaceAliasesWithPropertyPaths(string input)
+    {
+        var operators = ComparisonOperator.List.Select(x => x.Operator()).ToList();
+
+        foreach (var alias in _propertyMappings.Values)
+        {
+            var propertyPath = GetPropertyPathByQueryName(alias.QueryName);
+            if (!string.IsNullOrEmpty(propertyPath))
+            {
+                foreach (var op in operators)
+                {
+                    // Use regular expression to isolate left side of the expression
+                    var regex = new Regex($@"\b{alias.QueryName}\b(?=\s*{op})", RegexOptions.IgnoreCase);
+                    input = regex.Replace(input, propertyPath);
+                }
+            }
+        }
+
+        return input;
     }
 
     private static string GetFullPropertyPath(Expression? expression)

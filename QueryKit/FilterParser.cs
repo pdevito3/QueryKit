@@ -12,6 +12,8 @@ public static class FilterParser
 {
     internal static Expression<Func<T, bool>> ParseFilter<T>(string input, IQueryKitConfiguration? config = null)
     {
+        input = config?.PropertyMappings.ReplaceAliasesWithPropertyPaths(input) ?? input;
+        
         var parameter = Expression.Parameter(typeof(T), "x");
         Expression expr; 
         try
@@ -73,75 +75,36 @@ public static class FilterParser
 
         return leftIdentifierParser?.Select(left =>
         {
-            // If only a single identifier is present
             var leftList = left.ToList();
-            if (leftList.Count == 1)
+
+            var fullPropPath = leftList?.First();
+            var propertyExpression = leftList?.Aggregate((Expression)parameter, (expr, propName) =>
             {
-                var propName = leftList?.First();
-                var fullPropPath = config?.GetPropertyPathByQueryName(propName) ?? propName;
-                var propNames = fullPropPath?.Split('.');
-
-                var propertyExpression = propNames?.Aggregate((Expression)parameter, (expr, pn) =>
+                var propertyInfo = GetPropertyInfo(expr.Type, propName);
+                var actualPropertyName = propertyInfo?.Name ?? propName;
+                try
                 {
-                    var propertyInfo = GetPropertyInfo(expr.Type, pn);
-                    var actualPropertyName = propertyInfo?.Name ?? pn;
-                    try
-                    {
-                        return Expression.PropertyOrField(expr, actualPropertyName);
-                    }
-                    catch(ArgumentException)
-                    {
-                        throw new UnknownFilterPropertyException(actualPropertyName);
-                    }
-                    // if i want to allow for a property to be missing, i can do this:
-                    // catch
-                    // {
-                    //     return Expression.Constant(true, typeof(bool));
-                    // }
-                });
-
-                var propertyConfig = config?.PropertyMappings?.GetPropertyInfo(fullPropPath);
-                if (propertyConfig != null && !propertyConfig.CanFilter)
-                {
-                    return Expression.Constant(true, typeof(bool));
+                    return Expression.PropertyOrField(expr, actualPropertyName);
                 }
+                catch(ArgumentException)
+                {
+                    throw new UnknownFilterPropertyException(actualPropertyName);
+                }
+                // if i want to allow for a property to be missing, i can do this:
+                // catch
+                // {
+                //     return Expression.Constant(true, typeof(bool));
+                // }
+            });
 
-                return propertyExpression;
-            }
-
-            var nestedPropertyExpression = GetNestedPropertyExpression(parameter, leftList, config);
-            var nestedPropertyConfig = config?.PropertyMappings?.GetPropertyInfo(leftList.Last());
-            if (nestedPropertyConfig != null && !nestedPropertyConfig.CanFilter)
+            var propertyConfig = config?.PropertyMappings?.GetPropertyInfo(fullPropPath);
+            if (propertyConfig != null && !propertyConfig.CanFilter)
             {
                 return Expression.Constant(true, typeof(bool));
             }
 
-            return nestedPropertyExpression;
+            return propertyExpression;
         });
-    }
-
-    private static Expression GetNestedPropertyExpression(ParameterExpression parameter, List<string> leftList, IQueryKitConfiguration? config)
-    {
-        var nestedPropertyExpression = leftList.Aggregate((Expression)parameter, (expr, propName) =>
-        {
-            var propertyInfo = GetPropertyInfo(expr.Type, propName);
-            var mappedPropertyInfo = config?.PropertyMappings?.GetPropertyInfoByQueryName(propName);
-            var actualPropertyName = mappedPropertyInfo?.Name ?? propertyInfo?.Name ?? propName;
-            try
-            {
-                return Expression.PropertyOrField(expr, actualPropertyName);
-            }
-            catch (ArgumentException)
-            {
-                throw new UnknownFilterPropertyException(actualPropertyName);
-            }
-            // if i want to allow for a property to be missing, i can do this:
-            // catch
-            // {
-            //     return Expression.Constant(true, typeof(bool));
-            // }
-        });
-        return nestedPropertyExpression;
     }
 
     private static PropertyInfo? GetPropertyInfo(Type type, string propertyName)

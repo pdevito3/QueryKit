@@ -74,6 +74,36 @@ public class CustomFilterPropertyTests
     }
     
     [Fact]
+    public void can_handle_alias_in_value()
+    {
+        var faker = new Faker();
+        var value = faker.Lorem.Word();
+        var input = $"""special_title == "{value} with special_value" """;
+
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.Title).HasQueryName("special_title");
+        });
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+        filterExpression.ToString().Should().Be($"""x => (x.Title == "{value} with special_value")""");
+    }
+    
+    [Fact]
+    public void can_handle_alias_in_value_with_operator_after_it()
+    {
+        var faker = new Faker();
+        var value = faker.Lorem.Word();
+        var input = $"""special_title == "{value} with special_value @=* a thing" """;
+
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.Title).HasQueryName("special_title");
+        });
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+        filterExpression.ToString().Should().Be($"""x => (x.Title == "{value} with special_value @=* a thing")""");
+    }
+    
+    [Fact]
     public void can_have_custom_prop_name_for_multiple_props()
     {
         var faker = new Faker();
