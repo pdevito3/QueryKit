@@ -1,6 +1,7 @@
 ﻿
 namespace QueryKit;
 
+using System.Collections;
 using System.Globalization;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -165,13 +166,6 @@ public static class FilterParser
         from closingBracket in Parse.Char(']')
         select "[" + string.Join(",", content) + "]";
 
-    private static Parser<Expression> AtomicExprParser<T>(ParameterExpression parameter, IQueryKitConfiguration? config = null)
-        => ComparisonExprParser<T>(parameter, config)
-            .Or(Parse.Ref(() => ExprParser<T>(parameter, config)).Contained(Parse.Char('('), Parse.Char(')')));
-
-    private static Parser<Expression> ExprParser<T>(ParameterExpression parameter, IQueryKitConfiguration? config = null)
-        => OrExprParser<T>(parameter, config);
-
     private static readonly Dictionary<Type, Func<string, object>> TypeConversionFunctions = new()
     {
         { typeof(string), value => value },
@@ -259,6 +253,14 @@ public static class FilterParser
         return targetType;
     }
 
+    private static Parser<Expression> AtomicExprParser<T>(ParameterExpression parameter,
+        IQueryKitConfiguration? config = null)
+        => ComparisonExprParser<T>(parameter, config)
+            .Or(Parse.Ref(() => ExprParser<T>(parameter, config)).Contained(Parse.Char('('), Parse.Char(')')));
+
+    private static Parser<Expression> ExprParser<T>(ParameterExpression parameter, IQueryKitConfiguration? config = null)
+        => OrExprParser<T>(parameter, config);
+    
     private static Parser<Expression> AndExprParser<T>(ParameterExpression parameter, IQueryKitConfiguration? config = null)
         => Parse.ChainOperator(
             LogicalOperatorParser.Where(x => x.Name == LogicalOperator.AndOperator.Operator()),
