@@ -166,7 +166,7 @@ var config = new QueryKitConfiguration(config =>
 });
 ```
 
-#### Custom Comparison Operators
+#### Custom Operators
 
 You can also add custom comparison operators to your config if you'd like:
 ```csharp
@@ -174,6 +174,7 @@ var config = new QueryKitConfiguration(config =>
 {
     config.EqualsOperator = "@@$";
     config.CaseInsensitiveAppendix = "$";
+    config.AndOperator = "and";
 });
 ```
 
@@ -194,7 +195,12 @@ public class CustomQueryKitConfiguration : QueryKitConfiguration
             settings.ContainsOperator = "ct";
             settings.StartsWithOperator = "sw";
             settings.EndsWithOperator = "ew";
-				    settings.CaseInsensitiveAppendix = "$";
+            settings.NotContainsOperator = "nct";
+            settings.NotStartsWithOperator = "nsw";
+            settings.NotEndsWithOperator = "new";
+            settings.AndOperator = "and";
+            settings.OrOperator = "or";
+            settings.CaseInsensitiveAppendix = "i";
 
             configureSettings?.Invoke(settings);
         })
@@ -204,7 +210,7 @@ public class CustomQueryKitConfiguration : QueryKitConfiguration
 
 // ---
 
-var input = """Title eq$ "Pancakes" """;
+var input = """Title eq$ "Pancakes" and Rating gt 10""";
 var config = new CustomQueryKitConfiguration();
 var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
 ```

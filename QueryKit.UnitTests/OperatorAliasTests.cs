@@ -10,7 +10,6 @@ public class OperatorAliasTests
     {
         var input = """Title ti "titilating" """;
         
-    
         var config = new QueryKitConfiguration(config =>
         {
             config.EqualsOperator = "ti";
@@ -23,8 +22,7 @@ public class OperatorAliasTests
     public void can_handle_alias_text_with_casing_and_space()
     {
         var input = """Title ti "titilating ties a ti" || Title Ti "titilater" """;
-        
-    
+
         var config = new QueryKitConfiguration(config =>
         {
             config.EqualsOperator = "ti";
@@ -37,8 +35,7 @@ public class OperatorAliasTests
     public void can_do_symbol_alias()
     {
         var input = """Title @ "titilating" """;
-        
-    
+
         var config = new QueryKitConfiguration(config =>
         {
             config.EqualsOperator = "@";
@@ -48,11 +45,52 @@ public class OperatorAliasTests
     }
 
     [Fact]
+    public void can_alias_logical_operator_or()
+    {
+        var input = """Title eq "titilating" or Rating > 3""";
+
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.EqualsOperator = "eq";
+            config.OrOperator = "or";
+        });
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
+        filterExpression.ToString().Should().Be($"""x => ((x.Title == "titilating") OrElse (x.Rating > 3))""");
+    }
+
+    [Fact]
+    public void can_alias_logical_operator_and()
+    {
+        var input = """Title eq "titilating" and Rating > 3""";
+
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.EqualsOperator = "eq";
+            config.AndOperator = "and";
+        });
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
+        filterExpression.ToString().Should().Be($"""x => ((x.Title == "titilating") AndAlso (x.Rating > 3))""");
+    }
+
+    [Fact]
+    public void can_alias_logical_operator_with_conflict()
+    {
+        var input = """Title eq "titilating or" or Rating > 3""";
+
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.EqualsOperator = "eq";
+            config.OrOperator = "or";
+        });
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
+        filterExpression.ToString().Should().Be($"""x => ((x.Title == "titilating or") OrElse (x.Rating > 3))""");
+    }
+
+    [Fact]
     public void can_do_symbols_alias()
     {
         var input = """Title @@$ "titilating" """;
         
-    
         var config = new QueryKitConfiguration(config =>
         {
             config.EqualsOperator = "@@$";
@@ -66,7 +104,6 @@ public class OperatorAliasTests
     {
         var input = """Title @@$* "titilating" """;
         
-    
         var config = new QueryKitConfiguration(config =>
         {
             config.EqualsOperator = "@@$";
@@ -80,7 +117,6 @@ public class OperatorAliasTests
     {
         var input = """Title @@$~ "titilating" """;
         
-    
         var config = new QueryKitConfiguration(config =>
         {
             config.EqualsOperator = "@@$";
@@ -95,7 +131,6 @@ public class OperatorAliasTests
     {
         var input = """Title @@$ "titilating" """;
         
-    
         var config = new QueryKitConfiguration(config =>
         {
             config.EqualsOperator = "@@$";
@@ -182,6 +217,12 @@ public class OperatorAliasTests
                 settings.ContainsOperator = "ct";
                 settings.StartsWithOperator = "sw";
                 settings.EndsWithOperator = "ew";
+                settings.NotContainsOperator = "nct";
+                settings.NotStartsWithOperator = "nsw";
+                settings.NotEndsWithOperator = "new";
+                settings.AndOperator = "and";
+                settings.OrOperator = "or";
+                settings.CaseInsensitiveAppendix = "i";
 
                 configureSettings?.Invoke(settings);
             })

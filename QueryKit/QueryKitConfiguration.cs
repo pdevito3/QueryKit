@@ -25,6 +25,7 @@ public interface IQueryKitConfiguration
     string? GetPropertyPathByQueryName(string? propPath);
     bool IsPropertySortable(string? propertyName);
     string ReplaceComparisonAliases(string input);
+    string ReplaceLogicalAliases(string input);
 }
 
 public class QueryKitSettings
@@ -43,6 +44,8 @@ public class QueryKitSettings
     public string NotStartsWithOperator { get; set; } = ComparisonOperator.NotStartsWithOperator().Operator();
     public string NotEndsWithOperator { get; set; } = ComparisonOperator.NotEndsWithOperator().Operator();
     public string InOperator { get; set; } = ComparisonOperator.InOperator().Operator();
+    public string AndOperator { get; set; } = LogicalOperator.AndOperator.Operator();
+    public string OrOperator { get; set; } = LogicalOperator.OrOperator.Operator();
     public string CaseInsensitiveAppendix { get; set; } = "*";
     
     public QueryKitPropertyMapping<TModel> Property<TModel>(Expression<Func<TModel, object>>? propertySelector)
@@ -68,6 +71,8 @@ public class QueryKitConfiguration : IQueryKitConfiguration
     public string NotEndsWithOperator { get; set; }
     public string InOperator { get; set; }
     public string CaseInsensitiveAppendix { get; set; }
+    public string AndOperator { get; set; }
+    public string OrOperator { get; set; }
 
     public string ReplaceComparisonAliases(string input)
     {
@@ -77,6 +82,19 @@ public class QueryKitConfiguration : IQueryKitConfiguration
             var escapedAlias = Regex.Escape(comparisonAliasMatch.Alias);
             var regex = new Regex($@"(?<=\s|^){escapedAlias}(?=\s|$)", RegexOptions.IgnoreCase);
             input = regex.Replace(input, comparisonAliasMatch.Operator);
+        }
+        
+        return input;
+    }
+    
+    public string ReplaceLogicalAliases(string input)
+    {
+        var aliasedOperators = LogicalOperator.GetAliasMatches(this);
+        foreach (var logicalAliasMatch in aliasedOperators)
+        {
+            var escapedAlias = Regex.Escape(logicalAliasMatch.Alias);
+            var regex = new Regex($@"(?<=\s|^){escapedAlias}(?=\s|$)", RegexOptions.IgnoreCase);
+            input = regex.Replace(input, logicalAliasMatch.Operator);
         }
         
         return input;
@@ -102,6 +120,8 @@ public class QueryKitConfiguration : IQueryKitConfiguration
         NotEndsWithOperator = settings.NotEndsWithOperator;
         InOperator = settings.InOperator;
         CaseInsensitiveAppendix = settings.CaseInsensitiveAppendix;
+        AndOperator = settings.AndOperator;
+        OrOperator = settings.OrOperator;
     }
     
     public string? GetPropertyPathByQueryName(string? queryName)
