@@ -52,68 +52,9 @@ public static class FilterParser
             .Or(Parse.String(ComparisonOperator.InOperator().Operator()).Text())
         .SelectMany(op => Parse.Char(ComparisonOperator.CaseSensitiveAppendix).Optional(), (op, caseInsensitive) => new { op, caseInsensitive })
         .Select(x => ComparisonOperator.GetByOperatorString(x.op, x.caseInsensitive.IsDefined));
-    
-    private static Parser<Expression> ComparisonExprParser<T>(ParameterExpression parameter, IQueryKitConfiguration? config)
-    {
-        var comparisonOperatorParser = ComparisonOperatorParser.Token();
-        var rightSideValueParser = RightSideValueParser.Token();
-
-        return CreateLeftExprParser(parameter, config)
-            .SelectMany(leftExpr => comparisonOperatorParser, (leftExpr, op) => new { leftExpr, op })
-            .SelectMany(temp => rightSideValueParser, (temp, right) => new { temp.leftExpr, temp.op, right })
-            .Select(temp =>
-            {
-                if (temp.leftExpr.NodeType == ExpressionType.Constant && ((ConstantExpression)temp.leftExpr).Value!.Equals(true))
-                {
-                    return Expression.Equal(Expression.Constant(true), Expression.Constant(true));
-                }
-
-                var rightExpr = CreateRightExpr(temp.leftExpr, temp.right);
-                return temp.op.GetExpression<T>(temp.leftExpr, rightExpr);
-            });
-    }
-
-    private static Parser<Expression?>? CreateLeftExprParser(ParameterExpression parameter, IQueryKitConfiguration? config)
-    {
-        var leftIdentifierParser = Identifier.DelimitedBy(Parse.Char('.')).Token();
-
-        return leftIdentifierParser?.Select(left =>
-        {
-            var leftList = left.ToList();
-
-            var fullPropPath = leftList?.First();
-            var propertyExpression = leftList?.Aggregate((Expression)parameter, (expr, propName) =>
-            {
-                var propertyInfo = GetPropertyInfo(expr.Type, propName);
-                var actualPropertyName = propertyInfo?.Name ?? propName;
-                try
-                {
-                    return Expression.PropertyOrField(expr, actualPropertyName);
-                }
-                catch(ArgumentException)
-                {
-                    if(config?.AllowUnknownProperties == true)
-                    {
-                        return Expression.Constant(true, typeof(bool));
-                    }
-                    throw new UnknownFilterPropertyException(actualPropertyName);
-                }
-            });
-
-            var propertyConfig = config?.PropertyMappings?.GetPropertyInfo(fullPropPath);
-            if (propertyConfig != null && !propertyConfig.CanFilter)
-            {
-                return Expression.Constant(true, typeof(bool));
-            }
-
-            return propertyExpression;
-        });
-    }
 
     private static PropertyInfo? GetPropertyInfo(Type type, string propertyName)
-    {
-        return type.GetProperty(propertyName, BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance);
-    }
+        => type.GetProperty(propertyName, BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance);
 
     public static Parser<LogicalOperator> LogicalOperatorParser =>
         from leadingSpaces in Parse.WhiteSpace.Many()
@@ -123,7 +64,6 @@ public static class FilterParser
     
     private static Parser<string> DoubleQuoteParser
         => Parse.Char('"').Then(_ => Parse.AnyChar.Except(Parse.Char('"')).Many().Text().Then(innerValue => Parse.Char('"').Return(innerValue)));
-
 
     private static Parser<string> TimeFormatParser => Parse.Regex(@"\d{2}:\d{2}:\d{2}").Text();
     private static Parser<string> DateTimeFormatParser => 
@@ -255,6 +195,63 @@ public static class FilterParser
         return targetType;
     }
 
+    private static Parser<Expression> ComparisonExprParser<T>(ParameterExpression parameter, IQueryKitConfiguration? config)
+    {
+        var comparisonOperatorParser = ComparisonOperatorParser.Token();
+        var rightSideValueParser = RightSideValueParser.Token();
+
+        return CreateLeftExprParser(parameter, config)
+            .SelectMany(leftExpr => comparisonOperatorParser, (leftExpr, op) => new { leftExpr, op })
+            .SelectMany(temp => rightSideValueParser, (temp, right) => new { temp.leftExpr, temp.op, right })
+            .Select(temp =>
+            {
+                if (temp.leftExpr.NodeType == ExpressionType.Constant && ((ConstantExpression)temp.leftExpr).Value!.Equals(true))
+                {
+                    return Expression.Equal(Expression.Constant(true), Expression.Constant(true));
+                }
+
+                var rightExpr = CreateRightExpr(temp.leftExpr, temp.right);
+                return temp.op.GetExpression<T>(temp.leftExpr, rightExpr);
+            });
+    }
+
+    private static Parser<Expression?>? CreateLeftExprParser(ParameterExpression parameter, IQueryKitConfiguration? config)
+    {
+        var leftIdentifierParser = Identifier.DelimitedBy(Parse.Char('.')).Token();
+
+        return leftIdentifierParser?.Select(left =>
+        {
+            var leftList = left.ToList();
+
+            var fullPropPath = leftList?.First();
+            var propertyExpression = leftList?.Aggregate((Expression)parameter, (expr, propName) =>
+            {
+                var propertyInfo = GetPropertyInfo(expr.Type, propName);
+                var actualPropertyName = propertyInfo?.Name ?? propName;
+                try
+                {
+                    return Expression.PropertyOrField(expr, actualPropertyName);
+                }
+                catch(ArgumentException)
+                {
+                    if(config?.AllowUnknownProperties == true)
+                    {
+                        return Expression.Constant(true, typeof(bool));
+                    }
+                    throw new UnknownFilterPropertyException(actualPropertyName);
+                }
+            });
+
+            var propertyConfig = config?.PropertyMappings?.GetPropertyInfo(fullPropPath);
+            if (propertyConfig != null && !propertyConfig.CanFilter)
+            {
+                return Expression.Constant(true, typeof(bool));
+            }
+
+            return propertyExpression;
+        });
+    }
+    
     private static Parser<Expression> AtomicExprParser<T>(ParameterExpression parameter,
         IQueryKitConfiguration? config = null)
         => ComparisonExprParser<T>(parameter, config)
