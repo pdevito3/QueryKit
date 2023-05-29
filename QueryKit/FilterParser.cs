@@ -13,7 +13,8 @@ public static class FilterParser
 {
     internal static Expression<Func<T, bool>> ParseFilter<T>(string input, IQueryKitConfiguration? config = null)
     {
-        input = config?.PropertyMappings.ReplaceAliasesWithPropertyPaths(input) ?? input;
+        input = config?.ComparisonOperatorAliases?.ReplaceAliases(input) ?? input;
+        input = config?.PropertyMappings?.ReplaceAliasesWithPropertyPaths(input) ?? input;
         
         var parameter = Expression.Parameter(typeof(T), "x");
         Expression expr; 

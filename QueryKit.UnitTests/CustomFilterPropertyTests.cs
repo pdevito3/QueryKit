@@ -5,6 +5,7 @@ using Exceptions;
 using FluentAssertions;
 using Operators;
 using WebApiTestProject.Entities;
+using WebApiTestProject.Entities.Recipes;
 
 public class CustomFilterPropertyTests
 {
@@ -17,7 +18,7 @@ public class CustomFilterPropertyTests
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
         filterExpression.ToString().Should().Be($"""x => (x.PhysicalAddress.State == "{value}")""");
     }
-    
+
     [Fact]
     public void can_have_custom_child_prop_name_ownsone()
     {

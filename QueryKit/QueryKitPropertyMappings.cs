@@ -1,6 +1,7 @@
 namespace QueryKit;
 
 using System.Linq.Expressions;
+using System.Text;
 using System.Text.RegularExpressions;
 using Operators;
 
@@ -28,7 +29,6 @@ public class QueryKitPropertyMappings
     public string ReplaceAliasesWithPropertyPaths(string input)
     {
         var operators = ComparisonOperator.List.Select(x => x.Operator()).ToList();
-
         foreach (var alias in _propertyMappings.Values)
         {
             var propertyPath = GetPropertyPathByQueryName(alias.QueryName);

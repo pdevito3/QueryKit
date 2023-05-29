@@ -166,6 +166,56 @@ var config = new QueryKitConfiguration(config =>
 });
 ```
 
+#### Custom Comparison Operators
+
+You can also add custom comparison operators to your config if you'd like:
+```csharp
+var config = new QueryKitConfiguration(config =>
+{
+    config.ComparisonOperatorAliases.EqualsOperator = "@@$";
+    config.ComparisonOperatorAliases.CaseInsensitiveAppendix = "$";
+});
+```
+
+If you want to use it globally, you can make a base implementation like this:
+
+```csharp
+public class CustomQueryKitConfiguration : QueryKitConfiguration
+{
+    public CustomQueryKitConfiguration(Action<QueryKitSettings>? configureSettings = null)
+        : base(settings => 
+        {
+            settings.ComparisonAliases.EqualsOperator = "eq";
+            settings.ComparisonAliases.NotEqualsOperator = "neq";
+            settings.ComparisonAliases.GreaterThanOperator = "gt";
+            settings.ComparisonAliases.GreaterThanOrEqualOperator = "gte";
+            settings.ComparisonAliases.LessThanOperator = "lt";
+            settings.ComparisonAliases.LessThanOrEqualOperator = "lte";
+            settings.ComparisonAliases.ContainsOperator = "ct";
+            settings.ComparisonAliases.StartsWithOperator = "sw";
+            settings.ComparisonAliases.EndsWithOperator = "ew";
+				    settings.ComparisonOperatorAliases.CaseInsensitiveAppendix = "$";
+
+            configureSettings?.Invoke(settings);
+        })
+    {
+    }
+}
+
+// ---
+
+var input = """Title eq "Pancakes" """;
+var config = new CustomQueryKitConfiguration();
+var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
+```
+
+> **Note**
+> Spaces must be used around the comparison operator when using custom values.
+> `Title @@$ "titilating"` ✅ 
+> `Title@@$"titilating"` ❌
+
+
+
 ### Nested Objects
 
 Say we have a nested object like this:
