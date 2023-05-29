@@ -22,10 +22,12 @@ public interface IQueryKitConfiguration
     public string NotEndsWithOperator { get; set; }
     public string InOperator { get; set; }
     public string CaseInsensitiveAppendix { get; set; }
-    string? GetPropertyPathByQueryName(string? propPath);
-    bool IsPropertySortable(string? propertyName);
-    string ReplaceComparisonAliases(string input);
-    string ReplaceLogicalAliases(string input);
+    public bool AllowUnknownProperties { get; set; }
+    
+    internal string? GetPropertyPathByQueryName(string? propPath);
+    internal bool IsPropertySortable(string? propertyName);
+    internal string ReplaceComparisonAliases(string input);
+    internal string ReplaceLogicalAliases(string input);
 }
 
 public class QueryKitSettings
@@ -47,6 +49,7 @@ public class QueryKitSettings
     public string AndOperator { get; set; } = LogicalOperator.AndOperator.Operator();
     public string OrOperator { get; set; } = LogicalOperator.OrOperator.Operator();
     public string CaseInsensitiveAppendix { get; set; } = "*";
+    public bool AllowUnknownProperties { get; set; }
     
     public QueryKitPropertyMapping<TModel> Property<TModel>(Expression<Func<TModel, object>>? propertySelector)
     {
@@ -73,6 +76,7 @@ public class QueryKitConfiguration : IQueryKitConfiguration
     public string CaseInsensitiveAppendix { get; set; }
     public string AndOperator { get; set; }
     public string OrOperator { get; set; }
+    public bool AllowUnknownProperties { get; set; } = false;
 
     public string ReplaceComparisonAliases(string input)
     {
@@ -122,6 +126,7 @@ public class QueryKitConfiguration : IQueryKitConfiguration
         CaseInsensitiveAppendix = settings.CaseInsensitiveAppendix;
         AndOperator = settings.AndOperator;
         OrOperator = settings.OrOperator;
+        AllowUnknownProperties = settings.AllowUnknownProperties;
     }
     
     public string? GetPropertyPathByQueryName(string? queryName)

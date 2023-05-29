@@ -148,7 +148,9 @@ There's a wide variety of comparison operators that use the same base syntax as 
 var input = """(Title == "lamb" && ((Age >= 25 && Rating < 4.5) || (SpecificDate <= 2022-07-01T00:00:03Z && Time == 00:00:03)) && (Favorite == true || Email.Value _= "hello@gmail.com"))""";
 ```
 
-### Property Settings
+### Settings
+
+#### Property Settings
 
 Filtering is set up to create an expression using the property names you have on your entity, but you can pass in a config to customize things a bit when needed.
 
@@ -220,7 +222,16 @@ var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
 > `Title @@$ "titilating"` ✅ 
 > `Title@@$"titilating"` ❌
 
+#### Allow Unknown Properties
 
+By default, QueryKit will throw an error if it doesn't recognize a property name, If you want to loosen the reigns here a bit, you can set `AllowUnknownProperties` to `true` in your config. When active, unknown properties will be ignored in the expression resolution.
+```csharp
+var config = new QueryKitConfiguration(config =>
+{
+    config.AllowUnknownProperties = true;
+});
+var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
+```
 
 ### Nested Objects
 

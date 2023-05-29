@@ -218,4 +218,18 @@ public class CustomFilterPropertyTests
         act.Should().Throw<UnknownFilterPropertyException>()
             .WithMessage($"The filter property '{firstWord}' was not recognized.");
     }
+    
+    [Fact]
+    public void can_handle_nonexistent_property()
+    {
+        var faker = new Faker();
+        var input = $"""{faker.Lorem.Word()} == 25""";
+        
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.AllowUnknownProperties = true;
+        });
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+        filterExpression.ToString().Should().Be("x => (True == True)");
+    }
 }

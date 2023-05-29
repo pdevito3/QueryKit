@@ -91,13 +91,12 @@ public static class FilterParser
                 }
                 catch(ArgumentException)
                 {
+                    if(config?.AllowUnknownProperties == true)
+                    {
+                        return Expression.Constant(true, typeof(bool));
+                    }
                     throw new UnknownFilterPropertyException(actualPropertyName);
                 }
-                // if i want to allow for a property to be missing, i can do this:
-                // catch
-                // {
-                //     return Expression.Constant(true, typeof(bool));
-                // }
             });
 
             var propertyConfig = config?.PropertyMappings?.GetPropertyInfo(fullPropPath);
