@@ -41,8 +41,65 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         {
             throw new Exception($"Operator {op} is not supported");
         }
-        comparisonOperator.CaseInsensitive = caseInsensitive;
-        return comparisonOperator;
+
+        ComparisonOperator? newOperator = null;
+
+        if (comparisonOperator is EqualsType)
+        {
+            newOperator = new EqualsType(caseInsensitive);
+        }
+        if (comparisonOperator is NotEqualsType)
+        {
+            newOperator = new NotEqualsType(caseInsensitive);
+        }
+        if (comparisonOperator is GreaterThanType)
+        {
+            newOperator = new GreaterThanType(caseInsensitive);
+        }
+        if (comparisonOperator is LessThanType)
+        {
+            newOperator = new LessThanType(caseInsensitive);
+        }
+        if (comparisonOperator is GreaterThanOrEqualType)
+        {
+            newOperator = new GreaterThanOrEqualType(caseInsensitive);
+        }
+        if (comparisonOperator is LessThanOrEqualType)
+        {
+            newOperator = new LessThanOrEqualType(caseInsensitive);
+        }
+        if (comparisonOperator is ContainsType)
+        {
+            newOperator = new ContainsType(caseInsensitive);
+        }
+        if (comparisonOperator is StartsWithType)
+        {
+            newOperator = new StartsWithType(caseInsensitive);
+        }
+        if (comparisonOperator is EndsWithType)
+        {
+            newOperator = new EndsWithType(caseInsensitive);
+        }
+        if (comparisonOperator is NotContainsType)
+        {
+            newOperator = new NotContainsType(caseInsensitive);
+        }
+        if (comparisonOperator is NotStartsWithType)
+        {
+            newOperator = new NotStartsWithType(caseInsensitive);
+        }
+        if (comparisonOperator is NotEndsWithType)
+        {
+            newOperator = new NotEndsWithType(caseInsensitive);
+        }
+        if (comparisonOperator is InType)
+        {
+            newOperator = new InType(caseInsensitive);
+        }
+        
+        return newOperator == null 
+            ? throw new Exception($"Operator {op} is not supported")
+            : newOperator!;
     }
 
     public abstract string Operator();
