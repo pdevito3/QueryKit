@@ -106,6 +106,21 @@ public class OperatorAliasTests
     }
 
     [Fact]
+    public void can_use_contains_not_case_sensitive()
+    {
+        var input = """Title @@$ "titilating" """;
+        
+    
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.ComparisonAliases.ContainsOperator = "@@$";
+            config.ComparisonAliases.CaseInsensitiveAppendix = "$";
+        });
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
+        filterExpression.ToString().Should().Be($"""x => x.Title.Contains("titilating")""");
+    }
+
+    [Fact]
     public void can_do_symbols_alias_case_insensitive_with_conflicting_chars()
     {
         var input = """Title @@$$ "titilating" """;

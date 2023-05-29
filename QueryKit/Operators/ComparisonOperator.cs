@@ -116,7 +116,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         {
         }
 
-        public override string Operator() => Name;
+        public override string Operator() => CaseInsensitive ? $"{Name}*" : Name;
         public override Expression GetExpression<T>(Expression left, Expression right)
         {
             if (CaseInsensitive && left.Type == typeof(string) && right.Type == typeof(string))
@@ -137,7 +137,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         {
         }
 
-        public override string Operator() => Name;
+        public override string Operator() => CaseInsensitive ? $"{Name}*" : Name;
         public override Expression GetExpression<T>(Expression left, Expression right)
         {
             
@@ -212,7 +212,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         {
         }
 
-        public override string Operator() => Name;
+        public override string Operator() => CaseInsensitive ? $"{Name}*" : Name;
         public override Expression GetExpression<T>(Expression left, Expression right)
         {
             if (CaseInsensitive)
@@ -234,7 +234,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         {
         }
 
-        public override string Operator() => Name;
+        public override string Operator() => CaseInsensitive ? $"{Name}*" : Name;
         public override Expression GetExpression<T>(Expression left, Expression right)
         {
             if (CaseInsensitive)
@@ -256,7 +256,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         {
         }
 
-        public override string Operator() => Name;
+        public override string Operator() => CaseInsensitive ? $"{Name}*" : Name;
         public override Expression GetExpression<T>(Expression left, Expression right)
         {
             if (CaseInsensitive)
@@ -278,7 +278,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         {
         }
 
-        public override string Operator() => Name;
+        public override string Operator() => CaseInsensitive ? $"{Name}*" : Name;
         public override Expression GetExpression<T>(Expression left, Expression right)
         {
             if(CaseInsensitive)
@@ -301,7 +301,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         {
         }
 
-        public override string Operator() => Name;
+        public override string Operator() => CaseInsensitive ? $"{Name}*" : Name;
         public override Expression GetExpression<T>(Expression left, Expression right)
         {
             if (CaseInsensitive)
@@ -323,7 +323,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         {
         }
 
-        public override string Operator() => Name;
+        public override string Operator() => CaseInsensitive ? $"{Name}*" : Name;
         public override Expression GetExpression<T>(Expression left, Expression right)
         {
             if (CaseInsensitive)
@@ -345,7 +345,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         {
         }
 
-        public override string Operator() => Name;
+        public override string Operator() => CaseInsensitive ? $"{Name}*" : Name;
         public override Expression GetExpression<T>(Expression left, Expression right)
         {
             var leftType = left.Type;
@@ -399,67 +399,67 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         if(aliases.EqualsOperator != EqualsOperator().Operator())
         {
             matches.Add(new ComparisonAliasMatch { Alias = aliases.EqualsOperator, Operator = EqualsOperator().Operator() });
-            matches.Add(new ComparisonAliasMatch { Alias = $"{aliases.EqualsOperator}{caseInsensitiveAppendix}", Operator = $"{EqualsOperator(true).Operator()}*"});
+            matches.Add(new ComparisonAliasMatch { Alias = $"{aliases.EqualsOperator}{caseInsensitiveAppendix}", Operator = $"{EqualsOperator(true).Operator()}"});
         }
         if(aliases.NotEqualsOperator != NotEqualsOperator().Operator())
         {
             matches.Add(new ComparisonAliasMatch { Alias = aliases.NotEqualsOperator, Operator = NotEqualsOperator().Operator() });
-            matches.Add(new ComparisonAliasMatch { Alias = $"{aliases.NotEqualsOperator}{caseInsensitiveAppendix}", Operator = $"{NotEqualsOperator(true).Operator()}*" });
+            matches.Add(new ComparisonAliasMatch { Alias = $"{aliases.NotEqualsOperator}{caseInsensitiveAppendix}", Operator = $"{NotEqualsOperator(true).Operator()}" });
         }
         if(aliases.GreaterThanOperator != GreaterThanOperator().Operator())
         {
             matches.Add(new ComparisonAliasMatch { Alias = aliases.GreaterThanOperator, Operator = GreaterThanOperator().Operator() });
-            matches.Add(new ComparisonAliasMatch { Alias = $"{aliases.GreaterThanOperator}{caseInsensitiveAppendix}", Operator = $"{GreaterThanOperator(true).Operator()}*" });
+            matches.Add(new ComparisonAliasMatch { Alias = $"{aliases.GreaterThanOperator}{caseInsensitiveAppendix}", Operator = $"{GreaterThanOperator(true).Operator()}" });
         }
         if(aliases.LessThanOperator != LessThanOperator().Operator())
         {
             matches.Add(new ComparisonAliasMatch { Alias = aliases.LessThanOperator, Operator = LessThanOperator().Operator() });
-            matches.Add(new ComparisonAliasMatch { Alias = $"{aliases.LessThanOperator}{caseInsensitiveAppendix}", Operator = $"{LessThanOperator(true).Operator()}*" });
+            matches.Add(new ComparisonAliasMatch { Alias = $"{aliases.LessThanOperator}{caseInsensitiveAppendix}", Operator = $"{LessThanOperator(true).Operator()}" });
         }
         if(aliases.GreaterThanOrEqualOperator != GreaterThanOrEqualOperator().Operator())
         {
             matches.Add(new ComparisonAliasMatch { Alias = aliases.GreaterThanOrEqualOperator, Operator = GreaterThanOrEqualOperator().Operator() });
-            matches.Add(new ComparisonAliasMatch { Alias = $"{aliases.GreaterThanOrEqualOperator}{caseInsensitiveAppendix}", Operator = $"{GreaterThanOrEqualOperator(true).Operator()}*" });
+            matches.Add(new ComparisonAliasMatch { Alias = $"{aliases.GreaterThanOrEqualOperator}{caseInsensitiveAppendix}", Operator = $"{GreaterThanOrEqualOperator(true).Operator()}" });
         }
         if(aliases.LessThanOrEqualOperator != LessThanOrEqualOperator().Operator())
         {
             matches.Add(new ComparisonAliasMatch { Alias = aliases.LessThanOrEqualOperator, Operator = LessThanOrEqualOperator().Operator() });
-            matches.Add(new ComparisonAliasMatch { Alias = $"{aliases.LessThanOrEqualOperator}{caseInsensitiveAppendix}", Operator = $"{LessThanOrEqualOperator(true).Operator()}*" });
+            matches.Add(new ComparisonAliasMatch { Alias = $"{aliases.LessThanOrEqualOperator}{caseInsensitiveAppendix}", Operator = $"{LessThanOrEqualOperator(true).Operator()}" });
         }
         if(aliases.ContainsOperator != ContainsOperator().Operator())
         {
             matches.Add(new ComparisonAliasMatch { Alias = aliases.ContainsOperator, Operator = ContainsOperator().Operator() });
-            matches.Add(new ComparisonAliasMatch { Alias = $"{aliases.ContainsOperator}{caseInsensitiveAppendix}", Operator = $"{ContainsOperator(true).Operator()}*" });
+            matches.Add(new ComparisonAliasMatch { Alias = $"{aliases.ContainsOperator}{caseInsensitiveAppendix}", Operator = $"{ContainsOperator(true).Operator()}" });
         }
         if(aliases.StartsWithOperator != StartsWithOperator().Operator())
         {
             matches.Add(new ComparisonAliasMatch { Alias = aliases.StartsWithOperator, Operator = StartsWithOperator().Operator() });
-            matches.Add(new ComparisonAliasMatch { Alias = $"{aliases.StartsWithOperator}{caseInsensitiveAppendix}", Operator = $"{StartsWithOperator(true).Operator()}*" });
+            matches.Add(new ComparisonAliasMatch { Alias = $"{aliases.StartsWithOperator}{caseInsensitiveAppendix}", Operator = $"{StartsWithOperator(true).Operator()}" });
         }
         if(aliases.EndsWithOperator != EndsWithOperator().Operator())
         {
             matches.Add(new ComparisonAliasMatch { Alias = aliases.EndsWithOperator, Operator = EndsWithOperator().Operator() });
-            matches.Add(new ComparisonAliasMatch { Alias = $"{aliases.EndsWithOperator}{caseInsensitiveAppendix}", Operator = $"{EndsWithOperator(true).Operator()}*" });
+            matches.Add(new ComparisonAliasMatch { Alias = $"{aliases.EndsWithOperator}{caseInsensitiveAppendix}", Operator = $"{EndsWithOperator(true).Operator()}" });
         }
         if(aliases.NotContainsOperator != NotContainsOperator().Operator())
         {
             matches.Add(new ComparisonAliasMatch { Alias = aliases.NotContainsOperator, Operator = NotContainsOperator().Operator() });
-            matches.Add(new ComparisonAliasMatch { Alias = $"{aliases.NotContainsOperator}{caseInsensitiveAppendix}", Operator = $"{NotContainsOperator(true).Operator()}*" });
+            matches.Add(new ComparisonAliasMatch { Alias = $"{aliases.NotContainsOperator}{caseInsensitiveAppendix}", Operator = $"{NotContainsOperator(true).Operator()}" });
         }
         if(aliases.NotStartsWithOperator != NotStartsWithOperator().Operator())
         {
             matches.Add(new ComparisonAliasMatch { Alias = aliases.NotStartsWithOperator, Operator = NotStartsWithOperator().Operator() });
-            matches.Add(new ComparisonAliasMatch { Alias = $"{aliases.NotStartsWithOperator}{caseInsensitiveAppendix}", Operator = $"{NotStartsWithOperator(true).Operator()}*" });
+            matches.Add(new ComparisonAliasMatch { Alias = $"{aliases.NotStartsWithOperator}{caseInsensitiveAppendix}", Operator = $"{NotStartsWithOperator(true).Operator()}" });
         }
         if(aliases.NotEndsWithOperator != NotEndsWithOperator().Operator())
         {
             matches.Add(new ComparisonAliasMatch { Alias = aliases.NotEndsWithOperator, Operator = NotEndsWithOperator().Operator() });
-            matches.Add(new ComparisonAliasMatch { Alias = $"{aliases.NotEndsWithOperator}{caseInsensitiveAppendix}", Operator = $"{NotEndsWithOperator(true).Operator()}*" });
+            matches.Add(new ComparisonAliasMatch { Alias = $"{aliases.NotEndsWithOperator}{caseInsensitiveAppendix}", Operator = $"{NotEndsWithOperator(true).Operator()}" });
         }
         if(aliases.InOperator != InOperator().Operator())
         {
             matches.Add(new ComparisonAliasMatch { Alias = aliases.InOperator, Operator = InOperator().Operator() });
-            matches.Add(new ComparisonAliasMatch { Alias = $"{aliases.InOperator}{caseInsensitiveAppendix}", Operator = $"{InOperator(true).Operator()}*" });
+            matches.Add(new ComparisonAliasMatch { Alias = $"{aliases.InOperator}{caseInsensitiveAppendix}", Operator = $"{InOperator(true).Operator()}" });
         }
         
         return matches;
