@@ -392,7 +392,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         public string Operator { get; set; }
     }
     
-    internal static List<ComparisonAliasMatch> GetAliasMatches(ComparisonOperatorAliases aliases)
+    internal static List<ComparisonAliasMatch> GetAliasMatches(QueryKitConfiguration aliases)
     {
         var matches = new List<ComparisonAliasMatch>();
         var caseInsensitiveAppendix = aliases.CaseInsensitiveAppendix;

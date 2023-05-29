@@ -8,13 +8,28 @@ using Operators;
 public interface IQueryKitConfiguration
 {
     QueryKitPropertyMappings PropertyMappings { get; }
-    ComparisonOperatorAliases? ComparisonOperatorAliases { get; }
+    public string EqualsOperator { get; set; }
+    public string NotEqualsOperator { get; set; }
+    public string GreaterThanOperator { get; set; }
+    public string LessThanOperator { get; set; }
+    public string GreaterThanOrEqualOperator { get; set; }
+    public string LessThanOrEqualOperator { get; set; }
+    public string ContainsOperator { get; set; }
+    public string StartsWithOperator { get; set; }
+    public string EndsWithOperator { get; set; }
+    public string NotContainsOperator { get; set; }
+    public string NotStartsWithOperator { get; set; }
+    public string NotEndsWithOperator { get; set; }
+    public string InOperator { get; set; }
+    public string CaseInsensitiveAppendix { get; set; }
     string? GetPropertyPathByQueryName(string? propPath);
     bool IsPropertySortable(string? propertyName);
+    string ReplaceComparisonAliases(string input);
 }
 
-public class ComparisonOperatorAliases
+public class QueryKitSettings
 {
+    public QueryKitPropertyMappings PropertyMappings { get; set; } = new QueryKitPropertyMappings();
     public string EqualsOperator { get; set; } = ComparisonOperator.EqualsOperator().Operator();
     public string NotEqualsOperator { get; set; } = ComparisonOperator.NotEqualsOperator().Operator();
     public string GreaterThanOperator { get; set; } = ComparisonOperator.GreaterThanOperator().Operator();
@@ -29,8 +44,32 @@ public class ComparisonOperatorAliases
     public string NotEndsWithOperator { get; set; } = ComparisonOperator.NotEndsWithOperator().Operator();
     public string InOperator { get; set; } = ComparisonOperator.InOperator().Operator();
     public string CaseInsensitiveAppendix { get; set; } = "*";
+    
+    public QueryKitPropertyMapping<TModel> Property<TModel>(Expression<Func<TModel, object>>? propertySelector)
+    {
+        return PropertyMappings.Property(propertySelector);
+    }
+}
 
-    public string ReplaceAliases(string input)
+public class QueryKitConfiguration : IQueryKitConfiguration
+{
+    public QueryKitPropertyMappings PropertyMappings { get; }
+    public string EqualsOperator { get; set; }
+    public string NotEqualsOperator { get; set; }
+    public string GreaterThanOperator { get; set; }
+    public string LessThanOperator { get; set; }
+    public string GreaterThanOrEqualOperator { get; set; }
+    public string LessThanOrEqualOperator { get; set; }
+    public string ContainsOperator { get; set; }
+    public string StartsWithOperator { get; set; }
+    public string EndsWithOperator { get; set; }
+    public string NotContainsOperator { get; set; }
+    public string NotStartsWithOperator { get; set; }
+    public string NotEndsWithOperator { get; set; }
+    public string InOperator { get; set; }
+    public string CaseInsensitiveAppendix { get; set; }
+
+    public string ReplaceComparisonAliases(string input)
     {
         var aliasedOperators = ComparisonOperator.GetAliasMatches(this);
         foreach (var comparisonAliasMatch in aliasedOperators)
@@ -42,23 +81,6 @@ public class ComparisonOperatorAliases
         
         return input;
     }
-}
-
-public class QueryKitSettings
-{
-    public QueryKitPropertyMappings PropertyMappings { get; set; } = new QueryKitPropertyMappings();
-    public ComparisonOperatorAliases ComparisonAliases { get; set; } = new ComparisonOperatorAliases();
-    
-    public QueryKitPropertyMapping<TModel> Property<TModel>(Expression<Func<TModel, object>>? propertySelector)
-    {
-        return PropertyMappings.Property(propertySelector);
-    }
-}
-
-public class QueryKitConfiguration : IQueryKitConfiguration
-{
-    public QueryKitPropertyMappings PropertyMappings { get; }
-    public ComparisonOperatorAliases ComparisonOperatorAliases { get; }
 
     public QueryKitConfiguration(Action<QueryKitSettings> configureSettings)
     {
@@ -66,7 +88,20 @@ public class QueryKitConfiguration : IQueryKitConfiguration
         configureSettings(settings);
 
         PropertyMappings = settings.PropertyMappings;
-        ComparisonOperatorAliases = settings.ComparisonAliases;
+        EqualsOperator = settings.EqualsOperator;
+        NotEqualsOperator = settings.NotEqualsOperator;
+        GreaterThanOperator = settings.GreaterThanOperator;
+        LessThanOperator = settings.LessThanOperator;
+        GreaterThanOrEqualOperator = settings.GreaterThanOrEqualOperator;
+        LessThanOrEqualOperator = settings.LessThanOrEqualOperator;
+        ContainsOperator = settings.ContainsOperator;
+        StartsWithOperator = settings.StartsWithOperator;
+        EndsWithOperator = settings.EndsWithOperator;
+        NotContainsOperator = settings.NotContainsOperator;
+        NotStartsWithOperator = settings.NotStartsWithOperator;
+        NotEndsWithOperator = settings.NotEndsWithOperator;
+        InOperator = settings.InOperator;
+        CaseInsensitiveAppendix = settings.CaseInsensitiveAppendix;
     }
     
     public string? GetPropertyPathByQueryName(string? queryName)

@@ -13,7 +13,7 @@ public class OperatorAliasTests
     
         var config = new QueryKitConfiguration(config =>
         {
-            config.ComparisonAliases.EqualsOperator = "ti";
+            config.EqualsOperator = "ti";
         });
         var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
         filterExpression.ToString().Should().Be($"""x => (x.Title == "titilating")""");
@@ -27,7 +27,7 @@ public class OperatorAliasTests
     
         var config = new QueryKitConfiguration(config =>
         {
-            config.ComparisonAliases.EqualsOperator = "ti";
+            config.EqualsOperator = "ti";
         });
         var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
         filterExpression.ToString().Should().Be($"""x => ((x.Title == "titilating ties a ti") OrElse (x.Title == "titilater"))""");
@@ -41,7 +41,7 @@ public class OperatorAliasTests
     
         var config = new QueryKitConfiguration(config =>
         {
-            config.ComparisonAliases.EqualsOperator = "@";
+            config.EqualsOperator = "@";
         });
         var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
         filterExpression.ToString().Should().Be($"""x => (x.Title == "titilating")""");
@@ -55,7 +55,7 @@ public class OperatorAliasTests
     
         var config = new QueryKitConfiguration(config =>
         {
-            config.ComparisonAliases.EqualsOperator = "@@$";
+            config.EqualsOperator = "@@$";
         });
         var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
         filterExpression.ToString().Should().Be($"""x => (x.Title == "titilating")""");
@@ -69,7 +69,7 @@ public class OperatorAliasTests
     
         var config = new QueryKitConfiguration(config =>
         {
-            config.ComparisonAliases.EqualsOperator = "@@$";
+            config.EqualsOperator = "@@$";
         });
         var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
         filterExpression.ToString().Should().Be($"""x => (x.Title.ToLower() == "titilating".ToLower())""");
@@ -83,8 +83,8 @@ public class OperatorAliasTests
     
         var config = new QueryKitConfiguration(config =>
         {
-            config.ComparisonAliases.EqualsOperator = "@@$";
-            config.ComparisonAliases.CaseInsensitiveAppendix = "~";
+            config.EqualsOperator = "@@$";
+            config.CaseInsensitiveAppendix = "~";
         });
         var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
         filterExpression.ToString().Should().Be($"""x => (x.Title.ToLower() == "titilating".ToLower())""");
@@ -98,8 +98,8 @@ public class OperatorAliasTests
     
         var config = new QueryKitConfiguration(config =>
         {
-            config.ComparisonAliases.EqualsOperator = "@@$";
-            config.ComparisonAliases.CaseInsensitiveAppendix = "$";
+            config.EqualsOperator = "@@$";
+            config.CaseInsensitiveAppendix = "$";
         });
         var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
         filterExpression.ToString().Should().Be($"""x => (x.Title == "titilating")""");
@@ -113,8 +113,8 @@ public class OperatorAliasTests
     
         var config = new QueryKitConfiguration(config =>
         {
-            config.ComparisonAliases.ContainsOperator = "@@$";
-            config.ComparisonAliases.CaseInsensitiveAppendix = "$";
+            config.ContainsOperator = "@@$";
+            config.CaseInsensitiveAppendix = "$";
         });
         var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
         filterExpression.ToString().Should().Be($"""x => x.Title.Contains("titilating")""");
@@ -127,8 +127,8 @@ public class OperatorAliasTests
         
         var config = new QueryKitConfiguration(config =>
         {
-            config.ComparisonAliases.EqualsOperator = "@@$";
-            config.ComparisonAliases.CaseInsensitiveAppendix = "$";
+            config.EqualsOperator = "@@$";
+            config.CaseInsensitiveAppendix = "$";
         });
         var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
         filterExpression.ToString().Should().Be($"""x => (x.Title.ToLower() == "titilating".ToLower())""");
@@ -141,8 +141,8 @@ public class OperatorAliasTests
         
         var config = new QueryKitConfiguration(config =>
         {
-            config.ComparisonAliases.EqualsOperator = "eq";
-            config.ComparisonAliases.CaseInsensitiveAppendix = "t";
+            config.EqualsOperator = "eq";
+            config.CaseInsensitiveAppendix = "t";
         });
         var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
         filterExpression.ToString().Should().Be($"""x => (x.Title.ToLower() == "titilating".ToLower())""");
@@ -173,15 +173,15 @@ public class OperatorAliasTests
         public CustomQueryKitConfiguration(Action<QueryKitSettings>? configureSettings = null)
             : base(settings => 
             {
-                settings.ComparisonAliases.EqualsOperator = "eq";
-                settings.ComparisonAliases.NotEqualsOperator = "neq";
-                settings.ComparisonAliases.GreaterThanOperator = "gt";
-                settings.ComparisonAliases.GreaterThanOrEqualOperator = "gte";
-                settings.ComparisonAliases.LessThanOperator = "lt";
-                settings.ComparisonAliases.LessThanOrEqualOperator = "lte";
-                settings.ComparisonAliases.ContainsOperator = "ct";
-                settings.ComparisonAliases.StartsWithOperator = "sw";
-                settings.ComparisonAliases.EndsWithOperator = "ew";
+                settings.EqualsOperator = "eq";
+                settings.NotEqualsOperator = "neq";
+                settings.GreaterThanOperator = "gt";
+                settings.GreaterThanOrEqualOperator = "gte";
+                settings.LessThanOperator = "lt";
+                settings.LessThanOrEqualOperator = "lte";
+                settings.ContainsOperator = "ct";
+                settings.StartsWithOperator = "sw";
+                settings.EndsWithOperator = "ew";
 
                 configureSettings?.Invoke(settings);
             })

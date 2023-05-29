@@ -172,8 +172,8 @@ You can also add custom comparison operators to your config if you'd like:
 ```csharp
 var config = new QueryKitConfiguration(config =>
 {
-    config.ComparisonOperatorAliases.EqualsOperator = "@@$";
-    config.ComparisonOperatorAliases.CaseInsensitiveAppendix = "$";
+    config.EqualsOperator = "@@$";
+    config.CaseInsensitiveAppendix = "$";
 });
 ```
 
@@ -185,16 +185,16 @@ public class CustomQueryKitConfiguration : QueryKitConfiguration
     public CustomQueryKitConfiguration(Action<QueryKitSettings>? configureSettings = null)
         : base(settings => 
         {
-            settings.ComparisonAliases.EqualsOperator = "eq";
-            settings.ComparisonAliases.NotEqualsOperator = "neq";
-            settings.ComparisonAliases.GreaterThanOperator = "gt";
-            settings.ComparisonAliases.GreaterThanOrEqualOperator = "gte";
-            settings.ComparisonAliases.LessThanOperator = "lt";
-            settings.ComparisonAliases.LessThanOrEqualOperator = "lte";
-            settings.ComparisonAliases.ContainsOperator = "ct";
-            settings.ComparisonAliases.StartsWithOperator = "sw";
-            settings.ComparisonAliases.EndsWithOperator = "ew";
-				    settings.ComparisonOperatorAliases.CaseInsensitiveAppendix = "$";
+            settings.EqualsOperator = "eq";
+            settings.NotEqualsOperator = "neq";
+            settings.GreaterThanOperator = "gt";
+            settings.GreaterThanOrEqualOperator = "gte";
+            settings.LessThanOperator = "lt";
+            settings.LessThanOrEqualOperator = "lte";
+            settings.ContainsOperator = "ct";
+            settings.StartsWithOperator = "sw";
+            settings.EndsWithOperator = "ew";
+				    settings.CaseInsensitiveAppendix = "$";
 
             configureSettings?.Invoke(settings);
         })
@@ -204,7 +204,7 @@ public class CustomQueryKitConfiguration : QueryKitConfiguration
 
 // ---
 
-var input = """Title eq "Pancakes" """;
+var input = """Title eq$ "Pancakes" """;
 var config = new CustomQueryKitConfiguration();
 var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
 ```
