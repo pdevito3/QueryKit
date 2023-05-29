@@ -5,6 +5,7 @@ using System.Collections;
 using System.Globalization;
 using System.Linq.Expressions;
 using System.Reflection;
+using Configuration;
 using Exceptions;
 using Operators;
 using Sprache;

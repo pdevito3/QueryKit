@@ -1,5 +1,6 @@
 namespace QueryKit.WebApiTestProject.Features;
 
+using Configuration;
 using Database;
 using Entities;
 using MediatR;

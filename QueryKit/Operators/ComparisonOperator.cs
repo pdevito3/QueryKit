@@ -2,6 +2,7 @@ namespace QueryKit.Operators;
 
 using System.Linq.Expressions;
 using Ardalis.SmartEnum;
+using Configuration;
 
 public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
 {
@@ -392,7 +393,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         public string Operator { get; set; }
     }
     
-    internal static List<ComparisonAliasMatch> GetAliasMatches(QueryKitConfiguration aliases)
+    internal static List<ComparisonAliasMatch> GetAliasMatches(IQueryKitConfiguration aliases)
     {
         var matches = new List<ComparisonAliasMatch>();
         var caseInsensitiveAppendix = aliases.CaseInsensitiveAppendix;

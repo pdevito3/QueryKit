@@ -2,6 +2,7 @@ namespace QueryKit.UnitTests;
 
 using System.Linq.Expressions;
 using Bogus;
+using Configuration;
 using Exceptions;
 using FluentAssertions;
 using WebApiTestProject.Entities;

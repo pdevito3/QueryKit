@@ -2,6 +2,7 @@ namespace QueryKit.Operators;
 
 using System.Linq.Expressions;
 using Ardalis.SmartEnum;
+using Configuration;
 
 public abstract class LogicalOperator : SmartEnum<LogicalOperator>
 {
@@ -54,7 +55,7 @@ public abstract class LogicalOperator : SmartEnum<LogicalOperator>
         public string Operator { get; set; }
     }
 
-    internal static List<LogicalAliasMatch> GetAliasMatches(QueryKitConfiguration aliases)
+    internal static List<LogicalAliasMatch> GetAliasMatches(IQueryKitConfiguration aliases)
     {
         var matches = new List<LogicalAliasMatch>();
         

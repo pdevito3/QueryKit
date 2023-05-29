@@ -1,5 +1,6 @@
 namespace QueryKit.UnitTests;
 
+using Configuration;
 using FluentAssertions;
 using WebApiTestProject.Entities.Recipes;
 

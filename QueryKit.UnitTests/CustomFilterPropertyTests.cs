@@ -1,6 +1,7 @@
 namespace QueryKit.UnitTests;
 
 using Bogus;
+using Configuration;
 using Exceptions;
 using FluentAssertions;
 using Operators;

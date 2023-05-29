@@ -1,5 +1,7 @@
 namespace QueryKit;
 
+using Configuration;
+
 public static class QueryableExtensions
 {
     public static IQueryable<T> ApplyQueryKitFilter<T>(this IQueryable<T> source, string filter, IQueryKitConfiguration? config = null)
