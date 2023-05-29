@@ -21,7 +21,7 @@ public class QueryKitSettings
     public string InOperator { get; set; } = ComparisonOperator.InOperator().Operator();
     public string AndOperator { get; set; } = LogicalOperator.AndOperator.Operator();
     public string OrOperator { get; set; } = LogicalOperator.OrOperator.Operator();
-    public string CaseInsensitiveAppendix { get; set; } = "*";
+    public string CaseInsensitiveAppendix { get; set; } = ComparisonOperator.CaseSensitiveAppendix.ToString();
     public bool AllowUnknownProperties { get; set; }
     
     public QueryKitPropertyMapping<TModel> Property<TModel>(Expression<Func<TModel, object>>? propertySelector)

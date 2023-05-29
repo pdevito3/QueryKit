@@ -103,6 +103,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
             : newOperator!;
     }
 
+    public const char CaseSensitiveAppendix = '*';
     public abstract string Operator();
     public bool CaseInsensitive { get; protected set; }
     public abstract Expression GetExpression<T>(Expression left, Expression right);
@@ -117,7 +118,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         {
         }
 
-        public override string Operator() => CaseInsensitive ? $"{Name}*" : Name;
+        public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
         public override Expression GetExpression<T>(Expression left, Expression right)
         {
             if (CaseInsensitive && left.Type == typeof(string) && right.Type == typeof(string))
@@ -138,7 +139,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         {
         }
 
-        public override string Operator() => CaseInsensitive ? $"{Name}*" : Name;
+        public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
         public override Expression GetExpression<T>(Expression left, Expression right)
         {
             
@@ -213,7 +214,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         {
         }
 
-        public override string Operator() => CaseInsensitive ? $"{Name}*" : Name;
+        public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
         public override Expression GetExpression<T>(Expression left, Expression right)
         {
             if (CaseInsensitive)
@@ -235,7 +236,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         {
         }
 
-        public override string Operator() => CaseInsensitive ? $"{Name}*" : Name;
+        public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
         public override Expression GetExpression<T>(Expression left, Expression right)
         {
             if (CaseInsensitive)
@@ -257,7 +258,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         {
         }
 
-        public override string Operator() => CaseInsensitive ? $"{Name}*" : Name;
+        public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
         public override Expression GetExpression<T>(Expression left, Expression right)
         {
             if (CaseInsensitive)
@@ -279,7 +280,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         {
         }
 
-        public override string Operator() => CaseInsensitive ? $"{Name}*" : Name;
+        public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
         public override Expression GetExpression<T>(Expression left, Expression right)
         {
             if(CaseInsensitive)
@@ -302,7 +303,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         {
         }
 
-        public override string Operator() => CaseInsensitive ? $"{Name}*" : Name;
+        public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
         public override Expression GetExpression<T>(Expression left, Expression right)
         {
             if (CaseInsensitive)
@@ -324,7 +325,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         {
         }
 
-        public override string Operator() => CaseInsensitive ? $"{Name}*" : Name;
+        public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
         public override Expression GetExpression<T>(Expression left, Expression right)
         {
             if (CaseInsensitive)
@@ -346,7 +347,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         {
         }
 
-        public override string Operator() => CaseInsensitive ? $"{Name}*" : Name;
+        public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
         public override Expression GetExpression<T>(Expression left, Expression right)
         {
             var leftType = left.Type;

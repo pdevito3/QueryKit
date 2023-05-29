@@ -50,7 +50,7 @@ public static class FilterParser
             .Or(Parse.String(ComparisonOperator.NotStartsWithOperator().Operator()).Text())
             .Or(Parse.String(ComparisonOperator.NotEndsWithOperator().Operator()).Text())
             .Or(Parse.String(ComparisonOperator.InOperator().Operator()).Text())
-        .SelectMany(op => Parse.Char('*').Optional(), (op, caseInsensitive) => new { op, caseInsensitive })
+        .SelectMany(op => Parse.Char(ComparisonOperator.CaseSensitiveAppendix).Optional(), (op, caseInsensitive) => new { op, caseInsensitive })
         .Select(x => ComparisonOperator.GetByOperatorString(x.op, x.caseInsensitive.IsDefined));
     
     private static Parser<Expression> ComparisonExprParser<T>(ParameterExpression parameter, IQueryKitConfiguration? config)
