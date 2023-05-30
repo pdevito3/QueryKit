@@ -1,9 +1,12 @@
 ﻿
 namespace QueryKit;
 
+using System.Collections;
 using System.Globalization;
 using System.Linq.Expressions;
 using System.Reflection;
+using Configuration;
+using Exceptions;
 using Operators;
 using Sprache;
 
@@ -11,8 +14,20 @@ public static class FilterParser
 {
     internal static Expression<Func<T, bool>> ParseFilter<T>(string input, IQueryKitConfiguration? config = null)
     {
+        input = config?.ReplaceLogicalAliases(input) ?? input;
+        input = config?.ReplaceComparisonAliases(input) ?? input;
+        input = config?.PropertyMappings?.ReplaceAliasesWithPropertyPaths(input) ?? input;
+        
         var parameter = Expression.Parameter(typeof(T), "x");
-        var expr = ExprParser<T>(parameter, config).End().Parse(input);
+        Expression expr; 
+        try
+        {
+            expr = ExprParser<T>(parameter, config).End().Parse(input);
+        }
+        catch (ParseException e)
+        {
+            throw new ParsingException(e);
+        }
         return Expression.Lambda<Func<T, bool>>(expr, parameter);
     }
 
@@ -20,112 +35,26 @@ public static class FilterParser
         from first in Parse.Letter.Once()
         from rest in Parse.LetterOrDigit.XOr(Parse.Char('_')).Many()
         select new string(first.Concat(rest).ToArray());
-
+    
     private static Parser<ComparisonOperator> ComparisonOperatorParser =>
-        from op in
-            Parse.String(ComparisonOperator.EqualsOperator().Operator()).Text()
-                .Or(Parse.String(ComparisonOperator.NotEqualsOperator().Operator()).Text())
-                .Or(Parse.String(ComparisonOperator.GreaterThanOrEqualOperator().Operator()).Text())
-                .Or(Parse.String(ComparisonOperator.LessThanOrEqualOperator().Operator()).Text())
-                .Or(Parse.String(ComparisonOperator.GreaterThanOperator().Operator()).Text())
-                .Or(Parse.String(ComparisonOperator.LessThanOperator().Operator()).Text())
-                .Or(Parse.String(ComparisonOperator.ContainsOperator().Operator()).Text())
-                .Or(Parse.String(ComparisonOperator.StartsWithOperator().Operator()).Text())
-                .Or(Parse.String(ComparisonOperator.EndsWithOperator().Operator()).Text())
-                .Or(Parse.String(ComparisonOperator.NotContainsOperator().Operator()).Text())
-                .Or(Parse.String(ComparisonOperator.NotStartsWithOperator().Operator()).Text())
-                .Or(Parse.String(ComparisonOperator.NotEndsWithOperator().Operator()).Text())
-                .Or(Parse.String(ComparisonOperator.InOperator().Operator()).Text())
-        from caseInsensitive in Parse.Char('*').Optional()
-        select ComparisonOperator.GetByOperatorString(op, caseInsensitive.IsDefined);
-
-    private static Parser<Expression> ComparisonExprParser<T>(ParameterExpression parameter, IQueryKitConfiguration? config)
-    {
-        var comparisonOperatorParser = ComparisonOperatorParser.Token();
-        var rightSideValueParser = RightSideValueParser.Token();
-
-        return CreateLeftExprParser(parameter, config)
-            .SelectMany(leftExpr => comparisonOperatorParser, (leftExpr, op) => new { leftExpr, op })
-            .SelectMany(temp => rightSideValueParser, (temp, right) => new { temp.leftExpr, temp.op, right })
-            .Select(temp =>
-            {
-                if (temp.leftExpr.NodeType == ExpressionType.Constant && ((ConstantExpression)temp.leftExpr).Value!.Equals(true))
-                {
-                    return Expression.Equal(Expression.Constant(true), Expression.Constant(true));
-                }
-
-                var rightExpr = CreateRightExpr(temp.leftExpr, temp.right);
-                return temp.op.GetExpression<T>(temp.leftExpr, rightExpr);
-            });
-    }
-
-    private static Parser<Expression?>? CreateLeftExprParser(ParameterExpression parameter, IQueryKitConfiguration? config)
-    {
-        var leftIdentifierParser = Identifier.DelimitedBy(Parse.Char('.')).Token();
-
-        return leftIdentifierParser?.Select(left =>
-        {
-            // If only a single identifier is present
-            var leftList = left.ToList();
-            if (leftList.Count == 1)
-            {
-                var propName = leftList?.First();
-                var fullPropPath = config?.GetPropertyPathByQueryName(propName) ?? propName;
-                var propNames = fullPropPath?.Split('.');
-
-                var propertyExpression = propNames?.Aggregate((Expression)parameter, (expr, pn) =>
-                {
-                    var propertyInfo = GetPropertyInfo(expr.Type, pn);
-                    var actualPropertyName = propertyInfo?.Name ?? pn;
-                    try
-                    {
-                        return Expression.PropertyOrField(expr, actualPropertyName);
-                    }
-                    catch
-                    {
-                        return Expression.Constant(true, typeof(bool));
-                    }
-                });
-
-                var propertyConfig = config?.PropertyMappings?.GetPropertyInfo(fullPropPath);
-                if (propertyConfig != null && !propertyConfig.CanFilter)
-                {
-                    return Expression.Constant(true, typeof(bool));
-                }
-
-                return propertyExpression;
-            }
-
-            // If the property is nested with a dot ('.') separator
-            var nestedPropertyExpression = leftList.Aggregate((Expression)parameter, (expr, propName) =>
-            {
-                var propertyInfo = GetPropertyInfo(expr.Type, propName);
-                var mappedPropertyInfo = config?.PropertyMappings?.GetPropertyInfoByQueryName(propName);
-                var actualPropertyName = mappedPropertyInfo?.Name ?? propertyInfo?.Name ?? propName;
-                try
-                {
-                    return Expression.PropertyOrField(expr, actualPropertyName);
-                }
-                catch
-                {
-                    return Expression.Constant(true, typeof(bool));
-                }
-            });
-
-            var nestedPropertyConfig = config?.PropertyMappings?.GetPropertyInfo(leftList.Last());
-            if (nestedPropertyConfig != null && !nestedPropertyConfig.CanFilter)
-            {
-                return Expression.Constant(true, typeof(bool));
-            }
-
-            return nestedPropertyExpression;
-        });
-    }
+        Parse.String(ComparisonOperator.EqualsOperator().Operator()).Text()
+            .Or(Parse.String(ComparisonOperator.NotEqualsOperator().Operator()).Text())
+            .Or(Parse.String(ComparisonOperator.GreaterThanOrEqualOperator().Operator()).Text())
+            .Or(Parse.String(ComparisonOperator.LessThanOrEqualOperator().Operator()).Text())
+            .Or(Parse.String(ComparisonOperator.GreaterThanOperator().Operator()).Text())
+            .Or(Parse.String(ComparisonOperator.LessThanOperator().Operator()).Text())
+            .Or(Parse.String(ComparisonOperator.ContainsOperator().Operator()).Text())
+            .Or(Parse.String(ComparisonOperator.StartsWithOperator().Operator()).Text())
+            .Or(Parse.String(ComparisonOperator.EndsWithOperator().Operator()).Text())
+            .Or(Parse.String(ComparisonOperator.NotContainsOperator().Operator()).Text())
+            .Or(Parse.String(ComparisonOperator.NotStartsWithOperator().Operator()).Text())
+            .Or(Parse.String(ComparisonOperator.NotEndsWithOperator().Operator()).Text())
+            .Or(Parse.String(ComparisonOperator.InOperator().Operator()).Text())
+        .SelectMany(op => Parse.Char(ComparisonOperator.CaseSensitiveAppendix).Optional(), (op, caseInsensitive) => new { op, caseInsensitive })
+        .Select(x => ComparisonOperator.GetByOperatorString(x.op, x.caseInsensitive.IsDefined));
 
     private static PropertyInfo? GetPropertyInfo(Type type, string propertyName)
-    {
-        return type.GetProperty(propertyName, BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance);
-    }
+        => type.GetProperty(propertyName, BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance);
 
     public static Parser<LogicalOperator> LogicalOperatorParser =>
         from leadingSpaces in Parse.WhiteSpace.Many()
@@ -135,7 +64,6 @@ public static class FilterParser
     
     private static Parser<string> DoubleQuoteParser
         => Parse.Char('"').Then(_ => Parse.AnyChar.Except(Parse.Char('"')).Many().Text().Then(innerValue => Parse.Char('"').Return(innerValue)));
-
 
     private static Parser<string> TimeFormatParser => Parse.Regex(@"\d{2}:\d{2}:\d{2}").Text();
     private static Parser<string> DateTimeFormatParser => 
@@ -179,13 +107,6 @@ public static class FilterParser
             .DelimitedBy(Parse.Char(',').Token())
         from closingBracket in Parse.Char(']')
         select "[" + string.Join(",", content) + "]";
-
-    private static Parser<Expression> AtomicExprParser<T>(ParameterExpression parameter, IQueryKitConfiguration? config = null)
-        => ComparisonExprParser<T>(parameter, config)
-            .Or(Parse.Ref(() => ExprParser<T>(parameter, config)).Contained(Parse.Char('('), Parse.Char(')')));
-
-    private static Parser<Expression> ExprParser<T>(ParameterExpression parameter, IQueryKitConfiguration? config = null)
-        => OrExprParser<T>(parameter, config);
 
     private static readonly Dictionary<Type, Func<string, object>> TypeConversionFunctions = new()
     {
@@ -274,6 +195,71 @@ public static class FilterParser
         return targetType;
     }
 
+    private static Parser<Expression> ComparisonExprParser<T>(ParameterExpression parameter, IQueryKitConfiguration? config)
+    {
+        var comparisonOperatorParser = ComparisonOperatorParser.Token();
+        var rightSideValueParser = RightSideValueParser.Token();
+
+        return CreateLeftExprParser(parameter, config)
+            .SelectMany(leftExpr => comparisonOperatorParser, (leftExpr, op) => new { leftExpr, op })
+            .SelectMany(temp => rightSideValueParser, (temp, right) => new { temp.leftExpr, temp.op, right })
+            .Select(temp =>
+            {
+                if (temp.leftExpr.NodeType == ExpressionType.Constant && ((ConstantExpression)temp.leftExpr).Value!.Equals(true))
+                {
+                    return Expression.Equal(Expression.Constant(true), Expression.Constant(true));
+                }
+
+                var rightExpr = CreateRightExpr(temp.leftExpr, temp.right);
+                return temp.op.GetExpression<T>(temp.leftExpr, rightExpr);
+            });
+    }
+
+    private static Parser<Expression?>? CreateLeftExprParser(ParameterExpression parameter, IQueryKitConfiguration? config)
+    {
+        var leftIdentifierParser = Identifier.DelimitedBy(Parse.Char('.')).Token();
+
+        return leftIdentifierParser?.Select(left =>
+        {
+            var leftList = left.ToList();
+
+            var fullPropPath = leftList?.First();
+            var propertyExpression = leftList?.Aggregate((Expression)parameter, (expr, propName) =>
+            {
+                var propertyInfo = GetPropertyInfo(expr.Type, propName);
+                var actualPropertyName = propertyInfo?.Name ?? propName;
+                try
+                {
+                    return Expression.PropertyOrField(expr, actualPropertyName);
+                }
+                catch(ArgumentException)
+                {
+                    if(config?.AllowUnknownProperties == true)
+                    {
+                        return Expression.Constant(true, typeof(bool));
+                    }
+                    throw new UnknownFilterPropertyException(actualPropertyName);
+                }
+            });
+
+            var propertyConfig = config?.PropertyMappings?.GetPropertyInfo(fullPropPath);
+            if (propertyConfig != null && !propertyConfig.CanFilter)
+            {
+                return Expression.Constant(true, typeof(bool));
+            }
+
+            return propertyExpression;
+        });
+    }
+    
+    private static Parser<Expression> AtomicExprParser<T>(ParameterExpression parameter,
+        IQueryKitConfiguration? config = null)
+        => ComparisonExprParser<T>(parameter, config)
+            .Or(Parse.Ref(() => ExprParser<T>(parameter, config)).Contained(Parse.Char('('), Parse.Char(')')));
+
+    private static Parser<Expression> ExprParser<T>(ParameterExpression parameter, IQueryKitConfiguration? config = null)
+        => OrExprParser<T>(parameter, config);
+    
     private static Parser<Expression> AndExprParser<T>(ParameterExpression parameter, IQueryKitConfiguration? config = null)
         => Parse.ChainOperator(
             LogicalOperatorParser.Where(x => x.Name == LogicalOperator.AndOperator.Operator()),

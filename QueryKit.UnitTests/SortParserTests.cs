@@ -2,6 +2,8 @@ namespace QueryKit.UnitTests;
 
 using System.Linq.Expressions;
 using Bogus;
+using Configuration;
+using Exceptions;
 using FluentAssertions;
 using WebApiTestProject.Entities;
 
@@ -259,27 +261,25 @@ public class SortParserTests
         GetMemberName(sortExpression[0].Expression).Should().Be("Age");
         sortExpression[0].IsAscending.Should().BeFalse();
     }
-    
+
     [Fact]
-    public void can_handle_nonexistent_property()
+    public void can_throw_error_when_property_not_recognized()
     {
         var faker = new Faker();
-        var input = $"""{faker.Lorem.Word()}""";
-        var sortExpression = SortParser.ParseSort<TestingPerson>(input);
-        sortExpression.Should().HaveCount(0);
+        var propertyName = faker.Lorem.Word();
+        var input = $"""Title, {propertyName}, Age desc""";
+        var act = () => SortParser.ParseSort<TestingPerson>(input);
+        act.Should().Throw<SortParsingException>()
+            .WithMessage($"Parsing failed during sorting. '{propertyName}' was not recognized.");
     }
-    
+
     [Fact]
-    public void can_handle_nonexistent_property_with_others()
+    public void can_throw_error_when_operator_not_recognized()
     {
-        var faker = new Faker();
-        var input = $"""Title, {faker.Lorem.Word()}, Age desc""";
-        var sortExpression = SortParser.ParseSort<TestingPerson>(input);
-        sortExpression.Should().HaveCount(2);
-        GetMemberName(sortExpression[0].Expression).Should().Be("Title");
-        sortExpression[0].IsAscending.Should().BeTrue();
-        GetMemberName(sortExpression[1].Expression).Should().Be("Age");
-        sortExpression[1].IsAscending.Should().BeFalse();
+        var input = $"""++Title, Age desc""";
+        var act = () => SortParser.ParseSort<TestingPerson>(input);
+        act.Should().Throw<SortParsingException>()
+            .WithMessage($"Parsing failed during sorting. '++Title' was not recognized.");
     }
 
     private string GetMemberName<T>(Expression<Func<T, object>>? expr)

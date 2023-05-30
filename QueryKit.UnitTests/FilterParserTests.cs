@@ -1,6 +1,7 @@
 namespace QueryKit.UnitTests;
 
 using Bogus;
+using Exceptions;
 using FluentAssertions;
 using WebApiTestProject.Entities;
 
@@ -424,11 +425,52 @@ public class FilterParserTests
     }
     
     [Fact]
-    public void can_handle_nonexistent_property()
+    public void can_throw_error_when_property_not_recognized()
     {
         var faker = new Faker();
-        var input = $"""{faker.Lorem.Word()} == 25""";
-        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be("x => (True == True)");
+        var propertyName = faker.Lorem.Word();
+        var input = $"""{propertyName} == 25""";
+        var act = () => FilterParser.ParseFilter<TestingPerson>(input);
+        act.Should().Throw<UnknownFilterPropertyException>()
+            .WithMessage($"The filter property '{propertyName}' was not recognized.");
+    }
+    
+    [Fact]
+    public void can_throw_error_when_comparison_operator_not_recognized()
+    {
+        var input = $"""Age ^#$%^%@ 25""";
+        var act = () => FilterParser.ParseFilter<TestingPerson>(input);
+        act.Should().Throw<ParsingException>()
+        .WithMessage("There was a parsing failure, likely due to an invalid comparison or logical operator. You may also be missing double quotes surrounding a string or guid.");
+    }
+    
+    [Fact]
+    public void can_throw_error_when_logical_operator_not_recognized()
+    {
+        var input = $"""Title == "temp" %$@#^ Age == 25""";
+        var act = () => FilterParser.ParseFilter<TestingPerson>(input);
+        act.Should().Throw<ParsingException>()
+        .WithMessage("There was a parsing failure, likely due to an invalid comparison or logical operator. You may also be missing double quotes surrounding a string or guid.");
+    }
+    
+    [Fact]
+    public void can_throw_error_when_missing_double_quotes_not_recognized()
+    {
+        var input = $"""Title == temp string here""";
+        var act = () => FilterParser.ParseFilter<TestingPerson>(input);
+        act.Should().Throw<ParsingException>()
+        .WithMessage("There was a parsing failure, likely due to an invalid comparison or logical operator. You may also be missing double quotes surrounding a string or guid.");
+    }
+    
+    [Fact]
+    public void can_throw_error_when_property_has_space()
+    {
+        var faker = new Faker();
+        var propertyName = faker.Lorem.Sentence();
+        var firstWord = propertyName.Split(' ').First();
+        var input = $"""{propertyName} == 25""";
+        var act = () => FilterParser.ParseFilter<TestingPerson>(input);
+        act.Should().Throw<UnknownFilterPropertyException>()
+            .WithMessage($"The filter property '{firstWord}' was not recognized.");
     }
 }

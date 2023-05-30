@@ -148,7 +148,9 @@ There's a wide variety of comparison operators that use the same base syntax as 
 var input = """(Title == "lamb" && ((Age >= 25 && Rating < 4.5) || (SpecificDate <= 2022-07-01T00:00:03Z && Time == 00:00:03)) && (Favorite == true || Email.Value _= "hello@gmail.com"))""";
 ```
 
-### Property Settings
+### Settings
+
+#### Property Settings
 
 Filtering is set up to create an expression using the property names you have on your entity, but you can pass in a config to customize things a bit when needed.
 
@@ -164,6 +166,71 @@ var config = new QueryKitConfiguration(config =>
     config.Property<SpecialPerson>(x => x.Age)
       		.PreventFilter();
 });
+```
+
+#### Custom Operators
+
+You can also add custom comparison operators to your config if you'd like:
+```csharp
+var config = new QueryKitConfiguration(config =>
+{
+    config.EqualsOperator = "@@$";
+    config.CaseInsensitiveAppendix = "$";
+    config.AndOperator = "and";
+});
+```
+
+If you want to use it globally, you can make a base implementation like this:
+
+```csharp
+public class CustomQueryKitConfiguration : QueryKitConfiguration
+{
+    public CustomQueryKitConfiguration(Action<QueryKitSettings>? configureSettings = null)
+        : base(settings => 
+        {
+            settings.EqualsOperator = "eq";
+            settings.NotEqualsOperator = "neq";
+            settings.GreaterThanOperator = "gt";
+            settings.GreaterThanOrEqualOperator = "gte";
+            settings.LessThanOperator = "lt";
+            settings.LessThanOrEqualOperator = "lte";
+            settings.ContainsOperator = "ct";
+            settings.StartsWithOperator = "sw";
+            settings.EndsWithOperator = "ew";
+            settings.NotContainsOperator = "nct";
+            settings.NotStartsWithOperator = "nsw";
+            settings.NotEndsWithOperator = "new";
+            settings.AndOperator = "and";
+            settings.OrOperator = "or";
+            settings.CaseInsensitiveAppendix = "i";
+
+            configureSettings?.Invoke(settings);
+        })
+    {
+    }
+}
+
+// ---
+
+var input = """Title eq$ "Pancakes" and Rating gt 10""";
+var config = new CustomQueryKitConfiguration();
+var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
+```
+
+> **Note**
+> Spaces must be used around the comparison operator when using custom values.
+> `Title @@$ "titilating"` ✅ 
+> `Title@@$"titilating"` ❌
+
+#### Allow Unknown Properties
+
+By default, QueryKit will throw an error if it doesn't recognize a property name, If you want to loosen the reigns here a bit, you can set `AllowUnknownProperties` to `true` in your config. When active, unknown properties will be ignored in the expression resolution.
+```csharp
+var config = new QueryKitConfiguration(config =>
+{
+    config.AllowUnknownProperties = true;
+});
+var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
 ```
 
 ### Nested Objects
@@ -266,3 +333,11 @@ var config = new QueryKitConfiguration(config =>
           .PreventSort();
 });
 ```
+
+## Error Handling
+
+If you want to capture errors to easily throw a `400`, you can add error handling aronud these exceptions:
+
+* A `FilterParsingException` will be thrown when there is an invalid operator or bad syntax is used (e.g. not using double quotes around a string or guid).
+* An `UnknownFilterPropertyException` will be thrown if a property is not recognized during filtering
+* A `SortParsingException` will be thrown if a property or operation is not recognized during sorting

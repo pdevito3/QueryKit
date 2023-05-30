@@ -1,9 +1,12 @@
 namespace QueryKit.UnitTests;
 
 using Bogus;
+using Configuration;
+using Exceptions;
 using FluentAssertions;
 using Operators;
 using WebApiTestProject.Entities;
+using WebApiTestProject.Entities.Recipes;
 
 public class CustomFilterPropertyTests
 {
@@ -16,7 +19,7 @@ public class CustomFilterPropertyTests
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
         filterExpression.ToString().Should().Be($"""x => (x.PhysicalAddress.State == "{value}")""");
     }
-    
+
     [Fact]
     public void can_have_custom_child_prop_name_ownsone()
     {
@@ -70,6 +73,36 @@ public class CustomFilterPropertyTests
         });
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
         filterExpression.ToString().Should().Be($"""x => (x.Title == "{value}")""");
+    }
+    
+    [Fact]
+    public void can_handle_alias_in_value()
+    {
+        var faker = new Faker();
+        var value = faker.Lorem.Word();
+        var input = $"""special_title == "{value} with special_value" """;
+
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.Title).HasQueryName("special_title");
+        });
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+        filterExpression.ToString().Should().Be($"""x => (x.Title == "{value} with special_value")""");
+    }
+    
+    [Fact]
+    public void can_handle_alias_in_value_with_operator_after_it()
+    {
+        var faker = new Faker();
+        var value = faker.Lorem.Word();
+        var input = $"""special_title == "{value} with special_value @=* a thing" """;
+
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.Title).HasQueryName("special_title");
+        });
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+        filterExpression.ToString().Should().Be($"""x => (x.Title == "{value} with special_value @=* a thing")""");
     }
     
     [Fact]
@@ -168,5 +201,36 @@ public class CustomFilterPropertyTests
         });
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
         filterExpression.ToString().Should().Be($"""x => (True == True)""");
+    }
+    
+    [Fact]
+    public void can_throw_error_when_property_has_space()
+    {
+        var faker = new Faker();
+        var propertyName = faker.Lorem.Sentence();
+        var firstWord = propertyName.Split(' ').First();
+        var input = $"""{propertyName} == 25""";
+
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.Id).PreventFilter();
+        });
+        var act = () => FilterParser.ParseFilter<TestingPerson>(input, config);
+        act.Should().Throw<UnknownFilterPropertyException>()
+            .WithMessage($"The filter property '{firstWord}' was not recognized.");
+    }
+    
+    [Fact]
+    public void can_handle_nonexistent_property()
+    {
+        var faker = new Faker();
+        var input = $"""{faker.Lorem.Word()} == 25""";
+        
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.AllowUnknownProperties = true;
+        });
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+        filterExpression.ToString().Should().Be("x => (True == True)");
     }
 }

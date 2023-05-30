@@ -2,6 +2,7 @@ namespace QueryKit.Operators;
 
 using System.Linq.Expressions;
 using Ardalis.SmartEnum;
+using Configuration;
 
 public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
 {
@@ -41,10 +42,68 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         {
             throw new Exception($"Operator {op} is not supported");
         }
-        comparisonOperator.CaseInsensitive = caseInsensitive;
-        return comparisonOperator;
+
+        ComparisonOperator? newOperator = null;
+
+        if (comparisonOperator is EqualsType)
+        {
+            newOperator = new EqualsType(caseInsensitive);
+        }
+        if (comparisonOperator is NotEqualsType)
+        {
+            newOperator = new NotEqualsType(caseInsensitive);
+        }
+        if (comparisonOperator is GreaterThanType)
+        {
+            newOperator = new GreaterThanType(caseInsensitive);
+        }
+        if (comparisonOperator is LessThanType)
+        {
+            newOperator = new LessThanType(caseInsensitive);
+        }
+        if (comparisonOperator is GreaterThanOrEqualType)
+        {
+            newOperator = new GreaterThanOrEqualType(caseInsensitive);
+        }
+        if (comparisonOperator is LessThanOrEqualType)
+        {
+            newOperator = new LessThanOrEqualType(caseInsensitive);
+        }
+        if (comparisonOperator is ContainsType)
+        {
+            newOperator = new ContainsType(caseInsensitive);
+        }
+        if (comparisonOperator is StartsWithType)
+        {
+            newOperator = new StartsWithType(caseInsensitive);
+        }
+        if (comparisonOperator is EndsWithType)
+        {
+            newOperator = new EndsWithType(caseInsensitive);
+        }
+        if (comparisonOperator is NotContainsType)
+        {
+            newOperator = new NotContainsType(caseInsensitive);
+        }
+        if (comparisonOperator is NotStartsWithType)
+        {
+            newOperator = new NotStartsWithType(caseInsensitive);
+        }
+        if (comparisonOperator is NotEndsWithType)
+        {
+            newOperator = new NotEndsWithType(caseInsensitive);
+        }
+        if (comparisonOperator is InType)
+        {
+            newOperator = new InType(caseInsensitive);
+        }
+        
+        return newOperator == null 
+            ? throw new Exception($"Operator {op} is not supported")
+            : newOperator!;
     }
 
+    public const char CaseSensitiveAppendix = '*';
     public abstract string Operator();
     public bool CaseInsensitive { get; protected set; }
     public abstract Expression GetExpression<T>(Expression left, Expression right);
@@ -59,7 +118,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         {
         }
 
-        public override string Operator() => Name;
+        public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
         public override Expression GetExpression<T>(Expression left, Expression right)
         {
             if (CaseInsensitive && left.Type == typeof(string) && right.Type == typeof(string))
@@ -80,7 +139,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         {
         }
 
-        public override string Operator() => Name;
+        public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
         public override Expression GetExpression<T>(Expression left, Expression right)
         {
             
@@ -155,7 +214,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         {
         }
 
-        public override string Operator() => Name;
+        public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
         public override Expression GetExpression<T>(Expression left, Expression right)
         {
             if (CaseInsensitive)
@@ -177,7 +236,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         {
         }
 
-        public override string Operator() => Name;
+        public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
         public override Expression GetExpression<T>(Expression left, Expression right)
         {
             if (CaseInsensitive)
@@ -199,7 +258,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         {
         }
 
-        public override string Operator() => Name;
+        public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
         public override Expression GetExpression<T>(Expression left, Expression right)
         {
             if (CaseInsensitive)
@@ -221,7 +280,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         {
         }
 
-        public override string Operator() => Name;
+        public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
         public override Expression GetExpression<T>(Expression left, Expression right)
         {
             if(CaseInsensitive)
@@ -244,7 +303,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         {
         }
 
-        public override string Operator() => Name;
+        public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
         public override Expression GetExpression<T>(Expression left, Expression right)
         {
             if (CaseInsensitive)
@@ -266,7 +325,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         {
         }
 
-        public override string Operator() => Name;
+        public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
         public override Expression GetExpression<T>(Expression left, Expression right)
         {
             if (CaseInsensitive)
@@ -288,7 +347,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         {
         }
 
-        public override string Operator() => Name;
+        public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
         public override Expression GetExpression<T>(Expression left, Expression right)
         {
             var leftType = left.Type;
@@ -327,5 +386,84 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
 
             return Expression.Call(right, containsMethod, left);
         }
+    }
+    
+    internal class ComparisonAliasMatch
+    {
+        public string Alias { get; set; }
+        public string Operator { get; set; }
+    }
+    
+    internal static List<ComparisonAliasMatch> GetAliasMatches(IQueryKitConfiguration aliases)
+    {
+        var matches = new List<ComparisonAliasMatch>();
+        var caseInsensitiveAppendix = aliases.CaseInsensitiveAppendix;
+        if(aliases.EqualsOperator != EqualsOperator().Operator())
+        {
+            matches.Add(new ComparisonAliasMatch { Alias = aliases.EqualsOperator, Operator = EqualsOperator().Operator() });
+            matches.Add(new ComparisonAliasMatch { Alias = $"{aliases.EqualsOperator}{caseInsensitiveAppendix}", Operator = $"{EqualsOperator(true).Operator()}"});
+        }
+        if(aliases.NotEqualsOperator != NotEqualsOperator().Operator())
+        {
+            matches.Add(new ComparisonAliasMatch { Alias = aliases.NotEqualsOperator, Operator = NotEqualsOperator().Operator() });
+            matches.Add(new ComparisonAliasMatch { Alias = $"{aliases.NotEqualsOperator}{caseInsensitiveAppendix}", Operator = $"{NotEqualsOperator(true).Operator()}" });
+        }
+        if(aliases.GreaterThanOperator != GreaterThanOperator().Operator())
+        {
+            matches.Add(new ComparisonAliasMatch { Alias = aliases.GreaterThanOperator, Operator = GreaterThanOperator().Operator() });
+            matches.Add(new ComparisonAliasMatch { Alias = $"{aliases.GreaterThanOperator}{caseInsensitiveAppendix}", Operator = $"{GreaterThanOperator(true).Operator()}" });
+        }
+        if(aliases.LessThanOperator != LessThanOperator().Operator())
+        {
+            matches.Add(new ComparisonAliasMatch { Alias = aliases.LessThanOperator, Operator = LessThanOperator().Operator() });
+            matches.Add(new ComparisonAliasMatch { Alias = $"{aliases.LessThanOperator}{caseInsensitiveAppendix}", Operator = $"{LessThanOperator(true).Operator()}" });
+        }
+        if(aliases.GreaterThanOrEqualOperator != GreaterThanOrEqualOperator().Operator())
+        {
+            matches.Add(new ComparisonAliasMatch { Alias = aliases.GreaterThanOrEqualOperator, Operator = GreaterThanOrEqualOperator().Operator() });
+            matches.Add(new ComparisonAliasMatch { Alias = $"{aliases.GreaterThanOrEqualOperator}{caseInsensitiveAppendix}", Operator = $"{GreaterThanOrEqualOperator(true).Operator()}" });
+        }
+        if(aliases.LessThanOrEqualOperator != LessThanOrEqualOperator().Operator())
+        {
+            matches.Add(new ComparisonAliasMatch { Alias = aliases.LessThanOrEqualOperator, Operator = LessThanOrEqualOperator().Operator() });
+            matches.Add(new ComparisonAliasMatch { Alias = $"{aliases.LessThanOrEqualOperator}{caseInsensitiveAppendix}", Operator = $"{LessThanOrEqualOperator(true).Operator()}" });
+        }
+        if(aliases.ContainsOperator != ContainsOperator().Operator())
+        {
+            matches.Add(new ComparisonAliasMatch { Alias = aliases.ContainsOperator, Operator = ContainsOperator().Operator() });
+            matches.Add(new ComparisonAliasMatch { Alias = $"{aliases.ContainsOperator}{caseInsensitiveAppendix}", Operator = $"{ContainsOperator(true).Operator()}" });
+        }
+        if(aliases.StartsWithOperator != StartsWithOperator().Operator())
+        {
+            matches.Add(new ComparisonAliasMatch { Alias = aliases.StartsWithOperator, Operator = StartsWithOperator().Operator() });
+            matches.Add(new ComparisonAliasMatch { Alias = $"{aliases.StartsWithOperator}{caseInsensitiveAppendix}", Operator = $"{StartsWithOperator(true).Operator()}" });
+        }
+        if(aliases.EndsWithOperator != EndsWithOperator().Operator())
+        {
+            matches.Add(new ComparisonAliasMatch { Alias = aliases.EndsWithOperator, Operator = EndsWithOperator().Operator() });
+            matches.Add(new ComparisonAliasMatch { Alias = $"{aliases.EndsWithOperator}{caseInsensitiveAppendix}", Operator = $"{EndsWithOperator(true).Operator()}" });
+        }
+        if(aliases.NotContainsOperator != NotContainsOperator().Operator())
+        {
+            matches.Add(new ComparisonAliasMatch { Alias = aliases.NotContainsOperator, Operator = NotContainsOperator().Operator() });
+            matches.Add(new ComparisonAliasMatch { Alias = $"{aliases.NotContainsOperator}{caseInsensitiveAppendix}", Operator = $"{NotContainsOperator(true).Operator()}" });
+        }
+        if(aliases.NotStartsWithOperator != NotStartsWithOperator().Operator())
+        {
+            matches.Add(new ComparisonAliasMatch { Alias = aliases.NotStartsWithOperator, Operator = NotStartsWithOperator().Operator() });
+            matches.Add(new ComparisonAliasMatch { Alias = $"{aliases.NotStartsWithOperator}{caseInsensitiveAppendix}", Operator = $"{NotStartsWithOperator(true).Operator()}" });
+        }
+        if(aliases.NotEndsWithOperator != NotEndsWithOperator().Operator())
+        {
+            matches.Add(new ComparisonAliasMatch { Alias = aliases.NotEndsWithOperator, Operator = NotEndsWithOperator().Operator() });
+            matches.Add(new ComparisonAliasMatch { Alias = $"{aliases.NotEndsWithOperator}{caseInsensitiveAppendix}", Operator = $"{NotEndsWithOperator(true).Operator()}" });
+        }
+        if(aliases.InOperator != InOperator().Operator())
+        {
+            matches.Add(new ComparisonAliasMatch { Alias = aliases.InOperator, Operator = InOperator().Operator() });
+            matches.Add(new ComparisonAliasMatch { Alias = $"{aliases.InOperator}{caseInsensitiveAppendix}", Operator = $"{InOperator(true).Operator()}" });
+        }
+        
+        return matches;
     }
 }

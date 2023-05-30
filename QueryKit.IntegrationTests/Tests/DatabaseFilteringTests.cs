@@ -2,6 +2,7 @@ namespace QueryKit.IntegrationTests.Tests;
 
 using System.Linq.Expressions;
 using Bogus;
+using Configuration;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using SharedTestingHelper.Fakes;
