@@ -100,7 +100,7 @@ There's a wide variety of comparison operators that use the same base syntax as 
 | Name                  | Operator | Case Insensitive Operator |
 | --------------------- | -------- | ------------------------- |
 | Equals                | ==       | ==*                       |
-| Not Equals            | !=       | !=                        |
+| Not Equals            | !=       | !=*                        |
 | Greater Than          | >        | N/A                       |
 | Less Than             | <        | N/A                       |
 | Greater Than Or Equal | >=       | N/A                       |
@@ -336,7 +336,7 @@ var config = new QueryKitConfiguration(config =>
 
 ## Error Handling
 
-If you want to capture errors to easily throw a `400`, you can add error handling aronud these exceptions:
+If you want to capture errors to easily throw a `400`, you can add error handling around these exceptions:
 
 * A `FilterParsingException` will be thrown when there is an invalid operator or bad syntax is used (e.g. not using double quotes around a string or guid).
 * An `UnknownFilterPropertyException` will be thrown if a property is not recognized during filtering
