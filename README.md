@@ -66,7 +66,7 @@ var config = new QueryKitConfiguration(config =>
       		.PreventSort();
 });
 var people = _dbContext.People
-  		.ApplyQueryKitFilter("first == "Jane" && Age < 10", config)
+  		.ApplyQueryKitFilter(@$"first == "Jane" && Age < 10", config)
   		.ToList();
 ```
 
