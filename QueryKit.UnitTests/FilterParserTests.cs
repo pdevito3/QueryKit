@@ -279,6 +279,33 @@ public class FilterParserTests
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
         filterExpression.ToString().Should().Be("x => (x.SpecificDate == 7/1/2022 12:00:03 AM +01:00)");
     }
+
+    [Theory]
+    [InlineData("yyyy-MM-ddTHH:mm:ssZ")]
+    [InlineData("yyyy-MM-ddTHH:mm:sszzz")]
+    public void can_handle_date_time_offset_another(string format)
+    {
+        var dateTimeOffset = DateTimeOffset.Parse("2022-07-01T00:00:03Z").ToString(format);
+        var input = $"""SpecificDate == "{dateTimeOffset}" """;
+        var filterExpression =  FilterParser.ParseFilter<TestingPerson>(input);
+        filterExpression.ToString().Should().Be(""""x => (x.SpecificDate == 7/1/2022 12:00:03 AM +00:00)"""");
+    }
+    
+    [Fact]
+    public void can_handle_datetime_another()
+    {
+        var input = """SpecificDateTime == "2022-07-01T00:00:03" """;
+        var filterExpression =  FilterParser.ParseFilter<TestingPerson>(input);
+        filterExpression.ToString().Should().Be(""""x => (x.SpecificDateTime == 7/1/2022 12:00:03 AM)"""");
+    }
+    
+    [Fact]
+    public void can_handle_datetime_comparison_with_timezone_another()
+    {
+        var input = """SpecificDate == "2022-07-01T00:00:03+01:00" """;
+        var filterExpression =  FilterParser.ParseFilter<TestingPerson>(input);
+        filterExpression.ToString().Should().Be("x => (x.SpecificDate == 7/1/2022 12:00:03 AM +01:00)");
+    }
     
     [Fact]
     public void can_handle_time_only()
