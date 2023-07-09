@@ -126,7 +126,7 @@ There's a wide variety of comparison operators that use the same base syntax as 
     var input = """""""""Title == """"lamb is great on a "gee-ro" not a "gy-ro" sandwich"""" """"""""";
     ```
 
-* Dates and times use ISO format:
+* Dates and times use ISO 8601 format:
 
   * `DateOnly`: `var filterInput = "Birthday == 2022-07-01";`
   * `DateTimeOffset`: 
