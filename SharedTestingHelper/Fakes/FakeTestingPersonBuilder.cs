@@ -56,10 +56,22 @@ public class FakeTestingPersonBuilder
         _baseTestingPerson.SpecificDate = dateTime;
         return this;
     }
-
-    public FakeTestingPersonBuilder WithDate(DateOnly? dateTime)
+    
+    public FakeTestingPersonBuilder WithSpecificDateTime(DateTime dateTime)
     {
-        _baseTestingPerson.Date = dateTime;
+        _baseTestingPerson.SpecificDateTime = dateTime;
+        return this;
+    }
+
+    public FakeTestingPersonBuilder WithDate(DateOnly? date)
+    {
+        _baseTestingPerson.Date = date;
+        return this;
+    }
+    
+    public FakeTestingPersonBuilder WithTime(TimeOnly? time)
+    {
+        _baseTestingPerson.Time = time;
         return this;
     }
 

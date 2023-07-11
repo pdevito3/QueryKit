@@ -135,7 +135,9 @@ There's a wide variety of comparison operators that use the same base syntax as 
     * `var filterInput = "Birthday == 2022-07-01T00:00:03";` 
     * `var filterInput = "Birthday ==  2022-07-01T00:00:03+01:00";` 
 
-  * `TimeOnly`: `var filterInput = "Time == 12:30:00";`
+  * `TimeOnly`: 
+    * `var filterInput = "Time == 12:30:00";`
+    * `var filterInput = "Time == 12:30:00.678722";`
 
 * `bool` properties need to use `== true`, `== false`, or the same using the `!=` operator. they can not be standalone properies: 
 

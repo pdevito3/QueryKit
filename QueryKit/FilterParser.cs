@@ -65,13 +65,20 @@ public static class FilterParser
     private static Parser<string> DoubleQuoteParser
         => Parse.Char('"').Then(_ => Parse.AnyChar.Except(Parse.Char('"')).Many().Text().Then(innerValue => Parse.Char('"').Return(innerValue)));
 
+    /* ISO 8601
+     * DateTimeOffset (with offset): yyyy-MM-ddTHH:mm:ss.ffffffzzz
+     * DateTimeOffset (in UTC): yyyy-MM-ddTHH:mm:ss.ffffffZ
+     * DateTime (no offset information): yyyy-MM-ddTHH:mm:ss.ffffff
+     * DateTime (in UTC): yyyy-MM-ddTHH:mm:ss.ffffffZ
+     */
     private static Parser<string> TimeFormatParser => Parse.Regex(@"\d{2}:\d{2}:\d{2}").Text();
     private static Parser<string> DateTimeFormatParser => 
         from dateFormat in Parse.Regex(@"\d{4}-\d{2}-\d{2}").Text()
         from timeFormat in Parse.Regex(@"T\d{2}:\d{2}:\d{2}").Text().Optional().Select(x => x.GetOrElse(""))
-        from timeZone in Parse.Regex(@"(Z|[+-]\d{2}(:\d{2})?)").Text().Optional().Select(x => x.GetOrElse(""))
-        from millis in Parse.Regex(@"\.\d{3}").Text().Optional().Select(x => x.GetOrElse(""))
-        select dateFormat + timeFormat + timeZone + millis;
+        from timeZone in Parse.Regex(@"Z|[+-]\d{2}(:\d{2})?").Text().Optional().Select(x => x.GetOrElse(""))
+        from micros in Parse.Regex(@"\.\d{1,6}").Text().Optional().Select(x => x.GetOrElse(""))
+        select dateFormat + timeFormat + micros + timeZone;
+
 
     private static Parser<string> GuidFormatParser => Parse.Regex(@"[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}").Text();
     
@@ -121,11 +128,11 @@ public static class FilterParser
         { typeof(long), value => long.Parse(value, CultureInfo.InvariantCulture) },
         { typeof(short), value => short.Parse(value, CultureInfo.InvariantCulture) },
         { typeof(byte), value => byte.Parse(value, CultureInfo.InvariantCulture) },
-        { typeof(DateTime), value => DateTime.Parse(value, CultureInfo.InvariantCulture) },
-        { typeof(DateTimeOffset), value => DateTimeOffset.Parse(value, CultureInfo.InvariantCulture) },
-        { typeof(DateOnly), value => DateOnly.Parse(value, CultureInfo.InvariantCulture) },
-        { typeof(TimeOnly), value => TimeOnly.Parse(value, CultureInfo.InvariantCulture) },
-        { typeof(TimeSpan), value => TimeSpan.Parse(value, CultureInfo.InvariantCulture) },
+        { typeof(DateTime), value => DateTime.Parse(value, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal) },
+        { typeof(DateTimeOffset), value => DateTimeOffset.Parse(value) },
+        { typeof(DateOnly), value => DateOnly.Parse(value) },
+        { typeof(TimeOnly), value => TimeOnly.Parse(value) },
+        { typeof(TimeSpan), value => TimeSpan.Parse(value) },
         { typeof(uint), value => uint.Parse(value, CultureInfo.InvariantCulture) },
         { typeof(ulong), value => ulong.Parse(value, CultureInfo.InvariantCulture) },
         { typeof(ushort), value => ushort.Parse(value, CultureInfo.InvariantCulture) },
@@ -136,6 +143,7 @@ public static class FilterParser
     private static Expression CreateRightExpr(Expression leftExpr, string right)
     {
         var targetType = leftExpr.Type;
+        var rawType = targetType;
 
         targetType = TransformTargetTypeIfNullable(targetType);
 
@@ -171,6 +179,91 @@ public static class FilterParser
                 right = right.Trim('"');
             }
             
+            if (targetType == typeof(DateTime))
+            {
+                var dtStyle = right.EndsWith("Z") ? DateTimeStyles.AdjustToUniversal : DateTimeStyles.AssumeLocal;
+                var dt = DateTime.Parse(right, CultureInfo.InvariantCulture, dtStyle);
+                if (right.EndsWith("Z"))
+                {
+                    dt = DateTime.SpecifyKind(dt, DateTimeKind.Utc);
+                }
+
+                var dtCtor = typeof(DateTime).GetConstructor(new[] { typeof(long), typeof(DateTimeKind) });
+                var newExpr = Expression.New(dtCtor, Expression.Constant(dt.Ticks), Expression.Constant(dt.Kind));
+
+                if (rawType == typeof(DateTime?))
+                {
+                    var nullableDtCtor = typeof(DateTime?).GetConstructor(new[] { typeof(DateTime) });
+                    newExpr = Expression.New(nullableDtCtor, newExpr);
+                }
+                
+                return newExpr;
+            }
+
+
+            if (targetType == typeof(DateTimeOffset))
+            {
+                var dtStyle = right.EndsWith("Z") ? DateTimeStyles.AdjustToUniversal : DateTimeStyles.AssumeLocal;
+                var dto = DateTimeOffset.Parse(right, CultureInfo.InvariantCulture, dtStyle);
+    
+                var dtoCtor = typeof(DateTimeOffset).GetConstructor(new[] { typeof(long), typeof(TimeSpan) });
+                var newExpr = Expression.New(dtoCtor, Expression.Constant(dto.Ticks), Expression.Constant(dto.Offset));
+
+                if (rawType == typeof(DateTimeOffset?)) 
+                {
+                    var nullableDtoCtor = typeof(DateTimeOffset?).GetConstructor(new[] { typeof(DateTimeOffset) });
+                    newExpr = Expression.New(nullableDtoCtor, newExpr);
+                }
+
+                return newExpr;
+            }
+
+            if (targetType == typeof(DateOnly))
+            {
+                var date = DateOnly.Parse(right, CultureInfo.InvariantCulture);
+                var dateCtor = typeof(DateOnly).GetConstructor(new[] { typeof(int), typeof(int), typeof(int) });
+                var newExpr = Expression.New(dateCtor, Expression.Constant(date.Year), Expression.Constant(date.Month), Expression.Constant(date.Day));
+
+                if (rawType == typeof(DateOnly?))
+                {
+                    var nullableDateCtor = typeof(DateOnly?).GetConstructor(new[] { typeof(DateOnly) });
+                    newExpr = Expression.New(nullableDateCtor, newExpr);
+                }
+
+                return newExpr;
+            }
+            
+            if (targetType == typeof(TimeOnly))
+            {
+                var time = TimeOnly.Parse(right, CultureInfo.InvariantCulture);
+
+                int millisecond = 0, microsecond = 0;
+                if (right.Contains("."))
+                {
+                    var fractionalSeconds = right.Split('.')[1]; // Extract fractional seconds part
+                    if (fractionalSeconds.Length >= 3)
+                    {
+                        millisecond = int.Parse(fractionalSeconds.Substring(0, 3)); // Extract milliseconds
+                    }
+                    if (fractionalSeconds.Length >= 6)
+                    {
+                        microsecond = int.Parse(fractionalSeconds.Substring(3, 3)); // Extract microseconds
+                    }
+                }
+
+                var timeCtor = typeof(TimeOnly).GetConstructor(new[] { typeof(int), typeof(int), typeof(int), typeof(int), typeof(int) });
+                var newExpr = Expression.New(timeCtor, Expression.Constant(time.Hour), Expression.Constant(time.Minute), Expression.Constant(time.Second), Expression.Constant(millisecond), Expression.Constant(microsecond));
+
+                if (rawType == typeof(TimeOnly?))
+                {
+                    var nullableTimeCtor = typeof(TimeOnly?).GetConstructor(new[] { typeof(TimeOnly) });
+                    newExpr = Expression.New(nullableTimeCtor, newExpr);
+                }
+
+                return newExpr;
+            }
+
+
             var convertedValue = conversionFunction(right);
 
             if (targetType == typeof(Guid))

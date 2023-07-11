@@ -39,6 +39,117 @@ public class DatabaseFilteringTests : TestBase
     }
     
     [Fact]
+    public async Task can_filter_by_datetime_with_milliseconds()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var dateUtcNow = DateTime.UtcNow;
+        var dateInMilliPast = dateUtcNow.AddMilliseconds(-100);
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithSpecificDateTime(dateUtcNow)
+            .Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder()
+            .WithSpecificDateTime(dateInMilliPast)
+            .Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+
+        var input = $"""SpecificDateTime == "{fakePersonOne.SpecificDateTime:yyyy-MM-ddTHH:mm:ss.ffffff}Z" """;
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakePersonOne.Id);
+    }
+    
+    [Fact]
+    public async Task can_filter_by_dateonly()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var baseDate = new DateTime(1678, 01, 01);
+        var dateToday = DateOnly.FromDateTime(baseDate);
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithDate(dateToday)
+            .Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder()
+            .WithDate(DateOnly.FromDateTime(baseDate.AddDays(-1)))
+            .Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+
+        var input = $"""Date == "{fakePersonOne.Date:yyyy-MM-dd}" """;
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakePersonOne.Id);
+    }
+    
+    [Fact]
+    public async Task can_filter_by_timeonly_with_micros()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var timeNow = TimeOnly.FromDateTime(DateTime.UtcNow);
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithTime(timeNow)
+            .Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder()
+            .WithTime(TimeOnly.FromDateTime(DateTime.UtcNow.AddHours(-1)))
+            .Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+
+        var input = $"""Time == "{fakePersonOne.Time:HH:mm:ss.ffffff}" """;
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakePersonOne.Id);
+    }
+    
+    [Fact]
+    public async Task can_filter_by_timeonly_without_micros()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var timeNow = TimeOnly.FromDateTime(DateTime.UtcNow);
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithTime(timeNow)
+            .Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder()
+            .WithTime(TimeOnly.FromDateTime(DateTime.UtcNow.AddHours(-1)))
+            .Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+
+        var input = $"""Time >= "{fakePersonOne.Time:HH:mm:ss}" """;
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakePersonOne.Id);
+    }
+
+
+    [Fact]
     public async Task can_filter_by_guid()
     {
         // Arrange

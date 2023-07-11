@@ -36,7 +36,7 @@ public class FilterParserTests
 
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
         filterExpression.ToString().Should()
-            .Be(""""x => (((((((x.Title.ToLower().Contains("waffle & chicken".ToLower()) AndAlso (x.Age > 30)) OrElse (x.Id == Parse("aa648248-cb69-4217-ac95-d7484795afb2"))) OrElse (x.Title == "lamb")) OrElse (x.Title == null)) AndAlso ((x.Age < 18) OrElse ((x.BirthMonth == "January") AndAlso x.Title.StartsWith("ally")))) OrElse (x.Rating > 3.5)) OrElse ((x.SpecificDate == 7/1/2022 12:00:03 AM +00:00) AndAlso ((x.Date == 7/1/2022) OrElse (x.Time == 12:00 AM))))"""");
+            .Be(""""x => (((((((x.Title.ToLower().Contains("waffle & chicken".ToLower()) AndAlso (x.Age > 30)) OrElse (x.Id == Parse("aa648248-cb69-4217-ac95-d7484795afb2"))) OrElse (x.Title == "lamb")) OrElse (x.Title == null)) AndAlso ((x.Age < 18) OrElse ((x.BirthMonth == "January") AndAlso x.Title.StartsWith("ally")))) OrElse (x.Rating > 3.5)) OrElse ((x.SpecificDate == new Nullable`1(new DateTimeOffset(637922304030000000, 00:00:00))) AndAlso ((x.Date == new Nullable`1(new DateOnly(2022, 7, 1))) OrElse (x.Time == new Nullable`1(new TimeOnly(0, 0, 3, 0, 0))))))"""");
     }
     
     [Fact]
@@ -253,7 +253,7 @@ public class FilterParserTests
     {
         var input = """Date == 2022-07-01""";
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be(""""x => (x.Date == 7/1/2022)"""");
+        filterExpression.ToString().Should().Be(""""x => (x.Date == new Nullable`1(new DateOnly(2022, 7, 1)))"""");
     }
     
     [Fact]
@@ -261,7 +261,7 @@ public class FilterParserTests
     {
         var input = """SpecificDate == 2022-07-01T00:00:03Z""";
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be(""""x => (x.SpecificDate == 7/1/2022 12:00:03 AM +00:00)"""");
+        filterExpression.ToString().Should().Be(""""x => (x.SpecificDate == new Nullable`1(new DateTimeOffset(637922304030000000, 00:00:00)))"""");
     }
     
     [Fact]
@@ -269,7 +269,7 @@ public class FilterParserTests
     {
         var input = """SpecificDateTime == 2022-07-01T00:00:03""";
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be(""""x => (x.SpecificDateTime == 7/1/2022 12:00:03 AM)"""");
+        filterExpression.ToString().Should().Be(""""x => (x.SpecificDateTime == new DateTime(637922304030000000, Local))"""");
     }
 
     [Fact]
@@ -277,7 +277,7 @@ public class FilterParserTests
     {
         var input = """SpecificDate == 2022-07-01T00:00:03+01:00""";
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be("x => (x.SpecificDate == 7/1/2022 12:00:03 AM +01:00)");
+        filterExpression.ToString().Should().Be("x => (x.SpecificDate == new Nullable`1(new DateTimeOffset(637922304030000000, 01:00:00)))");
     }
 
     [Theory]
@@ -288,7 +288,7 @@ public class FilterParserTests
         var dateTimeOffset = DateTimeOffset.Parse("2022-07-01T00:00:03Z").ToString(format);
         var input = $"""SpecificDate == "{dateTimeOffset}" """;
         var filterExpression =  FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be(""""x => (x.SpecificDate == 7/1/2022 12:00:03 AM +00:00)"""");
+        filterExpression.ToString().Should().Be(""""x => (x.SpecificDate == new Nullable`1(new DateTimeOffset(637922304030000000, 00:00:00)))"""");
     }
     
     [Fact]
@@ -296,7 +296,15 @@ public class FilterParserTests
     {
         var input = """SpecificDateTime == "2022-07-01T00:00:03" """;
         var filterExpression =  FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be(""""x => (x.SpecificDateTime == 7/1/2022 12:00:03 AM)"""");
+        filterExpression.ToString().Should().Be(""""x => (x.SpecificDateTime == new DateTime(637922304030000000, Local))"""");
+    }
+    
+    [Fact]
+    public void can_handle_datetime_utc()
+    {
+        var input = """SpecificDateTime == "2022-07-01T00:00:03Z" """;
+        var filterExpression =  FilterParser.ParseFilter<TestingPerson>(input);
+        filterExpression.ToString().Should().Be(""""x => (x.SpecificDateTime == new DateTime(637922304030000000, Utc))"""");
     }
     
     [Fact]
@@ -304,7 +312,7 @@ public class FilterParserTests
     {
         var input = """SpecificDate == "2022-07-01T00:00:03+01:00" """;
         var filterExpression =  FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be("x => (x.SpecificDate == 7/1/2022 12:00:03 AM +01:00)");
+        filterExpression.ToString().Should().Be("x => (x.SpecificDate == new Nullable`1(new DateTimeOffset(637922304030000000, 01:00:00)))");
     }
     
     [Fact]
@@ -312,7 +320,31 @@ public class FilterParserTests
     {
         var input = "Time == 12:30:00";
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be("x => (x.Time == 12:30 PM)");
+        filterExpression.ToString().Should().Be("x => (x.Time == new Nullable`1(new TimeOnly(12, 30, 0, 0, 0)))");
+    }
+    
+    [Fact]
+    public void can_handle_datetime_comparison_with_negative_timezone()
+    {
+        var input = """SpecificDate == 2022-07-01T00:00:03-02:00""";
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
+        filterExpression.ToString().Should().Be("x => (x.SpecificDate == new Nullable`1(new DateTimeOffset(637922304030000000, -02:00:00)))");
+    }
+
+    [Fact]
+    public void can_handle_datetime_comparison_with_timezone_no_minutes()
+    {
+        var input = """SpecificDate == 2022-07-01T00:00:03+02""";
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
+        filterExpression.ToString().Should().Be("x => (x.SpecificDate == new Nullable`1(new DateTimeOffset(637922304030000000, 02:00:00)))");
+    }
+
+    [Fact]
+    public void can_handle_datetime_with_milliseconds()
+    {
+        var input = """SpecificDateTime == 2022-07-01T00:00:03.123""";
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
+        filterExpression.ToString().Should().Be("x => (x.SpecificDateTime == new DateTime(637922304031230000, Local))");
     }
 
     [Fact]
@@ -336,7 +368,7 @@ public class FilterParserTests
     {
         var input = """Time == 00:00:03""";
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be("x => (x.Time == 12:00 AM)");
+        filterExpression.ToString().Should().Be("x => (x.Time == new Nullable`1(new TimeOnly(0, 0, 3, 0, 0)))");
     }
 
     [Fact]
@@ -344,7 +376,7 @@ public class FilterParserTests
     {
         var input = """Title _= "lamb" && Age >= 25 && Rating < 4.5 && SpecificDate <= 2022-07-01T00:00:03Z && Time == 00:00:03""";
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be("x => ((((x.Title.StartsWith(\"lamb\") AndAlso (x.Age >= 25)) AndAlso (x.Rating < 4.5)) AndAlso (x.SpecificDate <= 7/1/2022 12:00:03 AM +00:00)) AndAlso (x.Time == 12:00 AM))");
+        filterExpression.ToString().Should().Be("x => ((((x.Title.StartsWith(\"lamb\") AndAlso (x.Age >= 25)) AndAlso (x.Rating < 4.5)) AndAlso (x.SpecificDate <= new Nullable`1(new DateTimeOffset(637922304030000000, 00:00:00)))) AndAlso (x.Time == new Nullable`1(new TimeOnly(0, 0, 3, 0, 0))))");
     }
 
     [Fact]
@@ -352,7 +384,7 @@ public class FilterParserTests
     {
         var input = """(Title == "lamb" && ((Age >= 25 && Rating < 4.5) || (SpecificDate <= 2022-07-01T00:00:03Z && Time == 00:00:03)) && (Favorite == true || Email.Value _= "example"))""";
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be("x => (((x.Title == \"lamb\") AndAlso (((x.Age >= 25) AndAlso (x.Rating < 4.5)) OrElse ((x.SpecificDate <= 7/1/2022 12:00:03 AM +00:00) AndAlso (x.Time == 12:00 AM)))) AndAlso ((x.Favorite == True) OrElse x.Email.Value.StartsWith(\"example\")))");
+        filterExpression.ToString().Should().Be("""x => (((x.Title == "lamb") AndAlso (((x.Age >= 25) AndAlso (x.Rating < 4.5)) OrElse ((x.SpecificDate <= new Nullable`1(new DateTimeOffset(637922304030000000, 00:00:00))) AndAlso (x.Time == new Nullable`1(new TimeOnly(0, 0, 3, 0, 0)))))) AndAlso ((x.Favorite == True) OrElse x.Email.Value.StartsWith("example")))""");
     }
 
     [Fact]
