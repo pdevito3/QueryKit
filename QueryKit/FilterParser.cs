@@ -1,7 +1,6 @@
 ﻿
 namespace QueryKit;
 
-using System.Collections;
 using System.Globalization;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -191,15 +190,13 @@ public static class FilterParser
                 var dtCtor = typeof(DateTime).GetConstructor(new[] { typeof(long), typeof(DateTimeKind) });
                 var newExpr = Expression.New(dtCtor, Expression.Constant(dt.Ticks), Expression.Constant(dt.Kind));
 
-                if (rawType == typeof(DateTime?))
-                {
-                    var nullableDtCtor = typeof(DateTime?).GetConstructor(new[] { typeof(DateTime) });
-                    newExpr = Expression.New(nullableDtCtor, newExpr);
-                }
+                var isNullable = rawType == typeof(DateTime?);
+                if (!isNullable) return newExpr;
                 
+                var nullableDtCtor = typeof(DateTime?).GetConstructor(new[] { typeof(DateTime) });
+                newExpr = Expression.New(nullableDtCtor, newExpr);
                 return newExpr;
             }
-
 
             if (targetType == typeof(DateTimeOffset))
             {
@@ -209,12 +206,11 @@ public static class FilterParser
                 var dtoCtor = typeof(DateTimeOffset).GetConstructor(new[] { typeof(long), typeof(TimeSpan) });
                 var newExpr = Expression.New(dtoCtor, Expression.Constant(dto.Ticks), Expression.Constant(dto.Offset));
 
-                if (rawType == typeof(DateTimeOffset?)) 
-                {
-                    var nullableDtoCtor = typeof(DateTimeOffset?).GetConstructor(new[] { typeof(DateTimeOffset) });
-                    newExpr = Expression.New(nullableDtoCtor, newExpr);
-                }
-
+                var isNullable = rawType == typeof(DateTimeOffset?);
+                if (!isNullable) return newExpr;
+                
+                var nullableDtoCtor = typeof(DateTimeOffset?).GetConstructor(new[] { typeof(DateTimeOffset) });
+                newExpr = Expression.New(nullableDtoCtor, newExpr);
                 return newExpr;
             }
 
@@ -224,12 +220,11 @@ public static class FilterParser
                 var dateCtor = typeof(DateOnly).GetConstructor(new[] { typeof(int), typeof(int), typeof(int) });
                 var newExpr = Expression.New(dateCtor, Expression.Constant(date.Year), Expression.Constant(date.Month), Expression.Constant(date.Day));
 
-                if (rawType == typeof(DateOnly?))
-                {
-                    var nullableDateCtor = typeof(DateOnly?).GetConstructor(new[] { typeof(DateOnly) });
-                    newExpr = Expression.New(nullableDateCtor, newExpr);
-                }
-
+                var isNullable = rawType == typeof(DateOnly?);
+                if (!isNullable) return newExpr;
+                
+                var nullableDateCtor = typeof(DateOnly?).GetConstructor(new[] { typeof(DateOnly) });
+                newExpr = Expression.New(nullableDateCtor, newExpr);
                 return newExpr;
             }
             
@@ -238,40 +233,37 @@ public static class FilterParser
                 var time = TimeOnly.Parse(right, CultureInfo.InvariantCulture);
 
                 int millisecond = 0, microsecond = 0;
-                if (right.Contains("."))
+                if (right.Contains('.'))
                 {
-                    var fractionalSeconds = right.Split('.')[1]; // Extract fractional seconds part
+                    var fractionalSeconds = right.Split('.')[1];
                     if (fractionalSeconds.Length >= 3)
                     {
-                        millisecond = int.Parse(fractionalSeconds.Substring(0, 3)); // Extract milliseconds
+                        millisecond = int.Parse(fractionalSeconds.Substring(0, 3));
                     }
                     if (fractionalSeconds.Length >= 6)
                     {
-                        microsecond = int.Parse(fractionalSeconds.Substring(3, 3)); // Extract microseconds
+                        microsecond = int.Parse(fractionalSeconds.Substring(3, 3));
                     }
                 }
 
                 var timeCtor = typeof(TimeOnly).GetConstructor(new[] { typeof(int), typeof(int), typeof(int), typeof(int), typeof(int) });
                 var newExpr = Expression.New(timeCtor, Expression.Constant(time.Hour), Expression.Constant(time.Minute), Expression.Constant(time.Second), Expression.Constant(millisecond), Expression.Constant(microsecond));
 
-                if (rawType == typeof(TimeOnly?))
-                {
-                    var nullableTimeCtor = typeof(TimeOnly?).GetConstructor(new[] { typeof(TimeOnly) });
-                    newExpr = Expression.New(nullableTimeCtor, newExpr);
-                }
-
+                var isNullable = rawType == typeof(TimeOnly?);
+                if (!isNullable) return newExpr;
+                
+                var nullableTimeCtor = typeof(TimeOnly?).GetConstructor(new[] { typeof(TimeOnly) });
+                newExpr = Expression.New(nullableTimeCtor, newExpr);
                 return newExpr;
             }
-
-
-            var convertedValue = conversionFunction(right);
 
             if (targetType == typeof(Guid))
             {
                 var guidParseMethod = typeof(Guid).GetMethod("Parse", new[] { typeof(string) });
-                return Expression.Call(guidParseMethod, Expression.Constant(convertedValue.ToString(), typeof(string)));
+                return Expression.Call(guidParseMethod, Expression.Constant(right, typeof(string)));
             }
 
+            var convertedValue = conversionFunction(right);
             return Expression.Constant(convertedValue, leftExpr.Type);
         }
 
