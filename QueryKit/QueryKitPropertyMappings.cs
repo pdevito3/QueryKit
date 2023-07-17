@@ -52,7 +52,9 @@ public class QueryKitPropertyMappings
         {
             var call = (MethodCallExpression)expression;
             if (call.Method.DeclaringType == typeof(Enumerable) && call.Method.Name == "Select" ||
-                call.Method.DeclaringType == typeof(Queryable) && call.Method.Name == "Select")
+                call.Method.DeclaringType == typeof(Queryable) && call.Method.Name == "Select" ||
+                call.Method.DeclaringType == typeof(Enumerable) && call.Method.Name == "SelectMany" ||
+                call.Method.DeclaringType == typeof(Queryable) && call.Method.Name == "SelectMany")
             {
                 var propertyPath = GetFullPropertyPath(call.Arguments[1]);
                 var prevPath = GetFullPropertyPath(call.Arguments[0]);

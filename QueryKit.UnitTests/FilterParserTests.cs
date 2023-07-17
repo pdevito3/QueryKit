@@ -568,7 +568,7 @@ public class FilterParserTests
         var input = $"Ingredients.Preparations.Text == \"{prepText}\"";
         var config = new QueryKitConfiguration(settings =>
         {
-            settings.Property<Recipe>(x => x.Ingredients.Select(y => y.Name)).PreventSort();
+            settings.Property<Recipe>(x => x.Ingredients.SelectMany(y => y.Preparations).Select(y=> y.Text)).PreventSort();
         });
         var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
 
