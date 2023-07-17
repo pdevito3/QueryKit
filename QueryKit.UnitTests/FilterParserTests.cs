@@ -1,8 +1,14 @@
+using QueryKit.Configuration;
+using QueryKit.WebApiTestProject.Entities.Ingredients;
+using QueryKit.WebApiTestProject.Entities.Ingredients.Models;
+using QueryKit.WebApiTestProject.Entities.Recipes;
+
 namespace QueryKit.UnitTests;
 
 using Bogus;
 using Exceptions;
 using FluentAssertions;
+using SharedTestingHelper.Fakes.Recipes;
 using WebApiTestProject.Entities;
 
 public class FilterParserTests
@@ -532,4 +538,41 @@ public class FilterParserTests
         act.Should().Throw<UnknownFilterPropertyException>()
             .WithMessage($"The filter property '{firstWord}' was not recognized.");
     }
+
+    [Fact]
+    public void can_filter_within_collection()
+    {
+        var faker = new Faker();
+        var ingredientName = faker.Lorem.Sentence();
+        var fakeRecipeOne = new FakeRecipeBuilder().Build();
+        fakeRecipeOne.AddIngredient(Ingredient.Create(new IngredientForCreation(){Name =  ingredientName}));
+        var input = $"Ingredients.Name == \"{ingredientName}\"";
+        var config = new QueryKitConfiguration(settings =>
+        {
+            settings.Property<Recipe>(x => x.Ingredients.Select(y => y.Name)).PreventSort();
+        });
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
+
+        filterExpression.Compile().Invoke(fakeRecipeOne).Should().BeTrue();
+    }
+
+    [Fact]
+    public void can_filter_within_nested_collection()
+    {
+        var faker = new Faker();
+        var ingredientName = faker.Lorem.Sentence();
+        var prepText = faker.Lorem.Sentence();
+        var fakeRecipeOne = new FakeRecipeBuilder().Build();
+        fakeRecipeOne.AddIngredient(Ingredient.Create(new IngredientForCreation(){Name =  ingredientName}));
+        fakeRecipeOne.Ingredients.First().Preparations.Add(new IngredientPreparation() { Text = prepText });
+        var input = $"Ingredients.Preparations.Text == \"{prepText}\"";
+        var config = new QueryKitConfiguration(settings =>
+        {
+            settings.Property<Recipe>(x => x.Ingredients.Select(y => y.Name)).PreventSort();
+        });
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
+
+        filterExpression.Compile().Invoke(fakeRecipeOne).Should().BeTrue();
+    }
 }
+    

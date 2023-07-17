@@ -38,6 +38,10 @@ public class Recipe : BaseEntity
     [JsonIgnore, IgnoreDataMember]
     public IReadOnlyCollection<Ingredient> Ingredients => _ingredients.AsReadOnly();
 
+    public void AddIngredient(Ingredient ingredient)
+    {
+        _ingredients.Add(ingredient);
+    }
 
     public static Recipe Create(RecipeForCreation recipeForCreation)
     {

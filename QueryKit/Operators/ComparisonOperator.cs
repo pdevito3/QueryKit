@@ -142,6 +142,27 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
                 );
             }
 
+            if (left.Type.IsGenericType && left.Type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
+            {
+                // create the x parameter
+                var xParameter = Expression.Parameter(left.Type.GetGenericArguments()[0], "x");
+
+                // create the x => x == right lambda
+                var anyLambda = Expression.Lambda(
+                    Expression.Equal(xParameter, right),
+                    xParameter
+                );
+
+                // get the .Any method
+                var anyMethod = typeof(Enumerable)
+                    .GetMethods()
+                    .Single(m => m.Name == "Any" && m.GetParameters().Length == 2)
+                    .MakeGenericMethod(left.Type.GetGenericArguments()[0]);
+
+                // append an .Any(x => x == right) expression
+                return Expression.Call(anyMethod, left, anyLambda);
+            }
+
             return Expression.Equal(left, right);
         }
     }

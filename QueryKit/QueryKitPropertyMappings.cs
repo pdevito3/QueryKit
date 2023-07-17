@@ -48,6 +48,18 @@ public class QueryKitPropertyMappings
 
     private static string GetFullPropertyPath(Expression? expression)
     {
+        if (expression!.NodeType == ExpressionType.Call)
+        {
+            var call = (MethodCallExpression)expression;
+            if (call.Method.DeclaringType == typeof(Enumerable) && call.Method.Name == "Select" ||
+                call.Method.DeclaringType == typeof(Queryable) && call.Method.Name == "Select")
+            {
+                var propertyPath = GetFullPropertyPath(call.Arguments[1]);
+                var prevPath = GetFullPropertyPath(call.Arguments[0]);
+                return $"{prevPath}.{propertyPath}";
+            }
+        }
+
         if (expression!.NodeType == ExpressionType.Lambda)
         {
             var lambda = (LambdaExpression)expression;
