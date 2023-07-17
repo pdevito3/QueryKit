@@ -142,6 +142,19 @@ public static class FilterParser
     private static Expression CreateRightExpr(Expression leftExpr, string right)
     {
         var targetType = leftExpr.Type;
+
+        if (IsEnumerable(targetType))
+        {
+            targetType = targetType.GetGenericArguments()[0];
+            return CreateRightExprFromType(targetType, right);
+        }
+
+        return CreateRightExprFromType(leftExpr.Type, right);
+    }
+
+    private static Expression CreateRightExprFromType(Type leftExprType, string right)
+    {
+        var targetType = leftExprType;
         var rawType = targetType;
 
         targetType = TransformTargetTypeIfNullable(targetType);
@@ -150,7 +163,7 @@ public static class FilterParser
         {
             if (right == "null")
             {
-                return Expression.Constant(null, leftExpr.Type);
+                return Expression.Constant(null, leftExprType);
             }
 
             if (right.StartsWith("[") && right.EndsWith("]"))
@@ -264,7 +277,7 @@ public static class FilterParser
             }
 
             var convertedValue = conversionFunction(right);
-            return Expression.Constant(convertedValue, leftExpr.Type);
+            return Expression.Constant(convertedValue, leftExprType);
         }
 
         throw new InvalidOperationException($"Unsupported value '{right}' for type '{targetType.Name}'");
@@ -272,12 +285,26 @@ public static class FilterParser
 
     private static Type TransformTargetTypeIfNullable(Type targetType)
     {
-        if (targetType.IsGenericType && targetType.GetGenericTypeDefinition() == typeof(Nullable<>))
+        if (targetType.IsGenericType)
         {
-            targetType = Nullable.GetUnderlyingType(targetType);
+            if (targetType.GetGenericTypeDefinition() == typeof(Nullable<>))
+            {
+                targetType = Nullable.GetUnderlyingType(targetType);
+            }
         }
 
         return targetType;
+    }
+
+    private static bool IsEnumerable(Type targetType)
+    {
+        if (targetType == typeof(string))
+        {
+            return false;
+        }
+        return targetType.IsGenericType && targetType.GetGenericTypeDefinition() == typeof(IEnumerable<>) ||
+               targetType.GetInterfaces()
+                   .Any(x => x.IsGenericType && x.GetGenericTypeDefinition() == typeof(IEnumerable<>));
     }
 
     private static Parser<Expression> ComparisonExprParser<T>(ParameterExpression parameter, IQueryKitConfiguration? config)
@@ -311,6 +338,69 @@ public static class FilterParser
             var fullPropPath = leftList?.First();
             var propertyExpression = leftList?.Aggregate((Expression)parameter, (expr, propName) =>
             {
+                if (expr is MemberExpression member)
+                {
+                    // check if member is IEnumerable
+                    if (IsEnumerable(member.Type))
+                    {
+                        var genericArgType = member.Type.GetGenericArguments()[0];
+                        var propertyType = genericArgType.GetProperty(propName).PropertyType;
+
+                        if (IsEnumerable(propertyType))
+                        {
+                            propertyType = propertyType.GetGenericArguments()[0];
+
+                            var linqMethod = "SelectMany";
+                            var selectMethod = typeof(Enumerable).GetMethods()
+                                .First(m => m.Name ==  linqMethod && m.GetParameters().Length == 2)
+                                .MakeGenericMethod(genericArgType, propertyType);
+
+                            var innerParameter = Expression.Parameter(genericArgType, "x_"+ propName);
+                            var propertyInfoForMethod = GetPropertyInfo(genericArgType, propName);
+                            Expression lambdaBody = Expression.PropertyOrField(innerParameter, propertyInfoForMethod.Name);
+
+                            var t = typeof(IEnumerable<>).MakeGenericType(propertyType);
+                            lambdaBody =  Expression.Lambda(Expression.Convert(lambdaBody, t), innerParameter);
+
+                            return Expression.Call(selectMethod, member, lambdaBody);
+                        }
+                        else
+                        {
+                            var selectMethod = typeof(Enumerable).GetMethods()
+                                .First(m => m.Name == "Select" && m.GetParameters().Length == 2)
+                                .MakeGenericMethod(genericArgType, genericArgType.GetProperty(propName).PropertyType);
+
+                            var innerParameter = Expression.Parameter(genericArgType, "x_"+ propName);
+                            var propertyInfoForMethod = GetPropertyInfo(genericArgType, propName);
+                            var lambdaBody = Expression.PropertyOrField(innerParameter, propertyInfoForMethod.Name);
+                            var selectLambda = Expression.Lambda(lambdaBody, innerParameter);
+
+                            return Expression.Call(null, selectMethod, member, selectLambda);
+                        }
+                    }
+                }
+
+                if (expr is MethodCallExpression call)
+                {
+                    // Find the inner generic type of the last argument
+                    var innerGenericType = GetInnerGenericType(call.Method.ReturnType);
+
+                    // Find the PropertyInfo on the innerGenericType for the property named propName
+                    var propertyInfoForMethod = GetPropertyInfo(innerGenericType, propName);
+
+                    // Create a Select expression for this property
+                    var linqMethod = IsEnumerable(innerGenericType) ? "SelectMany" : "Select";
+                    var selectMethod = typeof(Enumerable).GetMethods()
+                        .First(m => m.Name == linqMethod && m.GetParameters().Length == 2)
+                        .MakeGenericMethod(innerGenericType, propertyInfoForMethod.PropertyType);
+
+                    var innerParameter = Expression.Parameter(innerGenericType, "x_" + propName);
+                    var lambdaBody = Expression.PropertyOrField(innerParameter, propertyInfoForMethod.Name);
+                    var selectLambda = Expression.Lambda(lambdaBody, innerParameter);
+
+                    return Expression.Call(selectMethod, expr, selectLambda);
+                }
+
                 var propertyInfo = GetPropertyInfo(expr.Type, propName);
                 var actualPropertyName = propertyInfo?.Name ?? propName;
                 try
@@ -335,6 +425,21 @@ public static class FilterParser
 
             return propertyExpression;
         });
+    }
+
+    private static Type? GetInnerGenericType(Type type)
+    {
+        // If the type is not an IEnumerable, return the original type
+        if (!IsEnumerable(type))
+        {
+            return type;
+        }
+
+        // If the type is an IEnumerable, get the inner generic type
+        var innerGenericType = type.GetGenericArguments()[0];
+
+        // Recursively check if the inner type is also an IEnumerable
+        return GetInnerGenericType(innerGenericType);
     }
     
     private static Parser<Expression> AtomicExprParser<T>(ParameterExpression parameter,

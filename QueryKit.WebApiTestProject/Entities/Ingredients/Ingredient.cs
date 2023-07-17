@@ -6,6 +6,11 @@ using System.Text.Json.Serialization;
 using Models;
 using Recipes;
 
+public class IngredientPreparation
+{
+    public string Text { get; set; }
+}
+
 public class Ingredient : BaseEntity
 {
     public string Name { get; private set; }
@@ -16,11 +21,12 @@ public class Ingredient : BaseEntity
 
     public string Measure { get; private set; }
 
+    public List<IngredientPreparation> Preparations { get; set; } = new();
+
     [JsonIgnore, IgnoreDataMember]
     [ForeignKey("Recipe")]
     public Guid RecipeId { get; private set; }
     public Recipe Recipe { get; private set; }
-
 
     public static Ingredient Create(IngredientForCreation ingredientForCreation)
     {
