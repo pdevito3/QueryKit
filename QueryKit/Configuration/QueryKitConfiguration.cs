@@ -1,5 +1,7 @@
 namespace QueryKit.Configuration;
 
+using Microsoft.EntityFrameworkCore;
+
 public interface IQueryKitConfiguration
 {
     QueryKitPropertyMappings PropertyMappings { get; }
@@ -16,6 +18,7 @@ public interface IQueryKitConfiguration
     public string NotStartsWithOperator { get; set; }
     public string NotEndsWithOperator { get; set; }
     public string InOperator { get; set; }
+    public string SoundsLikeOperator { get; set; }
     public string CaseInsensitiveAppendix { get; set; }
     public string AndOperator { get; set; }
     public string OrOperator { get; set; }
@@ -38,11 +41,12 @@ public class QueryKitConfiguration : IQueryKitConfiguration
     public string NotStartsWithOperator { get; set; }
     public string NotEndsWithOperator { get; set; }
     public string InOperator { get; set; }
+    public string SoundsLikeOperator { get; set; }
     public string CaseInsensitiveAppendix { get; set; }
     public string AndOperator { get; set; }
     public string OrOperator { get; set; }
     public bool AllowUnknownProperties { get; set; } = false;
-    
+
     public QueryKitConfiguration(Action<QueryKitSettings> configureSettings)
     {
         var settings = new QueryKitSettings();
@@ -62,6 +66,7 @@ public class QueryKitConfiguration : IQueryKitConfiguration
         NotStartsWithOperator = settings.NotStartsWithOperator;
         NotEndsWithOperator = settings.NotEndsWithOperator;
         InOperator = settings.InOperator;
+        SoundsLikeOperator = settings.SoundsLikeOperator;
         CaseInsensitiveAppendix = settings.CaseInsensitiveAppendix;
         AndOperator = settings.AndOperator;
         OrOperator = settings.OrOperator;

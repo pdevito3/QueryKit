@@ -19,11 +19,12 @@ public class QueryKitSettings
     public string NotStartsWithOperator { get; set; } = ComparisonOperator.NotStartsWithOperator().Operator();
     public string NotEndsWithOperator { get; set; } = ComparisonOperator.NotEndsWithOperator().Operator();
     public string InOperator { get; set; } = ComparisonOperator.InOperator().Operator();
+    public string SoundsLikeOperator { get; set; } = ComparisonOperator.SoundsLikeOperator().Operator();
     public string AndOperator { get; set; } = LogicalOperator.AndOperator.Operator();
     public string OrOperator { get; set; } = LogicalOperator.OrOperator.Operator();
     public string CaseInsensitiveAppendix { get; set; } = ComparisonOperator.CaseSensitiveAppendix.ToString();
     public bool AllowUnknownProperties { get; set; }
-    
+
     public QueryKitPropertyMapping<TModel> Property<TModel>(Expression<Func<TModel, object>>? propertySelector)
     {
         return PropertyMappings.Property(propertySelector);

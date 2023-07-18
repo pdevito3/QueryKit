@@ -6,12 +6,16 @@ using System.Linq.Expressions;
 using System.Reflection;
 using Configuration;
 using Exceptions;
+using Microsoft.EntityFrameworkCore;
 using Operators;
 using Sprache;
 
 public static class FilterParser
 {
     public static Expression<Func<T, bool>> ParseFilter<T>(string input, IQueryKitConfiguration? config = null)
+        => ParseFilter<T>(input, config, null);
+
+    public static Expression<Func<T, bool>> ParseFilter<T>(string input, IQueryKitConfiguration? config = null, DbContext? dbContext = null)
     {
         input = config?.ReplaceLogicalAliases(input) ?? input;
         input = config?.ReplaceComparisonAliases(input) ?? input;
@@ -21,7 +25,7 @@ public static class FilterParser
         Expression expr; 
         try
         {
-            expr = ExprParser<T>(parameter, config).End().Parse(input);
+            expr = ExprParser<T>(parameter, config, dbContext).End().Parse(input);
         }
         catch (ParseException e)
         {
@@ -49,6 +53,7 @@ public static class FilterParser
             .Or(Parse.String(ComparisonOperator.NotStartsWithOperator().Operator()).Text())
             .Or(Parse.String(ComparisonOperator.NotEndsWithOperator().Operator()).Text())
             .Or(Parse.String(ComparisonOperator.InOperator().Operator()).Text())
+            .Or(Parse.String(ComparisonOperator.SoundsLikeOperator().Operator()).Text())
         .SelectMany(op => Parse.Char(ComparisonOperator.CaseSensitiveAppendix).Optional(), (op, caseInsensitive) => new { op, caseInsensitive })
         .Select(x => ComparisonOperator.GetByOperatorString(x.op, x.caseInsensitive.IsDefined));
 
@@ -280,7 +285,7 @@ public static class FilterParser
         return targetType;
     }
 
-    private static Parser<Expression> ComparisonExprParser<T>(ParameterExpression parameter, IQueryKitConfiguration? config)
+    private static Parser<Expression> ComparisonExprParser<T>(ParameterExpression parameter, IQueryKitConfiguration? config, DbContext? dbContext)
     {
         var comparisonOperatorParser = ComparisonOperatorParser.Token();
         var rightSideValueParser = RightSideValueParser.Token();
@@ -296,7 +301,7 @@ public static class FilterParser
                 }
 
                 var rightExpr = CreateRightExpr(temp.leftExpr, temp.right);
-                return temp.op.GetExpression<T>(temp.leftExpr, rightExpr);
+                return temp.op.GetExpression<T>(temp.leftExpr, rightExpr, dbContext);
             });
     }
 
@@ -338,24 +343,25 @@ public static class FilterParser
     }
     
     private static Parser<Expression> AtomicExprParser<T>(ParameterExpression parameter,
-        IQueryKitConfiguration? config = null)
-        => ComparisonExprParser<T>(parameter, config)
+        IQueryKitConfiguration? config = null,
+        DbContext? dbContext = null)
+        => ComparisonExprParser<T>(parameter, config, dbContext)
             .Or(Parse.Ref(() => ExprParser<T>(parameter, config)).Contained(Parse.Char('('), Parse.Char(')')));
 
-    private static Parser<Expression> ExprParser<T>(ParameterExpression parameter, IQueryKitConfiguration? config = null)
-        => OrExprParser<T>(parameter, config);
+    private static Parser<Expression> ExprParser<T>(ParameterExpression parameter, IQueryKitConfiguration? config = null, DbContext? dbContext = null)
+        => OrExprParser<T>(parameter, config, dbContext);
     
-    private static Parser<Expression> AndExprParser<T>(ParameterExpression parameter, IQueryKitConfiguration? config = null)
+    private static Parser<Expression> AndExprParser<T>(ParameterExpression parameter, IQueryKitConfiguration? config = null, DbContext? dbContext = null)
         => Parse.ChainOperator(
             LogicalOperatorParser.Where(x => x.Name == LogicalOperator.AndOperator.Operator()),
-            AtomicExprParser<T>(parameter, config),
+            AtomicExprParser<T>(parameter, config, dbContext),
             (op, left, right) => op.GetExpression<T>(left, right)
         );
 
-    private static Parser<Expression> OrExprParser<T>(ParameterExpression parameter, IQueryKitConfiguration? config = null)
+    private static Parser<Expression> OrExprParser<T>(ParameterExpression parameter, IQueryKitConfiguration? config = null, DbContext? dbContext = null)
         => Parse.ChainOperator(
             LogicalOperatorParser.Where(x => x.Name == LogicalOperator.OrOperator.Operator()),
-            AndExprParser<T>(parameter, config),
+            AndExprParser<T>(parameter, config, dbContext),
             (op, left, right) => op.GetExpression<T>(left, right)
         );
 }

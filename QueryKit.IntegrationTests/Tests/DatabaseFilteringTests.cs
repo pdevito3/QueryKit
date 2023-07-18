@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using SharedTestingHelper.Fakes;
 using SharedTestingHelper.Fakes.Author;
 using SharedTestingHelper.Fakes.Recipes;
+using WebApiTestProject.Database;
 using WebApiTestProject.Entities;
 using WebApiTestProject.Entities.Recipes;
 using WebApiTestProject.Features;
@@ -33,6 +34,31 @@ public class DatabaseFilteringTests : TestBase
         var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
         var people = await appliedQueryable.ToListAsync();
 
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakePersonOne.Id);
+    }
+    
+    [Fact]
+    public async Task can_use_soundex()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var faker = new Faker();
+
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithTitle("DeVito")
+            .Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder().Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+        
+        var input = $"""{nameof(TestingPerson.Title)} ~~ "davito" """;
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+        
         // Assert
         people.Count.Should().Be(1);
         people[0].Id.Should().Be(fakePersonOne.Id);
