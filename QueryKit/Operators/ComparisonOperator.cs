@@ -3,6 +3,7 @@ namespace QueryKit.Operators;
 using System.Linq.Expressions;
 using Ardalis.SmartEnum;
 using Configuration;
+using Exceptions;
 using Microsoft.EntityFrameworkCore;
 
 public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
@@ -411,14 +412,14 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         {
             if (dbContextType == null)
             {
-                throw new ArgumentException("DbContext type must be provided for SoundsLike operator.");
+                throw new QueryKitDbContextTypeException("DbContext type must be provided to use the SoundsLike operator.");
             }
             
             var method = dbContextType.GetMethod("SoundsLike", new Type[] { typeof(string) });
 
             if (method == null)
             {
-                throw new ArgumentException($"The DbContext type {dbContextType.FullName} does not have a SoundsLike method.");
+                throw new SoundsLikeNotImplementedException(dbContextType.FullName!);
             }
             
             Expression leftMethodCall = Expression.Call(null, method, left);
@@ -439,14 +440,14 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         {
             if (dbContextType == null)
             {
-                throw new ArgumentException("DbContext type must be provided for DoesNotSoundsLike operator.");
+                throw new QueryKitDbContextTypeException("DbContext type must be provided to use the DoesNotSoundsLike operator.");
             }
             
             var method = dbContextType.GetMethod("SoundsLike", new Type[] { typeof(string) });
 
             if (method == null)
             {
-                throw new ArgumentException($"The DbContext type {dbContextType.FullName} does not have a SoundsLike method.");
+                throw new SoundsLikeNotImplementedException(dbContextType.FullName!);
             }
             
             Expression leftMethodCall = Expression.Call(null, method, left);
