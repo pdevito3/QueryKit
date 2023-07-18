@@ -12,9 +12,24 @@ using Sprache;
 
 public static class FilterParser
 {
-    public static Expression<Func<T, bool>> ParseFilter<T>(string input, IQueryKitConfiguration? config = null)
+    /// <summary>
+    /// Generates an expression parser to filter data of the specified type. This simplified version does not support DbContext specific operations like SoundEx.
+    /// </summary>
+    /// <param name="input">A string that defines the filter parameters.</param>
+    /// <param name="config">An optional IQueryKitConfiguration object to provide configuration for parsing, including logical aliases, comparison aliases and property mappings. Defaults to null.</param>
+    /// <typeparam name="T">The type of data to be filtered by the returned expression parser.</typeparam>
+    /// <returns>Returns a Func delegate that represents a lambda expression that applies the filter defined by the input parameter.</returns>
+    public static Expression<Func<T, bool>> SimpleParseFilter<T>(string input, IQueryKitConfiguration? config = null)
         => ParseFilter<T>(input, config, null);
 
+    /// <summary>
+    /// Generates an expression parser to filter data of the specified type. It can optionally utilize a DbContext for operations not supported in the simple version.
+    /// </summary>
+    /// <param name="input">A string that defines the filter parameters.</param>
+    /// <param name="config">An optional IQueryKitConfiguration object to provide configuration for parsing, including logical aliases, comparison aliases and property mappings. Defaults to null.</param>
+    /// <param name="dbContext">An optional DbContext object that enables the use of database context specific operations. Defaults to null.</param>
+    /// <typeparam name="T">The type of data to be filtered by the returned expression parser.</typeparam>
+    /// <returns>Returns a Func delegate that represents a lambda expression that applies the filter defined by the input parameter.</returns>
     public static Expression<Func<T, bool>> ParseFilter<T>(string input, IQueryKitConfiguration? config = null, DbContext? dbContext = null)
     {
         input = config?.ReplaceLogicalAliases(input) ?? input;
