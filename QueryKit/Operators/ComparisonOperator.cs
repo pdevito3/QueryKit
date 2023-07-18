@@ -119,7 +119,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
     public const char CaseSensitiveAppendix = '*';
     public abstract string Operator();
     public bool CaseInsensitive { get; protected set; }
-    public abstract Expression GetExpression<T>(Expression left, Expression right, DbContext? dbContextName);
+    public abstract Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType);
     protected ComparisonOperator(string name, int value, bool caseInsensitive = false) : base(name, value)
     {
         CaseInsensitive = caseInsensitive;
@@ -132,7 +132,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         }
 
         public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
-        public override Expression GetExpression<T>(Expression left, Expression right, DbContext? dbContextName)
+        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
         {
             if (CaseInsensitive && left.Type == typeof(string) && right.Type == typeof(string))
             {
@@ -153,7 +153,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         }
 
         public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
-        public override Expression GetExpression<T>(Expression left, Expression right, DbContext? dbContextName)
+        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
         {
 
             if (CaseInsensitive && left.Type == typeof(string) && right.Type == typeof(string))
@@ -176,7 +176,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         }
 
         public override string Operator() => Name;
-        public override Expression GetExpression<T>(Expression left, Expression right, DbContext? dbContextName)
+        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
         {
             return Expression.GreaterThan(left, right);
         }
@@ -189,7 +189,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         }
 
         public override string Operator() => Name;
-        public override Expression GetExpression<T>(Expression left, Expression right, DbContext? dbContextName)
+        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
         {
             return Expression.LessThan(left, right);
         }
@@ -201,7 +201,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         public GreaterThanOrEqualType(bool caseInsensitive = false) : base(">=", 4, caseInsensitive)
         {
         }
-        public override Expression GetExpression<T>(Expression left, Expression right, DbContext? dbContextName)
+        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
         {
             return Expression.GreaterThanOrEqual(left, right);
         }
@@ -213,7 +213,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         {
         }
         public override string Operator() => Name;
-        public override Expression GetExpression<T>(Expression left, Expression right, DbContext? dbContextName)
+        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
         {
             return Expression.LessThanOrEqual(left, right);
         }
@@ -226,7 +226,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         }
 
         public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
-        public override Expression GetExpression<T>(Expression left, Expression right, DbContext? dbContextName)
+        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
         {
             if (CaseInsensitive)
             {
@@ -248,7 +248,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         }
 
         public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
-        public override Expression GetExpression<T>(Expression left, Expression right, DbContext? dbContextName)
+        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
         {
             if (CaseInsensitive)
             {
@@ -270,7 +270,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         }
 
         public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
-        public override Expression GetExpression<T>(Expression left, Expression right, DbContext? dbContextName)
+        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
         {
             if (CaseInsensitive)
             {
@@ -292,7 +292,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         }
 
         public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
-        public override Expression GetExpression<T>(Expression left, Expression right, DbContext? dbContextName)
+        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
         {
             if(CaseInsensitive)
             {
@@ -315,7 +315,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         }
 
         public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
-        public override Expression GetExpression<T>(Expression left, Expression right, DbContext? dbContextName)
+        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
         {
             if (CaseInsensitive)
             {
@@ -337,7 +337,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         }
 
         public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
-        public override Expression GetExpression<T>(Expression left, Expression right, DbContext? dbContextName)
+        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
         {
             if (CaseInsensitive)
             {
@@ -359,7 +359,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         }
 
         public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
-        public override Expression GetExpression<T>(Expression left, Expression right, DbContext? dbContextName)
+        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
         {
             var leftType = left.Type;
         
@@ -407,9 +407,13 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
 
         public override string Operator() => Name;
 
-        public override Expression GetExpression<T>(Expression left, Expression right, DbContext dbContext)
+        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
         {
-            var dbContextType = dbContext.GetType();
+            if (dbContextType == null)
+            {
+                throw new ArgumentException("DbContext type must be provided for SoundsLike operator.");
+            }
+            
             var method = dbContextType.GetMethod("SoundsLike", new Type[] { typeof(string) });
 
             if (method == null)
@@ -431,9 +435,13 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
 
         public override string Operator() => Name;
 
-        public override Expression GetExpression<T>(Expression left, Expression right, DbContext dbContext)
+        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
         {
-            var dbContextType = dbContext.GetType();
+            if (dbContextType == null)
+            {
+                throw new ArgumentException("DbContext type must be provided for DoesNotSoundsLike operator.");
+            }
+            
             var method = dbContextType.GetMethod("SoundsLike", new Type[] { typeof(string) });
 
             if (method == null)

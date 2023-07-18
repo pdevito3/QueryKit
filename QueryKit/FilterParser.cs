@@ -13,24 +13,13 @@ using Sprache;
 public static class FilterParser
 {
     /// <summary>
-    /// Generates an expression parser to filter data of the specified type. This simplified version does not support DbContext specific operations like SoundEx.
+    /// Generates an expression parser to filter data of the specified type.
     /// </summary>
     /// <param name="input">A string that defines the filter parameters.</param>
     /// <param name="config">An optional IQueryKitConfiguration object to provide configuration for parsing, including logical aliases, comparison aliases and property mappings. Defaults to null.</param>
     /// <typeparam name="T">The type of data to be filtered by the returned expression parser.</typeparam>
     /// <returns>Returns a Func delegate that represents a lambda expression that applies the filter defined by the input parameter.</returns>
-    public static Expression<Func<T, bool>> SimpleParseFilter<T>(string input, IQueryKitConfiguration? config = null)
-        => ParseFilter<T>(input, config, null);
-
-    /// <summary>
-    /// Generates an expression parser to filter data of the specified type. It can optionally utilize a DbContext for operations not supported in the simple version.
-    /// </summary>
-    /// <param name="input">A string that defines the filter parameters.</param>
-    /// <param name="config">An optional IQueryKitConfiguration object to provide configuration for parsing, including logical aliases, comparison aliases and property mappings. Defaults to null.</param>
-    /// <param name="dbContext">An optional DbContext object that enables the use of database context specific operations. Defaults to null.</param>
-    /// <typeparam name="T">The type of data to be filtered by the returned expression parser.</typeparam>
-    /// <returns>Returns a Func delegate that represents a lambda expression that applies the filter defined by the input parameter.</returns>
-    public static Expression<Func<T, bool>> ParseFilter<T>(string input, IQueryKitConfiguration? config = null, DbContext? dbContext = null)
+    public static Expression<Func<T, bool>> ParseFilter<T>(string input, IQueryKitConfiguration? config = null)
     {
         input = config?.ReplaceLogicalAliases(input) ?? input;
         input = config?.ReplaceComparisonAliases(input) ?? input;
@@ -40,7 +29,7 @@ public static class FilterParser
         Expression expr; 
         try
         {
-            expr = ExprParser<T>(parameter, config, dbContext).End().Parse(input);
+            expr = ExprParser<T>(parameter, config).End().Parse(input);
         }
         catch (ParseException e)
         {
@@ -301,7 +290,7 @@ public static class FilterParser
         return targetType;
     }
 
-    private static Parser<Expression> ComparisonExprParser<T>(ParameterExpression parameter, IQueryKitConfiguration? config, DbContext? dbContext)
+    private static Parser<Expression> ComparisonExprParser<T>(ParameterExpression parameter, IQueryKitConfiguration? config)
     {
         var comparisonOperatorParser = ComparisonOperatorParser.Token();
         var rightSideValueParser = RightSideValueParser.Token();
@@ -317,7 +306,7 @@ public static class FilterParser
                 }
 
                 var rightExpr = CreateRightExpr(temp.leftExpr, temp.right);
-                return temp.op.GetExpression<T>(temp.leftExpr, rightExpr, dbContext);
+                return temp.op.GetExpression<T>(temp.leftExpr, rightExpr, config?.DbContextType);
             });
     }
 
@@ -358,26 +347,24 @@ public static class FilterParser
         });
     }
     
-    private static Parser<Expression> AtomicExprParser<T>(ParameterExpression parameter,
-        IQueryKitConfiguration? config = null,
-        DbContext? dbContext = null)
-        => ComparisonExprParser<T>(parameter, config, dbContext)
+    private static Parser<Expression> AtomicExprParser<T>(ParameterExpression parameter, IQueryKitConfiguration? config = null)
+        => ComparisonExprParser<T>(parameter, config)
             .Or(Parse.Ref(() => ExprParser<T>(parameter, config)).Contained(Parse.Char('('), Parse.Char(')')));
 
-    private static Parser<Expression> ExprParser<T>(ParameterExpression parameter, IQueryKitConfiguration? config = null, DbContext? dbContext = null)
-        => OrExprParser<T>(parameter, config, dbContext);
+    private static Parser<Expression> ExprParser<T>(ParameterExpression parameter, IQueryKitConfiguration? config = null)
+        => OrExprParser<T>(parameter, config);
     
-    private static Parser<Expression> AndExprParser<T>(ParameterExpression parameter, IQueryKitConfiguration? config = null, DbContext? dbContext = null)
+    private static Parser<Expression> AndExprParser<T>(ParameterExpression parameter, IQueryKitConfiguration? config = null)
         => Parse.ChainOperator(
             LogicalOperatorParser.Where(x => x.Name == LogicalOperator.AndOperator.Operator()),
-            AtomicExprParser<T>(parameter, config, dbContext),
+            AtomicExprParser<T>(parameter, config),
             (op, left, right) => op.GetExpression<T>(left, right)
         );
 
-    private static Parser<Expression> OrExprParser<T>(ParameterExpression parameter, IQueryKitConfiguration? config = null, DbContext? dbContext = null)
+    private static Parser<Expression> OrExprParser<T>(ParameterExpression parameter, IQueryKitConfiguration? config = null)
         => Parse.ChainOperator(
             LogicalOperatorParser.Where(x => x.Name == LogicalOperator.OrOperator.Operator()),
-            AndExprParser<T>(parameter, config, dbContext),
+            AndExprParser<T>(parameter, config),
             (op, left, right) => op.GetExpression<T>(left, right)
         );
 }

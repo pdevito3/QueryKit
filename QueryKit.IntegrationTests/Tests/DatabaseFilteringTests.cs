@@ -55,7 +55,10 @@ public class DatabaseFilteringTests : TestBase
 
         // Act
         var queryablePeople = testingServiceScope.DbContext().People;
-        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input, new QueryKitConfiguration(o =>
+        {
+            o.DbContextType = typeof(TestingDbContext);
+        }));
         var people = await appliedQueryable.ToListAsync();
         
         // Assert
@@ -79,7 +82,10 @@ public class DatabaseFilteringTests : TestBase
 
         // Act
         var queryablePeople = testingServiceScope.DbContext().People;
-        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input, new QueryKitConfiguration(o =>
+        {
+            o.DbContextType = typeof(TestingDbContext);
+        }));
         var people = await appliedQueryable.ToListAsync();
         
         // Assert

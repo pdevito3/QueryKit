@@ -24,6 +24,7 @@ public interface IQueryKitConfiguration
     public string AndOperator { get; set; }
     public string OrOperator { get; set; }
     public bool AllowUnknownProperties { get; set; }
+    public Type? DbContextType { get; set; }
 }
 
 public class QueryKitConfiguration : IQueryKitConfiguration
@@ -48,6 +49,7 @@ public class QueryKitConfiguration : IQueryKitConfiguration
     public string AndOperator { get; set; }
     public string OrOperator { get; set; }
     public bool AllowUnknownProperties { get; set; } = false;
+    public Type? DbContextType { get; set; }
 
     public QueryKitConfiguration(Action<QueryKitSettings> configureSettings)
     {
@@ -74,5 +76,6 @@ public class QueryKitConfiguration : IQueryKitConfiguration
         AndOperator = settings.AndOperator;
         OrOperator = settings.OrOperator;
         AllowUnknownProperties = settings.AllowUnknownProperties;
+        DbContextType = settings.DbContextType;
     }
 }

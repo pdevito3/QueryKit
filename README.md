@@ -378,7 +378,23 @@ public class ExampleDbContext : DbContext
 You can even use this on a normal `IQueryable` like this: 
 ```csharp
 var waffleRecipes = _dbContext.MyPeople
-  .Where(x => ExampleDbContext.SoundsLike(x.FirstName) == ExampleDbContext.SoundsLike("devito"))
+  .Where(x => ExampleDbContext.SoundsLike(x.LastName) == ExampleDbContext.SoundsLike("devito"))
   .ToList();
+```
+
+### Usage
+
+Once your `DbContext` is configured to allow soundex, you'll need to provide that `DbContext` type in your QueryKit config. This is because, as of now, there is no reliable way to get the `DbContext` from an `IQueryable`.
+
+```csharp
+var input = $"""LastName ~~ "devito" """;
+
+// Act
+var queryablePeople = testingServiceScope.DbContext().People;
+var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input, new QueryKitConfiguration(o =>
+{
+    o.DbContextType = typeof(TestingDbContext);
+}));
+var people = await appliedQueryable.ToListAsync();
 ```
 
