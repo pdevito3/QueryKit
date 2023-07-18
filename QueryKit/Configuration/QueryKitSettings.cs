@@ -20,6 +20,7 @@ public class QueryKitSettings
     public string NotEndsWithOperator { get; set; } = ComparisonOperator.NotEndsWithOperator().Operator();
     public string InOperator { get; set; } = ComparisonOperator.InOperator().Operator();
     public string SoundsLikeOperator { get; set; } = ComparisonOperator.SoundsLikeOperator().Operator();
+    public string DoesNotSoundLikeOperator { get; set; } = ComparisonOperator.DoesNotSoundLikeOperator().Operator();
     public string AndOperator { get; set; } = LogicalOperator.AndOperator.Operator();
     public string OrOperator { get; set; } = LogicalOperator.OrOperator.Operator();
     public string CaseInsensitiveAppendix { get; set; } = ComparisonOperator.CaseSensitiveAppendix.ToString();

@@ -54,6 +54,7 @@ public static class FilterParser
             .Or(Parse.String(ComparisonOperator.NotEndsWithOperator().Operator()).Text())
             .Or(Parse.String(ComparisonOperator.InOperator().Operator()).Text())
             .Or(Parse.String(ComparisonOperator.SoundsLikeOperator().Operator()).Text())
+            .Or(Parse.String(ComparisonOperator.DoesNotSoundLikeOperator().Operator()).Text())
         .SelectMany(op => Parse.Char(ComparisonOperator.CaseSensitiveAppendix).Optional(), (op, caseInsensitive) => new { op, caseInsensitive })
         .Select(x => ComparisonOperator.GetByOperatorString(x.op, x.caseInsensitive.IsDefined));
 

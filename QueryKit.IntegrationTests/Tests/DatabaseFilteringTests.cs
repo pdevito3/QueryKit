@@ -40,11 +40,10 @@ public class DatabaseFilteringTests : TestBase
     }
     
     [Fact]
-    public async Task can_use_soundex()
+    public async Task can_use_soundex_equals()
     {
         // Arrange
         var testingServiceScope = new TestingServiceScope();
-        var faker = new Faker();
 
         var fakePersonOne = new FakeTestingPersonBuilder()
             .WithTitle("DeVito")
@@ -62,6 +61,29 @@ public class DatabaseFilteringTests : TestBase
         // Assert
         people.Count.Should().Be(1);
         people[0].Id.Should().Be(fakePersonOne.Id);
+    }
+    
+    [Fact]
+    public async Task can_use_soundex_not_equals()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithTitle("Jaime")
+            .Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder().Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+        
+        var input = $"""{nameof(TestingPerson.Title)} !~ "jaymee" """;
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+        
+        // Assert
+        people.Count(x => x.Id == fakePersonOne.Id).Should().Be(0);
     }
     
     [Fact]

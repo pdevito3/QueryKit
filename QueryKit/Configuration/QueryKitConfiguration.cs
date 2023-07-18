@@ -19,6 +19,7 @@ public interface IQueryKitConfiguration
     public string NotEndsWithOperator { get; set; }
     public string InOperator { get; set; }
     public string SoundsLikeOperator { get; set; }
+    public string DoesNotSoundLikeOperator { get; set; }
     public string CaseInsensitiveAppendix { get; set; }
     public string AndOperator { get; set; }
     public string OrOperator { get; set; }
@@ -42,6 +43,7 @@ public class QueryKitConfiguration : IQueryKitConfiguration
     public string NotEndsWithOperator { get; set; }
     public string InOperator { get; set; }
     public string SoundsLikeOperator { get; set; }
+    public string DoesNotSoundLikeOperator { get; set; }
     public string CaseInsensitiveAppendix { get; set; }
     public string AndOperator { get; set; }
     public string OrOperator { get; set; }
@@ -67,6 +69,7 @@ public class QueryKitConfiguration : IQueryKitConfiguration
         NotEndsWithOperator = settings.NotEndsWithOperator;
         InOperator = settings.InOperator;
         SoundsLikeOperator = settings.SoundsLikeOperator;
+        DoesNotSoundLikeOperator = settings.DoesNotSoundLikeOperator;
         CaseInsensitiveAppendix = settings.CaseInsensitiveAppendix;
         AndOperator = settings.AndOperator;
         OrOperator = settings.OrOperator;
