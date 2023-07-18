@@ -111,6 +111,10 @@ There's a wide variety of comparison operators that use the same base syntax as 
 | Does Not End With     | !_-=     | !_-=*                     |
 | Contains              | @=       | @=*                       |
 | Does Not Contain      | !@=      | !@=*                      |
+| Sounds Like           | ~~     | N/A                       |
+| Does Not Sound Like   | !~     | N/A                        |
+
+> `Sounds Like` and `Does Not Sound Like` requires a soundex configuration on your DbContext. For more info see [the docs below](#soundex)
 
 ### Filtering Notes
 
@@ -343,3 +347,38 @@ If you want to capture errors to easily throw a `400`, you can add error handlin
 * A `FilterParsingException` will be thrown when there is an invalid operator or bad syntax is used (e.g. not using double quotes around a string or guid).
 * An `UnknownFilterPropertyException` will be thrown if a property is not recognized during filtering
 * A `SortParsingException` will be thrown if a property or operation is not recognized during sorting
+
+## SoundEx
+
+The `Sounds Like` and `Does Not Sound Like` operators require a soundex configuration on any `DbContext` that contain your `DbSet` being filtered on. Something like the below should work. The `SoundsLike` method does not need to implement anything and is just used as a pointer to the db method.
+
+```csharp
+public class ExampleDbContext : DbContext
+{
+    public ExampleDbContext(DbContextOptions<TestingDbContext> options)
+        : base(options)
+    {
+    }
+    
+    [DbFunction (Name = "SOUNDEX", IsBuiltIn = true)]
+    public static string SoundsLike(string query) => throw new NotImplementedException();
+
+    public DbSet<People> MyPeople { get; set; }
+    
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
+        modelBuilder.HasPostgresExtension("fuzzystrmatch");
+    }
+}
+```
+
+> ⭐️ Note that with Postgres, something like `modelBuilder.HasPostgresExtension("fuzzystrmatch");` will need to be added like the example along with a migration for adding the extension.
+
+You can even use this on a normal `IQueryable` like this: 
+```csharp
+var waffleRecipes = _dbContext.MyPeople
+  .Where(x => ExampleDbContext.SoundsLike(x.FirstName) == ExampleDbContext.SoundsLike("devito"))
+  .ToList();
+```
+
