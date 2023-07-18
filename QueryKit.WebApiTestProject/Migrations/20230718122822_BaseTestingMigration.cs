@@ -6,11 +6,14 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace QueryKit.WebApiTestProject.Migrations
 {
     /// <inheritdoc />
-    public partial class initial : Migration
+    public partial class BaseTestingMigration : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.AlterDatabase()
+                .Annotation("Npgsql:PostgresExtension:fuzzystrmatch", ",,");
+
             migrationBuilder.CreateTable(
                 name: "people",
                 columns: table => new

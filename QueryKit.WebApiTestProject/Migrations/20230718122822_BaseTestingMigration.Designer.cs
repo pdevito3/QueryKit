@@ -12,8 +12,8 @@ using QueryKit.WebApiTestProject.Database;
 namespace QueryKit.WebApiTestProject.Migrations
 {
     [DbContext(typeof(TestingDbContext))]
-    [Migration("20230717235035_temp")]
-    partial class temp
+    [Migration("20230718122822_BaseTestingMigration")]
+    partial class BaseTestingMigration
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
