@@ -1,17 +1,24 @@
 namespace QueryKit;
 
+using System.Reflection;
 using Configuration;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Internal;
+using Microsoft.EntityFrameworkCore.Query;
+using Microsoft.EntityFrameworkCore.Query.Internal;
 
 public static class QueryableExtensions
 {
-    public static IQueryable<T> ApplyQueryKitFilter<T>(this IQueryable<T> source, string filter, IQueryKitConfiguration? config = null)
+    public static IQueryable<TEntity> ApplyQueryKitFilter<TEntity>(this IQueryable<TEntity> source, string filter, IQueryKitConfiguration? config = null) 
+        where TEntity : class
     {
         if (string.IsNullOrWhiteSpace(filter))
         {
             return source;
         }
 
-        var expression = FilterParser.ParseFilter<T>(filter, config);
+        var expression = FilterParser.ParseFilter<TEntity>(filter, config);
         return source.Where(expression);
     }
 

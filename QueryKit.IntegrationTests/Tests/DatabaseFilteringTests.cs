@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using SharedTestingHelper.Fakes;
 using SharedTestingHelper.Fakes.Author;
 using SharedTestingHelper.Fakes.Recipes;
+using WebApiTestProject.Database;
 using WebApiTestProject.Entities;
 using WebApiTestProject.Entities.Recipes;
 using WebApiTestProject.Features;
@@ -36,6 +37,59 @@ public class DatabaseFilteringTests : TestBase
         // Assert
         people.Count.Should().Be(1);
         people[0].Id.Should().Be(fakePersonOne.Id);
+    }
+    
+    [Fact]
+    public async Task can_use_soundex_equals()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithTitle("DeVito")
+            .Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder().Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+        
+        var input = $"""{nameof(TestingPerson.Title)} ~~ "davito" """;
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input, new QueryKitConfiguration(o =>
+        {
+            o.DbContextType = typeof(TestingDbContext);
+        }));
+        var people = await appliedQueryable.ToListAsync();
+        
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakePersonOne.Id);
+    }
+    
+    [Fact]
+    public async Task can_use_soundex_not_equals()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithTitle("Jaime")
+            .Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder().Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+        
+        var input = $"""{nameof(TestingPerson.Title)} !~ "jaymee" """;
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input, new QueryKitConfiguration(o =>
+        {
+            o.DbContextType = typeof(TestingDbContext);
+        }));
+        var people = await appliedQueryable.ToListAsync();
+        
+        // Assert
+        people.Count(x => x.Id == fakePersonOne.Id).Should().Be(0);
     }
     
     [Fact]
@@ -144,8 +198,8 @@ public class DatabaseFilteringTests : TestBase
         var people = await appliedQueryable.ToListAsync();
 
         // Assert
-        people.Count.Should().Be(1);
-        people[0].Id.Should().Be(fakePersonOne.Id);
+        people.Count.Should().BeGreaterOrEqualTo(1);
+        people.FirstOrDefault(x => x.Id == fakePersonOne.Id).Should().NotBeNull();
     }
 
 

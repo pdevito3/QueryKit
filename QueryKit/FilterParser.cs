@@ -6,11 +6,19 @@ using System.Linq.Expressions;
 using System.Reflection;
 using Configuration;
 using Exceptions;
+using Microsoft.EntityFrameworkCore;
 using Operators;
 using Sprache;
 
 public static class FilterParser
 {
+    /// <summary>
+    /// Generates an expression parser to filter data of the specified type.
+    /// </summary>
+    /// <param name="input">A string that defines the filter parameters.</param>
+    /// <param name="config">An optional IQueryKitConfiguration object to provide configuration for parsing, including logical aliases, comparison aliases and property mappings. Defaults to null.</param>
+    /// <typeparam name="T">The type of data to be filtered by the returned expression parser.</typeparam>
+    /// <returns>Returns a Func delegate that represents a lambda expression that applies the filter defined by the input parameter.</returns>
     public static Expression<Func<T, bool>> ParseFilter<T>(string input, IQueryKitConfiguration? config = null)
     {
         input = config?.ReplaceLogicalAliases(input) ?? input;
@@ -49,6 +57,8 @@ public static class FilterParser
             .Or(Parse.String(ComparisonOperator.NotStartsWithOperator().Operator()).Text())
             .Or(Parse.String(ComparisonOperator.NotEndsWithOperator().Operator()).Text())
             .Or(Parse.String(ComparisonOperator.InOperator().Operator()).Text())
+            .Or(Parse.String(ComparisonOperator.SoundsLikeOperator().Operator()).Text())
+            .Or(Parse.String(ComparisonOperator.DoesNotSoundLikeOperator().Operator()).Text())
         .SelectMany(op => Parse.Char(ComparisonOperator.CaseSensitiveAppendix).Optional(), (op, caseInsensitive) => new { op, caseInsensitive })
         .Select(x => ComparisonOperator.GetByOperatorString(x.op, x.caseInsensitive.IsDefined));
 
@@ -296,7 +306,7 @@ public static class FilterParser
                 }
 
                 var rightExpr = CreateRightExpr(temp.leftExpr, temp.right);
-                return temp.op.GetExpression<T>(temp.leftExpr, rightExpr);
+                return temp.op.GetExpression<T>(temp.leftExpr, rightExpr, config?.DbContextType);
             });
     }
 
@@ -337,8 +347,7 @@ public static class FilterParser
         });
     }
     
-    private static Parser<Expression> AtomicExprParser<T>(ParameterExpression parameter,
-        IQueryKitConfiguration? config = null)
+    private static Parser<Expression> AtomicExprParser<T>(ParameterExpression parameter, IQueryKitConfiguration? config = null)
         => ComparisonExprParser<T>(parameter, config)
             .Or(Parse.Ref(() => ExprParser<T>(parameter, config)).Contained(Parse.Char('('), Parse.Char(')')));
 
