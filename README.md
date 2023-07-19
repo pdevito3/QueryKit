@@ -340,6 +340,27 @@ var config = new QueryKitConfiguration(config =>
 });
 ```
 
+## Aggregate QueryKit Application
+
+If you want to apply filtering and sorting in one fell swoop, you can do something like this:
+
+```csharp
+var config = new QueryKitConfiguration(config =>
+{
+    config.Property<Person>(x => x.FirstName).HasQueryName("first");
+});
+var people = _dbContext.People
+  	.ApplyQueryKit(new QueryKitData() 
+        {
+            Filters = """first == "Jane" && Age > 10""",
+            SortOrder = "first, Age desc",
+            Configuration = config
+        })
+  	.ToList();
+```
+
+
+
 ## Error Handling
 
 If you want to capture errors to easily throw a `400`, you can add error handling around these exceptions:
