@@ -4,7 +4,6 @@ using System.Linq.Expressions;
 using Ardalis.SmartEnum;
 using Configuration;
 using Exceptions;
-using Microsoft.EntityFrameworkCore;
 
 public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
 {

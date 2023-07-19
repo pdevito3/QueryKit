@@ -6,7 +6,6 @@ using System.Linq.Expressions;
 using System.Reflection;
 using Configuration;
 using Exceptions;
-using Microsoft.EntityFrameworkCore;
 using Operators;
 using Sprache;
 

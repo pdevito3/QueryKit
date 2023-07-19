@@ -1,7 +1,5 @@
 namespace QueryKit.Configuration;
 
-using Microsoft.EntityFrameworkCore;
-
 public interface IQueryKitConfiguration
 {
     QueryKitPropertyMappings PropertyMappings { get; }
