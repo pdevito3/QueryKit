@@ -181,7 +181,32 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
         public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
         {
+            if (left.Type.IsGenericType && left.Type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
+            {
+                var xParameter = Expression.Parameter(left.Type.GetGenericArguments()[0], "x");
+                Expression body;
 
+                if (CaseInsensitive && xParameter.Type == typeof(string) && right.Type == typeof(string))
+                {
+                    var toLowerLeft = Expression.Call(xParameter, typeof(string).GetMethod("ToLower", Type.EmptyTypes));
+                    var toLowerRight = Expression.Call(right, typeof(string).GetMethod("ToLower", Type.EmptyTypes));
+
+                    body = Expression.NotEqual(toLowerLeft, toLowerRight);
+                }
+                else
+                {
+                    body = Expression.NotEqual(xParameter, right);
+                }
+
+                var anyLambda = Expression.Lambda(body, xParameter);
+                var anyMethod = typeof(Enumerable)
+                    .GetMethods()
+                    .Single(m => m.Name == "Any" && m.GetParameters().Length == 2)
+                    .MakeGenericMethod(left.Type.GetGenericArguments()[0]);
+
+                return Expression.Call(anyMethod, left, anyLambda);
+            }
+    
             if (CaseInsensitive && left.Type == typeof(string) && right.Type == typeof(string))
             {
                 return Expression.NotEqual(
@@ -193,7 +218,6 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
             return Expression.NotEqual(left, right);
         }
     }
-
 
     private class GreaterThanType : ComparisonOperator
     {

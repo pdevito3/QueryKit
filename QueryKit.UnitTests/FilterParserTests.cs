@@ -576,15 +576,6 @@ public class FilterParserTests
     }
     
     [Fact]
-    public void simple_child_collection_for_string_not_equal()
-    {
-        var input = """Ingredients.Name != "flour" """;
-        var filterExpression = FilterParser.ParseFilter<Recipe>(input);
-        filterExpression.ToString().Should()
-            .Be(""""x => (x.Ingredients.Select(y => y.Name) != "flour")"""");
-    }
-    
-    [Fact]
     public void simple_child_collection_for_string_equal()
     {
         var input = """Ingredients.Name == "flour" """;
@@ -600,6 +591,24 @@ public class FilterParserTests
         var filterExpression = FilterParser.ParseFilter<Recipe>(input);
         filterExpression.ToString().Should()
             .Be(""""x => x.Ingredients.Select(y => y.Name).Any(x => (x.ToLower() == "flour".ToLower()))"""");
+    }
+    
+    [Fact]
+    public void simple_child_collection_for_string_not_equal()
+    {
+        var input = """Ingredients.Name != "flour" """;
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input);
+        filterExpression.ToString().Should()
+            .Be(""""x => x.Ingredients.Select(y => y.Name).Any(x => (x != "flour"))"""");
+    }
+    
+    [Fact]
+    public void simple_child_collection_for_string_case_insensitive_not_equal()
+    {
+        var input = """Ingredients.Name !=* "flour" """;
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input);
+        filterExpression.ToString().Should()
+            .Be(""""x => x.Ingredients.Select(y => y.Name).Any(x => (x.ToLower() != "flour".ToLower()))"""");
     }
 }
     
