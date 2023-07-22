@@ -364,7 +364,7 @@ public static class FilterParser
                                 .First(m => m.Name ==  linqMethod && m.GetParameters().Length == 2)
                                 .MakeGenericMethod(genericArgType, propertyType);
 
-                            var innerParameter = Expression.Parameter(genericArgType, "x_"+ propName);
+                            var innerParameter = Expression.Parameter(genericArgType, "y");
                             var propertyInfoForMethod = GetPropertyInfo(genericArgType, propName);
                             Expression lambdaBody = Expression.PropertyOrField(innerParameter, propertyInfoForMethod.Name);
 
@@ -379,7 +379,7 @@ public static class FilterParser
                                 .First(m => m.Name == "Select" && m.GetParameters().Length == 2)
                                 .MakeGenericMethod(genericArgType, genericArgType.GetProperty(propName).PropertyType);
 
-                            var innerParameter = Expression.Parameter(genericArgType, "x_"+ propName);
+                            var innerParameter = Expression.Parameter(genericArgType, "y");
                             var propertyInfoForMethod = GetPropertyInfo(genericArgType, propName);
                             var lambdaBody = Expression.PropertyOrField(innerParameter, propertyInfoForMethod.Name);
                             var selectLambda = Expression.Lambda(lambdaBody, innerParameter);
@@ -403,7 +403,7 @@ public static class FilterParser
                         .First(m => m.Name == linqMethod && m.GetParameters().Length == 2)
                         .MakeGenericMethod(innerGenericType, propertyInfoForMethod.PropertyType);
 
-                    var innerParameter = Expression.Parameter(innerGenericType, "x_" + propName);
+                    var innerParameter = Expression.Parameter(innerGenericType, "y");
                     var lambdaBody = Expression.PropertyOrField(innerParameter, propertyInfoForMethod.Name);
                     var selectLambda = Expression.Lambda(lambdaBody, innerParameter);
 
