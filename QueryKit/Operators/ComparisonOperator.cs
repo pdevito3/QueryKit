@@ -254,27 +254,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         {
             if (left.Type.IsGenericType && left.Type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
             {
-                var xParameter = Expression.Parameter(left.Type.GetGenericArguments()[0], "x");
-                Expression body;
-
-                if (CaseInsensitive && xParameter.Type == typeof(string) && right.Type == typeof(string))
-                {
-                    var toLowerLeft = Expression.Call(xParameter, typeof(string).GetMethod("ToLower", Type.EmptyTypes));
-                    var toLowerRight = Expression.Call(right, typeof(string).GetMethod("ToLower", Type.EmptyTypes));
-                    body = Expression.Call(toLowerLeft, typeof(string).GetMethod("Contains", new[] { typeof(string) }), toLowerRight);
-                }
-                else
-                {
-                    body = Expression.Call(xParameter, typeof(string).GetMethod("Contains", new[] { typeof(string) }), right);
-                }
-
-                var anyLambda = Expression.Lambda(body, xParameter);
-                var anyMethod = typeof(Enumerable)
-                    .GetMethods()
-                    .Single(m => m.Name == "Any" && m.GetParameters().Length == 2)
-                    .MakeGenericMethod(left.Type.GetGenericArguments()[0]);
-                
-                return Expression.Call(anyMethod, left, anyLambda);
+                return GetCollectionExpression(left, right, "Contains");
             }
     
             if (CaseInsensitive && left.Type == typeof(string) && right.Type == typeof(string))
@@ -301,27 +281,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         {
             if (left.Type.IsGenericType && left.Type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
             {
-                var xParameter = Expression.Parameter(left.Type.GetGenericArguments()[0], "x");
-                Expression body;
-
-                if (CaseInsensitive && xParameter.Type == typeof(string) && right.Type == typeof(string))
-                {
-                    var toLowerLeft = Expression.Call(xParameter, typeof(string).GetMethod("ToLower", Type.EmptyTypes));
-                    var toLowerRight = Expression.Call(right, typeof(string).GetMethod("ToLower", Type.EmptyTypes));
-                    body = Expression.Call(toLowerLeft, typeof(string).GetMethod("StartsWith", new[] { typeof(string) }), toLowerRight);
-                }
-                else
-                {
-                    body = Expression.Call(xParameter, typeof(string).GetMethod("StartsWith", new[] { typeof(string) }), right);
-                }
-
-                var anyLambda = Expression.Lambda(body, xParameter);
-                var anyMethod = typeof(Enumerable)
-                    .GetMethods()
-                    .Single(m => m.Name == "Any" && m.GetParameters().Length == 2)
-                    .MakeGenericMethod(left.Type.GetGenericArguments()[0]);
-
-                return Expression.Call(anyMethod, left, anyLambda);
+                return GetCollectionExpression(left, right, "StartsWith");
             }
         
             if (CaseInsensitive && left.Type == typeof(string) && right.Type == typeof(string))
@@ -346,6 +306,11 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
         public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
         {
+            if (left.Type.IsGenericType && left.Type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
+            {
+                return GetCollectionExpression(left, right, "EndsWith");
+            }
+            
             if (CaseInsensitive)
             {
                 return Expression.Call(
@@ -634,4 +599,31 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
 
         return Expression.Call(anyMethod, left, anyLambda);
     }
+    
+    protected Expression GetCollectionExpression(Expression left, Expression right, string methodName)
+    {
+        var xParameter = Expression.Parameter(left.Type.GetGenericArguments()[0], "x");
+        Expression body;
+
+        if (CaseInsensitive && xParameter.Type == typeof(string) && right.Type == typeof(string))
+        {
+            var toLowerLeft = Expression.Call(xParameter, typeof(string).GetMethod("ToLower", Type.EmptyTypes));
+            var toLowerRight = Expression.Call(right, typeof(string).GetMethod("ToLower", Type.EmptyTypes));
+
+            body = Expression.Call(toLowerLeft, typeof(string).GetMethod(methodName, new[] { typeof(string) }), toLowerRight);
+        }
+        else
+        {
+            body = Expression.Call(xParameter, typeof(string).GetMethod(methodName, new[] { typeof(string) }), right);
+        }
+
+        var anyLambda = Expression.Lambda(body, xParameter);
+        var anyMethod = typeof(Enumerable)
+            .GetMethods()
+            .Single(m => m.Name == "Any" && m.GetParameters().Length == 2)
+            .MakeGenericMethod(left.Type.GetGenericArguments()[0]);
+
+        return Expression.Call(anyMethod, left, anyLambda);
+    }
+
 }

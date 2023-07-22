@@ -673,5 +673,14 @@ public class FilterParserTests
         filterExpression.ToString().Should()
             .Be(""""x => x.Ingredients.Select(y => y.Name).Any(x => x.StartsWith("waffle"))"""");
     }
+    
+    [Fact]
+    public void collection_ends_with()
+    {
+        var input = """"Ingredients.Name _-= "waffle" """";
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input);
+        filterExpression.ToString().Should()
+            .Be(""""x => x.Ingredients.Select(y => y.Name).Any(x => x.EndsWith("waffle"))"""");
+    }
 }
     
