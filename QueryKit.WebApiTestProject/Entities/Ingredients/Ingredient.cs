@@ -6,7 +6,7 @@ using System.Text.Json.Serialization;
 using Models;
 using Recipes;
 
-public class IngredientPreparation
+public class IngredientPreparation : BaseEntity
 {
     public string Text { get; set; }
 }

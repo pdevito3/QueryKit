@@ -682,5 +682,32 @@ public class FilterParserTests
         filterExpression.ToString().Should()
             .Be(""""x => x.Ingredients.Select(y => y.Name).Any(x => x.EndsWith("waffle"))"""");
     }
+    
+    [Fact]
+    public void collection_does_not_contains()
+    {
+        var input = """"Ingredients.Name !@= "waffle" """";
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input);
+        filterExpression.ToString().Should()
+            .Be(""""x => Not(x.Ingredients.Select(y => y.Name).Any(x => x.Contains("waffle")))"""");
+    }
+    
+    [Fact]
+    public void collection_does_not_starts_with()
+    {
+        var input = """"Ingredients.Name !_= "waffle" """";
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input);
+        filterExpression.ToString().Should()
+            .Be(""""x => Not(x.Ingredients.Select(y => y.Name).Any(x => x.StartsWith("waffle")))"""");
+    }
+    
+    [Fact]
+    public void collection_does_not_ends_with()
+    {
+        var input = """"Ingredients.Name !_-= "waffle" """";
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input);
+        filterExpression.ToString().Should()
+            .Be(""""x => Not(x.Ingredients.Select(y => y.Name).Any(x => x.EndsWith("waffle")))"""");
+    }
 }
     

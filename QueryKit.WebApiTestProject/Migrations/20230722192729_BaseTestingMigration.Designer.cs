@@ -12,7 +12,7 @@ using QueryKit.WebApiTestProject.Database;
 namespace QueryKit.WebApiTestProject.Migrations
 {
     [DbContext(typeof(TestingDbContext))]
-    [Migration("20230718122822_BaseTestingMigration")]
+    [Migration("20230722192729_BaseTestingMigration")]
     partial class BaseTestingMigration
     {
         /// <inheritdoc />
@@ -68,6 +68,10 @@ namespace QueryKit.WebApiTestProject.Migrations
                         .HasColumnType("text")
                         .HasColumnName("measure");
 
+                    b.Property<int>("MinimumQuality")
+                        .HasColumnType("integer")
+                        .HasColumnName("minimum_quality");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text")
@@ -83,12 +87,37 @@ namespace QueryKit.WebApiTestProject.Migrations
                         .HasColumnName("recipe_id");
 
                     b.HasKey("Id")
-                        .HasName("pk_ingredient");
+                        .HasName("pk_ingredients");
 
                     b.HasIndex("RecipeId")
-                        .HasDatabaseName("ix_ingredient_recipe_id");
+                        .HasDatabaseName("ix_ingredients_recipe_id");
 
-                    b.ToTable("ingredient", (string)null);
+                    b.ToTable("ingredients", (string)null);
+                });
+
+            modelBuilder.Entity("QueryKit.WebApiTestProject.Entities.Ingredients.IngredientPreparation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("IngredientId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("ingredient_id");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("text");
+
+                    b.HasKey("Id")
+                        .HasName("pk_ingredient_preparations");
+
+                    b.HasIndex("IngredientId")
+                        .HasDatabaseName("ix_ingredient_preparations_ingredient_id");
+
+                    b.ToTable("ingredient_preparations", (string)null);
                 });
 
             modelBuilder.Entity("QueryKit.WebApiTestProject.Entities.Recipes.Recipe", b =>
@@ -203,9 +232,17 @@ namespace QueryKit.WebApiTestProject.Migrations
                         .HasForeignKey("RecipeId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
-                        .HasConstraintName("fk_ingredient_recipes_recipe_id");
+                        .HasConstraintName("fk_ingredients_recipes_recipe_id");
 
                     b.Navigation("Recipe");
+                });
+
+            modelBuilder.Entity("QueryKit.WebApiTestProject.Entities.Ingredients.IngredientPreparation", b =>
+                {
+                    b.HasOne("QueryKit.WebApiTestProject.Entities.Ingredients.Ingredient", null)
+                        .WithMany("Preparations")
+                        .HasForeignKey("IngredientId")
+                        .HasConstraintName("fk_ingredient_preparations_ingredients_ingredient_id");
                 });
 
             modelBuilder.Entity("QueryKit.WebApiTestProject.Entities.TestingPerson", b =>
@@ -257,6 +294,11 @@ namespace QueryKit.WebApiTestProject.Migrations
 
                     b.Navigation("PhysicalAddress")
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("QueryKit.WebApiTestProject.Entities.Ingredients.Ingredient", b =>
+                {
+                    b.Navigation("Preparations");
                 });
 
             modelBuilder.Entity("QueryKit.WebApiTestProject.Entities.Recipes.Recipe", b =>

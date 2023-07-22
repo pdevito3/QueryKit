@@ -254,7 +254,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         {
             if (left.Type.IsGenericType && left.Type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
             {
-                return GetCollectionExpression(left, right, "Contains");
+                return GetCollectionExpression(left, right, "Contains", false);
             }
     
             if (CaseInsensitive && left.Type == typeof(string) && right.Type == typeof(string))
@@ -281,7 +281,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         {
             if (left.Type.IsGenericType && left.Type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
             {
-                return GetCollectionExpression(left, right, "StartsWith");
+                return GetCollectionExpression(left, right, "StartsWith", false);
             }
         
             if (CaseInsensitive && left.Type == typeof(string) && right.Type == typeof(string))
@@ -308,7 +308,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         {
             if (left.Type.IsGenericType && left.Type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
             {
-                return GetCollectionExpression(left, right, "EndsWith");
+                return GetCollectionExpression(left, right, "EndsWith", false);
             }
             
             if (CaseInsensitive)
@@ -333,6 +333,11 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
         public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
         {
+            if (left.Type.IsGenericType && left.Type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
+            {
+                return GetCollectionExpression(left, right, "Contains", true);
+            }
+            
             if(CaseInsensitive)
             {
                 return Expression.Not(Expression.Call(
@@ -356,6 +361,11 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
         public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
         {
+            if (left.Type.IsGenericType && left.Type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
+            {
+                return GetCollectionExpression(left, right, "StartsWith", true);
+            }
+            
             if (CaseInsensitive)
             {
                 return Expression.Not(Expression.Call(
@@ -378,6 +388,11 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
         public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
         {
+            if (left.Type.IsGenericType && left.Type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
+            {
+                return GetCollectionExpression(left, right, "EndsWith", true);
+            }
+            
             if (CaseInsensitive)
             {
                 return Expression.Not(Expression.Call(
@@ -600,7 +615,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         return Expression.Call(anyMethod, left, anyLambda);
     }
     
-    protected Expression GetCollectionExpression(Expression left, Expression right, string methodName)
+    protected Expression GetCollectionExpression(Expression left, Expression right, string methodName, bool negate)
     {
         var xParameter = Expression.Parameter(left.Type.GetGenericArguments()[0], "x");
         Expression body;
@@ -623,7 +638,8 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
             .Single(m => m.Name == "Any" && m.GetParameters().Length == 2)
             .MakeGenericMethod(left.Type.GetGenericArguments()[0]);
 
-        return Expression.Call(anyMethod, left, anyLambda);
+        return negate 
+            ? Expression.Not(Expression.Call(anyMethod, left, anyLambda))
+            : Expression.Call(anyMethod, left, anyLambda);
     }
-
 }

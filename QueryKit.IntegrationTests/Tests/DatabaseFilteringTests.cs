@@ -7,6 +7,7 @@ using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using SharedTestingHelper.Fakes;
 using SharedTestingHelper.Fakes.Author;
+using SharedTestingHelper.Fakes.Ingredients;
 using SharedTestingHelper.Fakes.Recipes;
 using WebApiTestProject.Database;
 using WebApiTestProject.Entities;
@@ -37,6 +38,99 @@ public class DatabaseFilteringTests : TestBase
         // Assert
         people.Count.Should().Be(1);
         people[0].Id.Should().Be(fakePersonOne.Id);
+    }
+    
+    [Fact]
+    public async Task can_filter_by_string_for_collection()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var faker = new Faker();
+        var fakeIngredientOne = new FakeIngredientBuilder()
+            .WithName(faker.Lorem.Sentence())
+            .Build();
+        var fakeRecipeOne = new FakeRecipeBuilder().Build();
+        fakeRecipeOne.AddIngredient(fakeIngredientOne);
+        
+        var fakeIngredientTwo = new FakeIngredientBuilder()
+            .WithName(faker.Lorem.Sentence())
+            .Build();
+        var fakeRecipeTwo = new FakeRecipeBuilder().Build();
+        fakeRecipeTwo.AddIngredient(fakeIngredientTwo);
+        await testingServiceScope.InsertAsync(fakeRecipeOne, fakeRecipeTwo);
+        
+        var input = $"""Ingredients.Name == "{fakeIngredientOne.Name}" """;
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().Recipes;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var recipes = await appliedQueryable.ToListAsync();
+
+        // Assert
+        recipes.Count.Should().Be(1);
+        recipes[0].Id.Should().Be(fakeRecipeOne.Id);
+    }
+    
+    [Fact]
+    public async Task can_filter_by_string_for_collection_contains()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var faker = new Faker();
+        var fakeIngredientOne = new FakeIngredientBuilder()
+            .WithName($"{faker.Lorem.Sentence()}partial")
+            .Build();
+        var fakeRecipeOne = new FakeRecipeBuilder().Build();
+        fakeRecipeOne.AddIngredient(fakeIngredientOne);
+        
+        var fakeIngredientTwo = new FakeIngredientBuilder()
+            .WithName(faker.Lorem.Sentence())
+            .Build();
+        var fakeRecipeTwo = new FakeRecipeBuilder().Build();
+        fakeRecipeTwo.AddIngredient(fakeIngredientTwo);
+        await testingServiceScope.InsertAsync(fakeRecipeOne, fakeRecipeTwo);
+        
+        var input = $"""Ingredients.Name @= "partial" """;
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().Recipes;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var recipes = await appliedQueryable.ToListAsync();
+
+        // Assert
+        recipes.Count.Should().Be(1);
+        recipes[0].Id.Should().Be(fakeRecipeOne.Id);
+    }
+    
+    [Fact]
+    public async Task can_filter_by_string_for_collection_does_not_contain()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var faker = new Faker();
+        var fakeIngredientOne = new FakeIngredientBuilder()
+            .WithName($"{faker.Lorem.Sentence()}partial")
+            .Build();
+        var fakeRecipeOne = new FakeRecipeBuilder().Build();
+        fakeRecipeOne.AddIngredient(fakeIngredientOne);
+        
+        var fakeIngredientTwo = new FakeIngredientBuilder()
+            .WithName(faker.Lorem.Sentence())
+            .Build();
+        var fakeRecipeTwo = new FakeRecipeBuilder().Build();
+        fakeRecipeTwo.AddIngredient(fakeIngredientTwo);
+        await testingServiceScope.InsertAsync(fakeRecipeOne, fakeRecipeTwo);
+        
+        var input = $"""Ingredients.Name !@= "partial" """;
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().Recipes;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var recipes = await appliedQueryable.ToListAsync();
+
+        // Assert
+        recipes.FirstOrDefault(x => x.Id == fakeRecipeOne.Id).Should().BeNull();
+        recipes.FirstOrDefault(x => x.Id == fakeRecipeTwo.Id).Should().NotBeNull();
     }
     
     [Fact]
