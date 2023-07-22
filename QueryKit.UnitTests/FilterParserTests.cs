@@ -646,5 +646,32 @@ public class FilterParserTests
         filterExpression.ToString().Should()
             .Be(""""x => x.Ingredients.Select(y => y.MinimumQuality).Any(x => (x <= 5))"""");
     }
+    
+    [Fact]
+    public void collection_contains_case_insensitive()
+    {
+        var input = """"Ingredients.Name @=* "waffle" """";
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input);
+        filterExpression.ToString().Should()
+            .Be(""""x => x.Ingredients.Select(y => y.Name).Any(x => x.ToLower().Contains("waffle".ToLower()))"""");
+    }
+    
+    [Fact]
+    public void collection_contains()
+    {
+        var input = """"Ingredients.Name @= "waffle" """";
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input);
+        filterExpression.ToString().Should()
+            .Be(""""x => x.Ingredients.Select(y => y.Name).Any(x => x.Contains("waffle"))"""");
+    }
+    
+    [Fact]
+    public void collection_starts_with()
+    {
+        var input = """"Ingredients.Name _= "waffle" """";
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input);
+        filterExpression.ToString().Should()
+            .Be(""""x => x.Ingredients.Select(y => y.Name).Any(x => x.StartsWith("waffle"))"""");
+    }
 }
     
