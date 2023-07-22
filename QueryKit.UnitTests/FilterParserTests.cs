@@ -592,5 +592,14 @@ public class FilterParserTests
         filterExpression.ToString().Should()
             .Be(""""x => x.Ingredients.Select(y => y.Name).Any(x => (x == "flour"))"""");
     }
+    
+    [Fact]
+    public void simple_child_collection_for_string_case_insensitive_equal()
+    {
+        var input = """Ingredients.Name ==* "flour" """;
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input);
+        filterExpression.ToString().Should()
+            .Be(""""x => x.Ingredients.Select(y => y.Name).Any(x => (x.ToLower() == "flour".ToLower()))"""");
+    }
 }
     
