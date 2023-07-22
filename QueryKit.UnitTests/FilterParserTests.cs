@@ -574,5 +574,23 @@ public class FilterParserTests
 
         filterExpression.Compile().Invoke(fakeRecipeOne).Should().BeTrue();
     }
+    
+    [Fact]
+    public void simple_child_collection_for_string_not_equal()
+    {
+        var input = """Ingredients.Name != "flour" """;
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input);
+        filterExpression.ToString().Should()
+            .Be(""""x => (x.Ingredients.Select(y => y.Name) != "flour")"""");
+    }
+    
+    [Fact]
+    public void simple_child_collection_for_string_equal()
+    {
+        var input = """Ingredients.Name == "flour" """;
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input);
+        filterExpression.ToString().Should()
+            .Be(""""x => x.Ingredients.Select(y => y.Name).Any(x => (x == "flour"))"""");
+    }
 }
     
