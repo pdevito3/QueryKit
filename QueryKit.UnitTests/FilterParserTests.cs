@@ -610,5 +610,41 @@ public class FilterParserTests
         filterExpression.ToString().Should()
             .Be(""""x => x.Ingredients.Select(y => y.Name).Any(x => (x.ToLower() != "flour".ToLower()))"""");
     }
+    
+    [Fact]
+    public void simple_child_collection_for_string_greater_than()
+    {
+        var input = """Ingredients.MinimumQuality > 5""";
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input);
+        filterExpression.ToString().Should()
+            .Be(""""x => x.Ingredients.Select(y => y.MinimumQuality).Any(x => (x > 5))"""");
+    }
+    
+    [Fact]
+    public void simple_child_collection_for_string_less_than()
+    {
+        var input = """Ingredients.MinimumQuality < 5""";
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input);
+        filterExpression.ToString().Should()
+            .Be(""""x => x.Ingredients.Select(y => y.MinimumQuality).Any(x => (x < 5))"""");
+    }
+    
+    [Fact]
+    public void simple_child_collection_for_string_greater_than_or_equal()
+    {
+        var input = """Ingredients.MinimumQuality >= 5""";
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input);
+        filterExpression.ToString().Should()
+            .Be(""""x => x.Ingredients.Select(y => y.MinimumQuality).Any(x => (x >= 5))"""");
+    }
+    
+    [Fact]
+    public void simple_child_collection_for_string_less_than_or_equal()
+    {
+        var input = """Ingredients.MinimumQuality <= 5""";
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input);
+        filterExpression.ToString().Should()
+            .Be(""""x => x.Ingredients.Select(y => y.MinimumQuality).Any(x => (x <= 5))"""");
+    }
 }
     

@@ -21,6 +21,8 @@ public class Ingredient : BaseEntity
 
     public string Measure { get; private set; }
 
+    public int MinimumQuality { get; private set; }
+
     public List<IngredientPreparation> Preparations { get; set; } = new();
 
     [JsonIgnore, IgnoreDataMember]
