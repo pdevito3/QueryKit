@@ -349,7 +349,6 @@ public static class FilterParser
             {
                 if (expr is MemberExpression member)
                 {
-                    // check if member is IEnumerable
                     if (IsEnumerable(member.Type))
                     {
                         var genericArgType = member.Type.GetGenericArguments()[0];
@@ -368,8 +367,8 @@ public static class FilterParser
                             var propertyInfoForMethod = GetPropertyInfo(genericArgType, propName);
                             Expression lambdaBody = Expression.PropertyOrField(innerParameter, propertyInfoForMethod.Name);
 
-                            var t = typeof(IEnumerable<>).MakeGenericType(propertyType);
-                            lambdaBody =  Expression.Lambda(Expression.Convert(lambdaBody, t), innerParameter);
+                            var type = typeof(IEnumerable<>).MakeGenericType(propertyType);
+                            lambdaBody =  Expression.Lambda(Expression.Convert(lambdaBody, type), innerParameter);
 
                             return Expression.Call(selectMethod, member, lambdaBody);
                         }
@@ -391,13 +390,9 @@ public static class FilterParser
 
                 if (expr is MethodCallExpression call)
                 {
-                    // Find the inner generic type of the last argument
                     var innerGenericType = GetInnerGenericType(call.Method.ReturnType);
-
-                    // Find the PropertyInfo on the innerGenericType for the property named propName
                     var propertyInfoForMethod = GetPropertyInfo(innerGenericType, propName);
 
-                    // Create a Select expression for this property
                     var linqMethod = IsEnumerable(innerGenericType) ? "SelectMany" : "Select";
                     var selectMethod = typeof(Enumerable).GetMethods()
                         .First(m => m.Name == linqMethod && m.GetParameters().Length == 2)
@@ -438,16 +433,12 @@ public static class FilterParser
 
     private static Type? GetInnerGenericType(Type type)
     {
-        // If the type is not an IEnumerable, return the original type
         if (!IsEnumerable(type))
         {
             return type;
         }
 
-        // If the type is an IEnumerable, get the inner generic type
         var innerGenericType = type.GetGenericArguments()[0];
-
-        // Recursively check if the inner type is also an IEnumerable
         return GetInnerGenericType(innerGenericType);
     }
     
