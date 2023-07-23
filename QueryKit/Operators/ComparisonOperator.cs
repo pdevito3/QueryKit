@@ -117,7 +117,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
     }
 
     public const char CaseSensitiveAppendix = '*';
-    public const char AllPrefix = '#';
+    public const char AllPrefix = '%';
     public abstract string Operator();
     public bool CaseInsensitive { get; protected set; }
     public bool UsesAll { get; protected set; }
