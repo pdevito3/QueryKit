@@ -72,6 +72,37 @@ public class DatabaseFilteringTests : TestBase
     }
     
     [Fact]
+    public async Task can_filter_by_string_for_collection_with_count()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var faker = new Faker();
+        var fakeIngredientOne = new FakeIngredientBuilder()
+            .WithName(faker.Lorem.Sentence())
+            .Build();
+        var fakeRecipeOne = new FakeRecipeBuilder().Build();
+        fakeRecipeOne.AddIngredient(fakeIngredientOne);
+        
+        var fakeIngredientTwo = new FakeIngredientBuilder()
+            .WithName(faker.Lorem.Sentence())
+            .Build();
+        var fakeRecipeTwo = new FakeRecipeBuilder().Build();
+        fakeRecipeTwo.AddIngredient(fakeIngredientTwo);
+        await testingServiceScope.InsertAsync(fakeRecipeOne, fakeRecipeTwo);
+        
+        var input = $"""Title == "{fakeRecipeOne.Title}" && Ingredients #>= 1""";
+
+        // Act
+        var queryableRecipes = testingServiceScope.DbContext().Recipes;
+        var appliedQueryable = queryableRecipes.ApplyQueryKitFilter(input);
+        var recipes = await appliedQueryable.ToListAsync();
+
+        // Assert
+        recipes.Count.Should().Be(1);
+        recipes[0].Id.Should().Be(fakeRecipeOne.Id);
+    }
+    
+    [Fact]
     public async Task can_filter_by_string_for_collection_contains()
     {
         // Arrange
