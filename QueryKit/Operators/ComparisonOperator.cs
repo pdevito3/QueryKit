@@ -591,7 +591,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
     
     private Expression GetCollectionExpression(Expression left, Expression right, Func<Expression, Expression, Expression> comparisonFunction)
     {
-        var xParameter = Expression.Parameter(left.Type.GetGenericArguments()[0], "x");
+        var xParameter = Expression.Parameter(left.Type.GetGenericArguments()[0], "z");
         Expression body;
 
         if (CaseInsensitive && xParameter.Type == typeof(string) && right.Type == typeof(string))
@@ -617,7 +617,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
     
     protected Expression GetCollectionExpression(Expression left, Expression right, string methodName, bool negate)
     {
-        var xParameter = Expression.Parameter(left.Type.GetGenericArguments()[0], "x");
+        var xParameter = Expression.Parameter(left.Type.GetGenericArguments()[0], "z");
         Expression body;
 
         if (CaseInsensitive && xParameter.Type == typeof(string) && right.Type == typeof(string))

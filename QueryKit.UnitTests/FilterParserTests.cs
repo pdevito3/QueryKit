@@ -581,7 +581,7 @@ public class FilterParserTests
         var input = """Ingredients.Name == "flour" """;
         var filterExpression = FilterParser.ParseFilter<Recipe>(input);
         filterExpression.ToString().Should()
-            .Be(""""x => x.Ingredients.Select(y => y.Name).Any(x => (x == "flour"))"""");
+            .Be(""""x => x.Ingredients.Select(y => y.Name).Any(z => (z == "flour"))"""");
     }
     
     [Fact]
@@ -590,7 +590,7 @@ public class FilterParserTests
         var input = """Ingredients.Name ==* "flour" """;
         var filterExpression = FilterParser.ParseFilter<Recipe>(input);
         filterExpression.ToString().Should()
-            .Be(""""x => x.Ingredients.Select(y => y.Name).Any(x => (x.ToLower() == "flour".ToLower()))"""");
+            .Be(""""x => x.Ingredients.Select(y => y.Name).Any(z => (z.ToLower() == "flour".ToLower()))"""");
     }
     
     [Fact]
@@ -599,7 +599,7 @@ public class FilterParserTests
         var input = """Ingredients.Name != "flour" """;
         var filterExpression = FilterParser.ParseFilter<Recipe>(input);
         filterExpression.ToString().Should()
-            .Be(""""x => x.Ingredients.Select(y => y.Name).Any(x => (x != "flour"))"""");
+            .Be(""""x => x.Ingredients.Select(y => y.Name).Any(z => (z != "flour"))"""");
     }
     
     [Fact]
@@ -608,7 +608,7 @@ public class FilterParserTests
         var input = """Ingredients.Name !=* "flour" """;
         var filterExpression = FilterParser.ParseFilter<Recipe>(input);
         filterExpression.ToString().Should()
-            .Be(""""x => x.Ingredients.Select(y => y.Name).Any(x => (x.ToLower() != "flour".ToLower()))"""");
+            .Be(""""x => x.Ingredients.Select(y => y.Name).Any(z => (z.ToLower() != "flour".ToLower()))"""");
     }
     
     [Fact]
@@ -617,7 +617,7 @@ public class FilterParserTests
         var input = """Ingredients.MinimumQuality > 5""";
         var filterExpression = FilterParser.ParseFilter<Recipe>(input);
         filterExpression.ToString().Should()
-            .Be(""""x => x.Ingredients.Select(y => y.MinimumQuality).Any(x => (x > 5))"""");
+            .Be(""""x => x.Ingredients.Select(y => y.MinimumQuality).Any(z => (z > 5))"""");
     }
     
     [Fact]
@@ -626,7 +626,7 @@ public class FilterParserTests
         var input = """Ingredients.MinimumQuality < 5""";
         var filterExpression = FilterParser.ParseFilter<Recipe>(input);
         filterExpression.ToString().Should()
-            .Be(""""x => x.Ingredients.Select(y => y.MinimumQuality).Any(x => (x < 5))"""");
+            .Be(""""x => x.Ingredients.Select(y => y.MinimumQuality).Any(z => (z < 5))"""");
     }
     
     [Fact]
@@ -635,7 +635,7 @@ public class FilterParserTests
         var input = """Ingredients.MinimumQuality >= 5""";
         var filterExpression = FilterParser.ParseFilter<Recipe>(input);
         filterExpression.ToString().Should()
-            .Be(""""x => x.Ingredients.Select(y => y.MinimumQuality).Any(x => (x >= 5))"""");
+            .Be(""""x => x.Ingredients.Select(y => y.MinimumQuality).Any(z => (z >= 5))"""");
     }
     
     [Fact]
@@ -644,7 +644,7 @@ public class FilterParserTests
         var input = """Ingredients.MinimumQuality <= 5""";
         var filterExpression = FilterParser.ParseFilter<Recipe>(input);
         filterExpression.ToString().Should()
-            .Be(""""x => x.Ingredients.Select(y => y.MinimumQuality).Any(x => (x <= 5))"""");
+            .Be(""""x => x.Ingredients.Select(y => y.MinimumQuality).Any(z => (z <= 5))"""");
     }
     
     [Fact]
@@ -653,7 +653,7 @@ public class FilterParserTests
         var input = """"Ingredients.Name @=* "waffle" """";
         var filterExpression = FilterParser.ParseFilter<Recipe>(input);
         filterExpression.ToString().Should()
-            .Be(""""x => x.Ingredients.Select(y => y.Name).Any(x => x.ToLower().Contains("waffle".ToLower()))"""");
+            .Be(""""x => x.Ingredients.Select(y => y.Name).Any(z => z.ToLower().Contains("waffle".ToLower()))"""");
     }
     
     [Fact]
@@ -662,7 +662,7 @@ public class FilterParserTests
         var input = """"Ingredients.Name @= "waffle" """";
         var filterExpression = FilterParser.ParseFilter<Recipe>(input);
         filterExpression.ToString().Should()
-            .Be(""""x => x.Ingredients.Select(y => y.Name).Any(x => x.Contains("waffle"))"""");
+            .Be(""""x => x.Ingredients.Select(y => y.Name).Any(z => z.Contains("waffle"))"""");
     }
     
     [Fact]
@@ -671,7 +671,7 @@ public class FilterParserTests
         var input = """"Ingredients.Name _= "waffle" """";
         var filterExpression = FilterParser.ParseFilter<Recipe>(input);
         filterExpression.ToString().Should()
-            .Be(""""x => x.Ingredients.Select(y => y.Name).Any(x => x.StartsWith("waffle"))"""");
+            .Be(""""x => x.Ingredients.Select(y => y.Name).Any(z => z.StartsWith("waffle"))"""");
     }
     
     [Fact]
@@ -680,7 +680,7 @@ public class FilterParserTests
         var input = """"Ingredients.Name _-= "waffle" """";
         var filterExpression = FilterParser.ParseFilter<Recipe>(input);
         filterExpression.ToString().Should()
-            .Be(""""x => x.Ingredients.Select(y => y.Name).Any(x => x.EndsWith("waffle"))"""");
+            .Be(""""x => x.Ingredients.Select(y => y.Name).Any(z => z.EndsWith("waffle"))"""");
     }
     
     [Fact]
@@ -689,7 +689,7 @@ public class FilterParserTests
         var input = """"Ingredients.Name !@= "waffle" """";
         var filterExpression = FilterParser.ParseFilter<Recipe>(input);
         filterExpression.ToString().Should()
-            .Be(""""x => Not(x.Ingredients.Select(y => y.Name).Any(x => x.Contains("waffle")))"""");
+            .Be(""""x => Not(x.Ingredients.Select(y => y.Name).Any(z => z.Contains("waffle")))"""");
     }
     
     [Fact]
@@ -698,7 +698,7 @@ public class FilterParserTests
         var input = """"Ingredients.Name !_= "waffle" """";
         var filterExpression = FilterParser.ParseFilter<Recipe>(input);
         filterExpression.ToString().Should()
-            .Be(""""x => Not(x.Ingredients.Select(y => y.Name).Any(x => x.StartsWith("waffle")))"""");
+            .Be(""""x => Not(x.Ingredients.Select(y => y.Name).Any(z => z.StartsWith("waffle")))"""");
     }
     
     [Fact]
@@ -707,7 +707,7 @@ public class FilterParserTests
         var input = """"Ingredients.Name !_-= "waffle" """";
         var filterExpression = FilterParser.ParseFilter<Recipe>(input);
         filterExpression.ToString().Should()
-            .Be(""""x => Not(x.Ingredients.Select(y => y.Name).Any(x => x.EndsWith("waffle")))"""");
+            .Be(""""x => Not(x.Ingredients.Select(y => y.Name).Any(z => z.EndsWith("waffle")))"""");
     }
 }
     
