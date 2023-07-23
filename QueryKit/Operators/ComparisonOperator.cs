@@ -615,7 +615,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         return Expression.Call(anyMethod, left, anyLambda);
     }
     
-    protected Expression GetCollectionExpression(Expression left, Expression right, string methodName, bool negate)
+    private Expression GetCollectionExpression(Expression left, Expression right, string methodName, bool negate)
     {
         var xParameter = Expression.Parameter(left.Type.GetGenericArguments()[0], "z");
         Expression body;
