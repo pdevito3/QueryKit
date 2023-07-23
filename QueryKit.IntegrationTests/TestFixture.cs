@@ -11,6 +11,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Moq;
+using Testcontainers.PostgreSql;
 using WebApiTestProject;
 using WebApiTestProject.Database;
 using Xunit;
@@ -21,7 +22,7 @@ public class TestFixtureCollection : ICollectionFixture<TestFixture> {}
 public class TestFixture : IAsyncLifetime
 {
     public static IServiceScopeFactory BaseScopeFactory;
-    private readonly TestcontainerDatabase _dbContainer = DbSetup();
+    private PostgreSqlContainer _dbContainer;
 
     public async Task InitializeAsync()
     {
@@ -30,9 +31,10 @@ public class TestFixture : IAsyncLifetime
             EnvironmentName = Consts.Testing.IntegrationTestingEnvName
         });
 
+        _dbContainer = new PostgreSqlBuilder().Build();
         await _dbContainer.StartAsync();
-        builder.Configuration.GetSection(ConnectionStringOptions.SectionName)[ConnectionStringOptions.RecipeManagementKey] = _dbContainer.ConnectionString;
-        await RunMigration(_dbContainer.ConnectionString);
+        builder.Configuration.GetSection(ConnectionStringOptions.SectionName)[ConnectionStringOptions.RecipeManagementKey] = _dbContainer.GetConnectionString();
+        await RunMigration(_dbContainer.GetConnectionString());
 
         builder.ConfigureServices();
         var services = builder.Services;
@@ -53,21 +55,7 @@ public class TestFixture : IAsyncLifetime
         var context = new TestingDbContext(options);
         await context?.Database?.MigrateAsync();
     }
-
-    private static TestcontainerDatabase DbSetup()
-    {
-        return new TestcontainersBuilder<PostgreSqlTestcontainer>()
-            .WithDatabase(new PostgreSqlTestcontainerConfiguration
-            {
-                Database = "db",
-                Username = "postgres",
-                Password = "postgres"
-            })
-            .WithName($"IntegrationTesting_QueryKit_{Guid.NewGuid()}")
-            .WithImage("postgres:latest")
-            .Build();
-    }
-
+    
     public async Task DisposeAsync()
     {
         await _dbContainer.DisposeAsync();
