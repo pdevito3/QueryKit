@@ -1,6 +1,7 @@
 ﻿
 namespace QueryKit;
 
+using System.Collections;
 using System.Globalization;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -60,6 +61,12 @@ public static class FilterParser
                     .Or(Parse.String(ComparisonOperator.InOperator().Operator()).Text())
                     .Or(Parse.String(ComparisonOperator.SoundsLikeOperator().Operator()).Text())
                     .Or(Parse.String(ComparisonOperator.DoesNotSoundLikeOperator().Operator()).Text())
+                    .Or(Parse.String(ComparisonOperator.HasCountEqualToOperator().Operator()).Text())
+                    .Or(Parse.String(ComparisonOperator.HasCountNotEqualToOperator().Operator()).Text())
+                    .Or(Parse.String(ComparisonOperator.HasCountGreaterThanOrEqualOperator().Operator()).Text())
+                    .Or(Parse.String(ComparisonOperator.HasCountLessThanOrEqualOperator().Operator()).Text())
+                    .Or(Parse.String(ComparisonOperator.HasCountGreaterThanOperator().Operator()).Text())
+                    .Or(Parse.String(ComparisonOperator.HasCountLessThanOperator().Operator()).Text())
                     .SelectMany(op => Parse.Char(ComparisonOperator.CaseSensitiveAppendix).Optional(), (op, caseInsensitive) => new { op, caseInsensitive, hasHash })
                     .Select(x => ComparisonOperator.GetByOperatorString(x.op, x.caseInsensitive.IsDefined, x.hasHash)));
 
@@ -153,19 +160,24 @@ public static class FilterParser
     private static Expression CreateRightExpr(Expression leftExpr, string right)
     {
         var targetType = leftExpr.Type;
-
-        if (IsEnumerable(targetType))
-        {
-            targetType = targetType.GetGenericArguments()[0];
-            return CreateRightExprFromType(targetType, right);
-        }
-
-        return CreateRightExprFromType(leftExpr.Type, right);
+        return CreateRightExprFromType(targetType, right);
     }
 
     private static Expression CreateRightExprFromType(Type leftExprType, string right)
     {
+        var isEnumerable = IsEnumerable(leftExprType);
         var targetType = leftExprType;
+        if (isEnumerable)
+        {
+            if (int.TryParse(right, out var intVal))
+            {
+                // supports collection count
+                return Expression.Constant(intVal, typeof(int));
+            }
+            targetType = targetType.GetGenericArguments()[0];
+            return CreateRightExprFromType(targetType, right);
+        }
+        
         var rawType = targetType;
 
         targetType = TransformTargetTypeIfNullable(targetType);
@@ -176,7 +188,7 @@ public static class FilterParser
             {
                 return Expression.Constant(null, leftExprType);
             }
-
+            
             if (right.StartsWith("[") && right.EndsWith("]"))
             {
                 var values = right.Trim('[', ']').Split(',').Select(x => x.Trim()).ToList();

@@ -21,6 +21,12 @@ public class QueryKitSettings
     public string InOperator { get; set; } = ComparisonOperator.InOperator().Operator();
     public string SoundsLikeOperator { get; set; } = ComparisonOperator.SoundsLikeOperator().Operator();
     public string DoesNotSoundLikeOperator { get; set; } = ComparisonOperator.DoesNotSoundLikeOperator().Operator();
+    public string HasCountEqualToOperator { get; set; } = ComparisonOperator.HasCountEqualToOperator().Operator();
+    public string HasCountNotEqualToOperator { get; set; } = ComparisonOperator.HasCountNotEqualToOperator().Operator();
+    public string HasCountGreaterThanOperator { get; set; } = ComparisonOperator.HasCountGreaterThanOperator().Operator();
+    public string HasCountLessThanOperator { get; set; } = ComparisonOperator.HasCountLessThanOperator().Operator();
+    public string HasCountGreaterThanOrEqualOperator { get; set; } = ComparisonOperator.HasCountGreaterThanOrEqualOperator().Operator();
+    public string HasCountLessThanOrEqualOperator { get; set; } = ComparisonOperator.HasCountLessThanOrEqualOperator().Operator();
     public string AndOperator { get; set; } = LogicalOperator.AndOperator.Operator();
     public string OrOperator { get; set; } = LogicalOperator.OrOperator.Operator();
     public string CaseInsensitiveAppendix { get; set; } = ComparisonOperator.CaseSensitiveAppendix.ToString();

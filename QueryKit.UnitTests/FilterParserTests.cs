@@ -612,7 +612,16 @@ public class FilterParserTests
     }
     
     [Fact]
-    public void simple_child_collection_for_string_greater_than()
+    public void simple_child_collection_for_int_equals()
+    {
+        var input = """Ingredients.MinimumQuality == 5""";
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input);
+        filterExpression.ToString().Should()
+            .Be(""""x => x.Ingredients.Select(y => y.MinimumQuality).Any(z => (z == 5))"""");
+    }
+    
+    [Fact]
+    public void simple_child_collection_for_int_greater_than()
     {
         var input = """Ingredients.MinimumQuality > 5""";
         var filterExpression = FilterParser.ParseFilter<Recipe>(input);
@@ -621,7 +630,7 @@ public class FilterParserTests
     }
     
     [Fact]
-    public void simple_child_collection_for_string_less_than()
+    public void simple_child_collection_for_int_less_than()
     {
         var input = """Ingredients.MinimumQuality < 5""";
         var filterExpression = FilterParser.ParseFilter<Recipe>(input);
@@ -630,7 +639,7 @@ public class FilterParserTests
     }
     
     [Fact]
-    public void simple_child_collection_for_string_greater_than_or_equal()
+    public void simple_child_collection_for_int_greater_than_or_equal()
     {
         var input = """Ingredients.MinimumQuality >= 5""";
         var filterExpression = FilterParser.ParseFilter<Recipe>(input);
@@ -639,7 +648,7 @@ public class FilterParserTests
     }
     
     [Fact]
-    public void simple_child_collection_for_string_less_than_or_equal()
+    public void simple_child_collection_for_int_less_than_or_equal()
     {
         var input = """Ingredients.MinimumQuality <= 5""";
         var filterExpression = FilterParser.ParseFilter<Recipe>(input);
@@ -717,6 +726,42 @@ public class FilterParserTests
         var filterExpression = FilterParser.ParseFilter<Recipe>(input);
         filterExpression.ToString().Should()
             .Be(""""x => x.Ingredients.Select(y => y.Name).All(z => (z == "waffle"))"""");
+    }
+    
+    [Fact]
+    public void collection_has_operator_greater_than()
+    {
+        var input = """"Ingredients #> 0"""";
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input);
+        filterExpression.ToString().Should()
+            .Be(""""x => (x.Ingredients.Count() > 0)"""");
+    }
+    
+    [Fact]
+    public void collection_has_operator_equal()
+    {
+        var input = """"Ingredients #== 0"""";
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input);
+        filterExpression.ToString().Should()
+            .Be(""""x => (x.Ingredients.Count() == 0)"""");
+    }
+    
+    [Fact]
+    public void collection_has_operator_not_equal()
+    {
+        var input = """"Ingredients #!= 3"""";
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input);
+        filterExpression.ToString().Should()
+            .Be(""""x => (x.Ingredients.Count() != 3)"""");
+    }
+    
+    [Fact]
+    public void collection_has_operator_greater_than_equal()
+    {
+        var input = """"Ingredients #>= 0"""";
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input);
+        filterExpression.ToString().Should()
+            .Be(""""x => (x.Ingredients.Count() >= 0)"""");
     }
 }
     

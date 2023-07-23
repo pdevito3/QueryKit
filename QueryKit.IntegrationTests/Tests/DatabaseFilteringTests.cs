@@ -29,7 +29,7 @@ public class DatabaseFilteringTests : TestBase
         await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
         
         var input = $"""{nameof(TestingPerson.Title)} == "{fakePersonOne.Title}" """;
-
+        
         // Act
         var queryablePeople = testingServiceScope.DbContext().People;
         var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
@@ -62,8 +62,8 @@ public class DatabaseFilteringTests : TestBase
         var input = $"""Ingredients.Name == "{fakeIngredientOne.Name}" """;
 
         // Act
-        var queryablePeople = testingServiceScope.DbContext().Recipes;
-        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var queryableRecipes = testingServiceScope.DbContext().Recipes;
+        var appliedQueryable = queryableRecipes.ApplyQueryKitFilter(input);
         var recipes = await appliedQueryable.ToListAsync();
 
         // Assert
@@ -93,8 +93,8 @@ public class DatabaseFilteringTests : TestBase
         var input = $"""Ingredients.Name @= "partial" """;
 
         // Act
-        var queryablePeople = testingServiceScope.DbContext().Recipes;
-        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var queryableRecipes = testingServiceScope.DbContext().Recipes;
+        var appliedQueryable = queryableRecipes.ApplyQueryKitFilter(input);
         var recipes = await appliedQueryable.ToListAsync();
 
         // Assert
@@ -124,8 +124,8 @@ public class DatabaseFilteringTests : TestBase
         var input = $"""Ingredients.Name !@= "partial" """;
 
         // Act
-        var queryablePeople = testingServiceScope.DbContext().Recipes;
-        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var queryableRecipes = testingServiceScope.DbContext().Recipes;
+        var appliedQueryable = queryableRecipes.ApplyQueryKitFilter(input);
         var recipes = await appliedQueryable.ToListAsync();
 
         // Assert
