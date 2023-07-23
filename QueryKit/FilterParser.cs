@@ -43,23 +43,25 @@ public static class FilterParser
         select new string(first.Concat(rest).ToArray());
     
     private static Parser<ComparisonOperator> ComparisonOperatorParser =>
-        Parse.String(ComparisonOperator.EqualsOperator().Operator()).Text()
-            .Or(Parse.String(ComparisonOperator.NotEqualsOperator().Operator()).Text())
-            .Or(Parse.String(ComparisonOperator.GreaterThanOrEqualOperator().Operator()).Text())
-            .Or(Parse.String(ComparisonOperator.LessThanOrEqualOperator().Operator()).Text())
-            .Or(Parse.String(ComparisonOperator.GreaterThanOperator().Operator()).Text())
-            .Or(Parse.String(ComparisonOperator.LessThanOperator().Operator()).Text())
-            .Or(Parse.String(ComparisonOperator.ContainsOperator().Operator()).Text())
-            .Or(Parse.String(ComparisonOperator.StartsWithOperator().Operator()).Text())
-            .Or(Parse.String(ComparisonOperator.EndsWithOperator().Operator()).Text())
-            .Or(Parse.String(ComparisonOperator.NotContainsOperator().Operator()).Text())
-            .Or(Parse.String(ComparisonOperator.NotStartsWithOperator().Operator()).Text())
-            .Or(Parse.String(ComparisonOperator.NotEndsWithOperator().Operator()).Text())
-            .Or(Parse.String(ComparisonOperator.InOperator().Operator()).Text())
-            .Or(Parse.String(ComparisonOperator.SoundsLikeOperator().Operator()).Text())
-            .Or(Parse.String(ComparisonOperator.DoesNotSoundLikeOperator().Operator()).Text())
-        .SelectMany(op => Parse.Char(ComparisonOperator.CaseSensitiveAppendix).Optional(), (op, caseInsensitive) => new { op, caseInsensitive })
-        .Select(x => ComparisonOperator.GetByOperatorString(x.op, x.caseInsensitive.IsDefined));
+        Parse.Char(ComparisonOperator.AllPrefix).Optional().Select(opt => opt.IsDefined)
+            .Then(hasHash => 
+                Parse.String(ComparisonOperator.EqualsOperator().Operator()).Text()
+                    .Or(Parse.String(ComparisonOperator.NotEqualsOperator().Operator()).Text())
+                    .Or(Parse.String(ComparisonOperator.GreaterThanOrEqualOperator().Operator()).Text())
+                    .Or(Parse.String(ComparisonOperator.LessThanOrEqualOperator().Operator()).Text())
+                    .Or(Parse.String(ComparisonOperator.GreaterThanOperator().Operator()).Text())
+                    .Or(Parse.String(ComparisonOperator.LessThanOperator().Operator()).Text())
+                    .Or(Parse.String(ComparisonOperator.ContainsOperator().Operator()).Text())
+                    .Or(Parse.String(ComparisonOperator.StartsWithOperator().Operator()).Text())
+                    .Or(Parse.String(ComparisonOperator.EndsWithOperator().Operator()).Text())
+                    .Or(Parse.String(ComparisonOperator.NotContainsOperator().Operator()).Text())
+                    .Or(Parse.String(ComparisonOperator.NotStartsWithOperator().Operator()).Text())
+                    .Or(Parse.String(ComparisonOperator.NotEndsWithOperator().Operator()).Text())
+                    .Or(Parse.String(ComparisonOperator.InOperator().Operator()).Text())
+                    .Or(Parse.String(ComparisonOperator.SoundsLikeOperator().Operator()).Text())
+                    .Or(Parse.String(ComparisonOperator.DoesNotSoundLikeOperator().Operator()).Text())
+                    .SelectMany(op => Parse.Char(ComparisonOperator.CaseSensitiveAppendix).Optional(), (op, caseInsensitive) => new { op, caseInsensitive, hasHash })
+                    .Select(x => ComparisonOperator.GetByOperatorString(x.op, x.caseInsensitive.IsDefined, x.hasHash)));
 
     private static PropertyInfo? GetPropertyInfo(Type type, string propertyName)
         => type.GetProperty(propertyName, BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance);

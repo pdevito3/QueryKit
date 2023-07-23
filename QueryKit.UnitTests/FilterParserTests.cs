@@ -709,5 +709,14 @@ public class FilterParserTests
         filterExpression.ToString().Should()
             .Be(""""x => Not(x.Ingredients.Select(y => y.Name).Any(z => z.EndsWith("waffle")))"""");
     }
+    
+    [Fact]
+    public void collection_equals_with_all()
+    {
+        var input = """"Ingredients.Name #== "waffle" """";
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input);
+        filterExpression.ToString().Should()
+            .Be(""""x => x.Ingredients.Select(y => y.Name).All(z => (z == "waffle"))"""");
+    }
 }
     
