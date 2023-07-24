@@ -63,7 +63,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         var comparisonOperator = List.FirstOrDefault(x => x.Operator() == op);
         if (comparisonOperator == null)
         {
-            throw new Exception($"Operator {op} is not supported");
+            throw new QueryKitParsingException($"Operator {op} is not supported");
         }
 
         ComparisonOperator? newOperator = null;
@@ -162,7 +162,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         }
         
         return newOperator == null 
-            ? throw new Exception($"Operator {op} is not supported")
+            ? throw new QueryKitParsingException($"Operator {op} is not supported")
             : newOperator!;
     }
 
@@ -658,7 +658,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
                 return GetCollectionExpression(left, right, Expression.Equal, UsesAll);
             }
 
-            throw new Exception("DoesNotHaveType is only supported for collections");
+            throw new QueryKitParsingException("DoesNotHaveType is only supported for collections");
         }
     }
 
@@ -680,7 +680,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
                 return GetCollectionExpression(left, right, Expression.NotEqual, UsesAll);
             }
             
-            throw new Exception("DoesNotHaveType is only supported for collections");
+            throw new QueryKitParsingException("DoesNotHaveType is only supported for collections");
         }
     }
 
@@ -862,7 +862,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         var leftAsEnumerableType = left.Type.GetInterface(nameof(IEnumerable));
         if (leftAsEnumerableType == null)
         {
-            throw new Exception("Left expression should be of type IEnumerable<T>");
+            throw new QueryKitParsingException("Left expression should be of type IEnumerable<T>");
         }
 
         var leftGenericType = left.Type.GetGenericArguments()[0];
@@ -870,14 +870,14 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
 
         if (rightType != typeof(int))
         {
-            throw new Exception("The right expression should be of type int");
+            throw new QueryKitParsingException("The right expression should be of type int");
         }
         var countMethod = typeof(Enumerable).GetMethods(BindingFlags.Public | BindingFlags.Static)
             .FirstOrDefault(m => m.Name == "Count" && m.GetParameters().Length == 1
                                                    && m.GetParameters()[0].ParameterType.GetGenericTypeDefinition() == typeof(IEnumerable<>));
         if (countMethod == null)
         {
-            throw new Exception("Count method not found");
+            throw new QueryKitParsingException("Count method not found");
         }
 
         var specificCountMethod = countMethod.MakeGenericMethod(leftGenericType);
@@ -886,10 +886,9 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         var comparisonMethod = typeof(Expression).GetMethod(methodName, new[] { typeof(Expression), typeof(Expression) });
         if (comparisonMethod == null)
         {
-            throw new Exception($"Comparison method '{methodName}' not found");
+            throw new QueryKitParsingException($"Comparison method '{methodName}' not found");
         }
 
-        // Invoke the comparison method
         return (Expression)comparisonMethod.Invoke(null, new object[] { countExpression, right });
     }
 }
