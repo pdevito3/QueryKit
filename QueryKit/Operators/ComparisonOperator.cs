@@ -704,37 +704,37 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
             matches.Add(new ComparisonAliasMatch { Alias = aliases.InOperator, Operator = InOperator().Operator() });
             matches.Add(new ComparisonAliasMatch { Alias = $"{aliases.InOperator}{caseInsensitiveAppendix}", Operator = $"{InOperator(true).Operator()}" });
         }
-        if(aliases.HasCountEqualToOperator != EqualsOperator().Operator())
+        if(aliases.HasCountEqualToOperator != HasCountEqualToOperator().Operator())
         {
-            matches.Add(new ComparisonAliasMatch { Alias = aliases.HasCountEqualToOperator, Operator = EqualsOperator().Operator() });
-            matches.Add(new ComparisonAliasMatch { Alias = $"{aliases.HasCountEqualToOperator}{caseInsensitiveAppendix}", Operator = $"{EqualsOperator(true).Operator()}"});
+            matches.Add(new ComparisonAliasMatch { Alias = aliases.HasCountEqualToOperator, Operator = HasCountEqualToOperator().Operator() });
+            matches.Add(new ComparisonAliasMatch { Alias = $"{aliases.HasCountEqualToOperator}{caseInsensitiveAppendix}", Operator = $"{HasCountEqualToOperator(true).Operator()}"});
         }
-        if(aliases.HasCountNotEqualToOperator != NotEqualsOperator().Operator())
+        if(aliases.HasCountNotEqualToOperator != HasCountNotEqualToOperator().Operator())
         {
-            matches.Add(new ComparisonAliasMatch { Alias = aliases.HasCountNotEqualToOperator, Operator = NotEqualsOperator().Operator() });
-            matches.Add(new ComparisonAliasMatch { Alias = $"{aliases.HasCountNotEqualToOperator}{caseInsensitiveAppendix}", Operator = $"{NotEqualsOperator(true).Operator()}" });
+            matches.Add(new ComparisonAliasMatch { Alias = aliases.HasCountNotEqualToOperator, Operator = HasCountNotEqualToOperator().Operator() });
+            matches.Add(new ComparisonAliasMatch { Alias = $"{aliases.HasCountNotEqualToOperator}{caseInsensitiveAppendix}", Operator = $"{HasCountNotEqualToOperator(true).Operator()}" });
         }
-        if(aliases.HasCountGreaterThanOperator != GreaterThanOperator().Operator())
+        if(aliases.HasCountGreaterThanOperator != HasCountGreaterThanOperator().Operator())
         {
-            matches.Add(new ComparisonAliasMatch { Alias = aliases.HasCountGreaterThanOperator, Operator = GreaterThanOperator().Operator() });
-            matches.Add(new ComparisonAliasMatch { Alias = $"{aliases.HasCountGreaterThanOperator}{caseInsensitiveAppendix}", Operator = $"{GreaterThanOperator(true).Operator()}" });
+            matches.Add(new ComparisonAliasMatch { Alias = aliases.HasCountGreaterThanOperator, Operator = HasCountGreaterThanOperator().Operator() });
+            matches.Add(new ComparisonAliasMatch { Alias = $"{aliases.HasCountGreaterThanOperator}{caseInsensitiveAppendix}", Operator = $"{HasCountGreaterThanOperator(true).Operator()}" });
         }
-        if(aliases.HasCountLessThanOperator != LessThanOperator().Operator())
+        if(aliases.HasCountLessThanOperator != HasCountLessThanOperator().Operator())
         {
-            matches.Add(new ComparisonAliasMatch { Alias = aliases.HasCountLessThanOperator, Operator = LessThanOperator().Operator() });
-            matches.Add(new ComparisonAliasMatch { Alias = $"{aliases.HasCountLessThanOperator}{caseInsensitiveAppendix}", Operator = $"{LessThanOperator(true).Operator()}" });
+            matches.Add(new ComparisonAliasMatch { Alias = aliases.HasCountLessThanOperator, Operator = HasCountLessThanOperator().Operator() });
+            matches.Add(new ComparisonAliasMatch { Alias = $"{aliases.HasCountLessThanOperator}{caseInsensitiveAppendix}", Operator = $"{HasCountLessThanOperator(true).Operator()}" });
         }
-        if(aliases.HasCountGreaterThanOrEqualOperator != GreaterThanOrEqualOperator().Operator())
+        if(aliases.HasCountGreaterThanOrEqualOperator != HasCountGreaterThanOrEqualOperator().Operator())
         {
-            matches.Add(new ComparisonAliasMatch { Alias = aliases.HasCountGreaterThanOrEqualOperator, Operator = GreaterThanOrEqualOperator().Operator() });
-            matches.Add(new ComparisonAliasMatch { Alias = $"{aliases.HasCountGreaterThanOrEqualOperator}{caseInsensitiveAppendix}", Operator = $"{GreaterThanOrEqualOperator(true).Operator()}" });
+            matches.Add(new ComparisonAliasMatch { Alias = aliases.HasCountGreaterThanOrEqualOperator, Operator = HasCountGreaterThanOrEqualOperator().Operator() });
+            matches.Add(new ComparisonAliasMatch { Alias = $"{aliases.HasCountGreaterThanOrEqualOperator}{caseInsensitiveAppendix}", Operator = $"{HasCountGreaterThanOrEqualOperator(true).Operator()}" });
         }
-        if(aliases.HasCountLessThanOrEqualOperator != LessThanOrEqualOperator().Operator())
+        if(aliases.HasCountLessThanOrEqualOperator != HasCountLessThanOrEqualOperator().Operator())
         {
-            matches.Add(new ComparisonAliasMatch { Alias = aliases.HasCountLessThanOrEqualOperator, Operator = LessThanOrEqualOperator().Operator() });
-            matches.Add(new ComparisonAliasMatch { Alias = $"{aliases.HasCountLessThanOrEqualOperator}{caseInsensitiveAppendix}", Operator = $"{LessThanOrEqualOperator(true).Operator()}" });
+            matches.Add(new ComparisonAliasMatch { Alias = aliases.HasCountLessThanOrEqualOperator, Operator = HasCountLessThanOrEqualOperator().Operator() });
+            matches.Add(new ComparisonAliasMatch { Alias = $"{aliases.HasCountLessThanOrEqualOperator}{caseInsensitiveAppendix}", Operator = $"{HasCountLessThanOrEqualOperator(true).Operator()}" });
         }
-        
+
         return matches;
     }
     
