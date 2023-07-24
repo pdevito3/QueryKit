@@ -97,22 +97,23 @@ var input = """(FirstName == "Jane" && Age < 10) || FirstName == "John" """;
 
 There's a wide variety of comparison operators that use the same base syntax as [Sieve](https://github.com/Biarity/Sieve)'s operators. To do a case-insensitive operation, just append a ` *` at the end of the operator.
 
-| Name                  | Operator | Case Insensitive Operator |
-| --------------------- | -------- | ------------------------- |
-| Equals                | ==       | ==*                       |
-| Not Equals            | !=       | !=*                        |
-| Greater Than          | >        | N/A                       |
-| Less Than             | <        | N/A                       |
-| Greater Than Or Equal | >=       | N/A                       |
-| Less Than Or Equal    | <=       | N/A                       |
-| Starts With           | _=       | _=*                       |
-| Does Not Start With   | !_=      | !_=*                      |
-| Ends With             | _-=      | _-=*                      |
-| Does Not End With     | !_-=     | !_-=*                     |
-| Contains              | @=       | @=*                       |
-| Does Not Contain      | !@=      | !@=*                      |
-| Sounds Like           | ~~     | N/A                       |
-| Does Not Sound Like   | !~     | N/A                        |
+| Name                  | Operator | Case Insensitive Operator | Count Operator |
+| --------------------- | -------- | ------------------------- | -------------- |
+| Equals                | ==       | ==*                       | #==            |
+| Not Equals            | !=       | !=*                       | #!=            |
+| Greater Than          | >        | N/A                       | #>             |
+| Less Than             | <        | N/A                       | #<             |
+| Greater Than Or Equal | >=       | N/A                       | #>=            |
+| Less Than Or Equal    | <=       | N/A                       | #<=            |
+| Starts With           | _=       | _=*                       | N/A            |
+| Does Not Start With   | !_=      | !_=*                      | N/A            |
+| Ends With             | _-=      | _-=*                      | N/A            |
+| Does Not End With     | !_-=     | !_-=*                     | N/A            |
+| Contains              | @=       | @=*                       | N/A            |
+| Does Not Contain      | !@=      | !@=*                      | N/A            |
+| Sounds Like           | ~~       | N/A                       | N/A            |
+| Does Not Sound Like   | !~       | N/A                       | N/A            |
+
 
 > `Sounds Like` and `Does Not Sound Like` requires a soundex configuration on your DbContext. For more info see [the docs below](#soundex)
 
@@ -152,6 +153,28 @@ There's a wide variety of comparison operators that use the same base syntax as 
 
 ```c#
 var input = """(Title == "lamb" && ((Age >= 25 && Rating < 4.5) || (SpecificDate <= 2022-07-01T00:00:03Z && Time == 00:00:03)) && (Favorite == true || Email.Value _= "hello@gmail.com"))""";
+```
+
+#### Filtering Collections
+
+You can also filter into collections with QueryKit by using most of the normal operators. For example, if I wanted to filter for recipes that only have an ingredient named `salt`, I could do something like this:
+
+```csharp
+var input = """"Ingredients.Name == "salt" """";
+```
+
+By default, QueryKit will use `Any` under the hood when building this filter, but if you want to use `All`, you just need to prefix the operator with a `%`:
+
+```csharp
+var input = """"Ingredients.Stock %>= 1"""";
+```
+
+> 🚧 At the moment, nested collections like `Ingredients.Suppliers.Rating > 4` is still under active development
+
+If you want to filter on the count of a collection, you can prefix some of the operators with a `#`. For example, if i wanted to get all recipes that have more than 0 ingredients:
+
+```csharp
+var input = """"Ingredients #>= 0"""";
 ```
 
 ### Settings
