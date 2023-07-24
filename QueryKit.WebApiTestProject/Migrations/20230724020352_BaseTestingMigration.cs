@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -51,7 +52,8 @@ namespace QueryKit.WebApiTestProject.Migrations
                     directions = table.Column<string>(type: "text", nullable: false),
                     rating = table.Column<int>(type: "integer", nullable: true),
                     date_of_origin = table.Column<DateOnly>(type: "date", nullable: true),
-                    have_made_it_myself = table.Column<bool>(type: "boolean", nullable: false)
+                    have_made_it_myself = table.Column<bool>(type: "boolean", nullable: false),
+                    tags = table.Column<List<string>>(type: "text[]", nullable: false)
                 },
                 constraints: table =>
                 {

@@ -113,7 +113,8 @@ There's a wide variety of comparison operators that use the same base syntax as 
 | Does Not Contain      | !@=      | !@=*                      | N/A            |
 | Sounds Like           | ~~       | N/A                       | N/A            |
 | Does Not Sound Like   | !~       | N/A                       | N/A            |
-
+| Has                   | ^$       | ^$*                       | N/A            |
+| Does Not Have         | !^$      | !^$*                      | N/A            |
 
 > `Sounds Like` and `Does Not Sound Like` requires a soundex configuration on your DbContext. For more info see [the docs below](#soundex)
 
@@ -170,6 +171,14 @@ var input = """"Ingredients.Stock %>= 1"""";
 ```
 
 > 🚧 At the moment, nested collections like `Ingredients.Suppliers.Rating > 4` is still under active development
+
+If you want to filter a primitve collection like `List<string>` you can use the `Has` or `DoesNotHave` operator (can be case insensitive with the appended `*`):
+
+```csharp
+var input = """Tags ^$ "winner" """;
+// or
+var input = """Tags !^$ "winner" """;
+```
 
 If you want to filter on the count of a collection, you can prefix some of the operators with a `#`. For example, if i wanted to get all recipes that have more than 0 ingredients:
 

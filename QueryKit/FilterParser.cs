@@ -67,6 +67,8 @@ public static class FilterParser
                     .Or(Parse.String(ComparisonOperator.HasCountLessThanOrEqualOperator().Operator()).Text())
                     .Or(Parse.String(ComparisonOperator.HasCountGreaterThanOperator().Operator()).Text())
                     .Or(Parse.String(ComparisonOperator.HasCountLessThanOperator().Operator()).Text())
+                    .Or(Parse.String(ComparisonOperator.HasOperator().Operator()).Text())
+                    .Or(Parse.String(ComparisonOperator.DoesNotHaveOperator().Operator()).Text())
                     .SelectMany(op => Parse.Char(ComparisonOperator.CaseSensitiveAppendix).Optional(), (op, caseInsensitive) => new { op, caseInsensitive, hasHash })
                     .Select(x => ComparisonOperator.GetByOperatorString(x.op, x.caseInsensitive.IsDefined, x.hasHash)));
 

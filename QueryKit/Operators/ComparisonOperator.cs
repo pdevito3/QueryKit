@@ -30,6 +30,8 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
     public static ComparisonOperator CaseSensitiveHasCountLessThanOperator = new HasCountLessThanType();
     public static ComparisonOperator CaseSensitiveHasCountGreaterThanOrEqualOperator = new HasCountGreaterThanOrEqualType();
     public static ComparisonOperator CaseSensitiveHasCountLessThanOrEqualOperator = new HasCountLessThanOrEqualType();
+    public static ComparisonOperator CaseSensitiveHasOperator = new HasType();
+    public static ComparisonOperator CaseSensitiveDoesNotHaveOperator = new DoesNotHaveType();
     
     public static ComparisonOperator EqualsOperator(bool caseInsensitive = false, bool usesAll = false) => new EqualsType(caseInsensitive);
     public static ComparisonOperator NotEqualsOperator(bool caseInsensitive = false, bool usesAll = false) => new NotEqualsType(caseInsensitive);
@@ -52,6 +54,8 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
     public static ComparisonOperator HasCountLessThanOperator(bool caseInsensitive = false, bool usesAll = false) => new HasCountLessThanType(caseInsensitive);
     public static ComparisonOperator HasCountGreaterThanOrEqualOperator(bool caseInsensitive = false, bool usesAll = false) => new HasCountGreaterThanOrEqualType(caseInsensitive);
     public static ComparisonOperator HasCountLessThanOrEqualOperator(bool caseInsensitive = false, bool usesAll = false) => new HasCountLessThanOrEqualType(caseInsensitive);
+    public static ComparisonOperator HasOperator(bool caseInsensitive = false, bool usesAll = false) => new HasType(caseInsensitive);
+    public static ComparisonOperator DoesNotHaveOperator(bool caseInsensitive = false, bool usesAll = false) => new DoesNotHaveType(caseInsensitive);
 
     
     public static ComparisonOperator GetByOperatorString(string op, bool caseInsensitive = false, bool usesAll = false)
@@ -147,6 +151,14 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         if (comparisonOperator is HasCountLessThanOrEqualType)
         {
             newOperator = new HasCountLessThanOrEqualType(caseInsensitive, usesAll);
+        }
+        if (comparisonOperator is HasType)
+        {
+            newOperator = new HasType(caseInsensitive, usesAll);
+        }
+        if (comparisonOperator is DoesNotHaveType)
+        {
+            newOperator = new DoesNotHaveType(caseInsensitive, usesAll);
         }
         
         return newOperator == null 
@@ -628,6 +640,49 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         }
     }
 
+    private class HasType : ComparisonOperator
+    {
+        public HasType(bool caseInsensitive = false, bool usesAll = false) : base("^$", 21, caseInsensitive, usesAll)
+        {
+        }
+
+        public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
+        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
+        {
+            if (left.Type.IsGenericType && 
+                (left.Type.GetGenericTypeDefinition() == typeof(List<>) || 
+                 left.Type.GetGenericTypeDefinition() == typeof(ICollection<>) ||
+                 left.Type.GetGenericTypeDefinition() == typeof(IList<>) ||
+                 typeof(IEnumerable<>).IsAssignableFrom(left.Type.GetGenericTypeDefinition())))
+            {
+                return GetCollectionExpression(left, right, Expression.Equal, UsesAll);
+            }
+
+            throw new Exception("DoesNotHaveType is only supported for collections");
+        }
+    }
+
+    private class DoesNotHaveType : ComparisonOperator
+    {
+        public DoesNotHaveType(bool caseInsensitive = false, bool usesAll = false) : base("!^$", 22, caseInsensitive, usesAll)
+        {
+        }
+
+        public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
+        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
+        {
+            if (left.Type.IsGenericType && 
+                (left.Type.GetGenericTypeDefinition() == typeof(List<>) || 
+                 left.Type.GetGenericTypeDefinition() == typeof(ICollection<>) ||
+                 left.Type.GetGenericTypeDefinition() == typeof(IList<>) ||
+                 typeof(IEnumerable<>).IsAssignableFrom(left.Type.GetGenericTypeDefinition())))
+            {
+                return GetCollectionExpression(left, right, Expression.NotEqual, UsesAll);
+            }
+            
+            throw new Exception("DoesNotHaveType is only supported for collections");
+        }
+    }
 
     internal class ComparisonAliasMatch
     {
@@ -734,6 +789,16 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
             matches.Add(new ComparisonAliasMatch { Alias = aliases.HasCountLessThanOrEqualOperator, Operator = HasCountLessThanOrEqualOperator().Operator() });
             matches.Add(new ComparisonAliasMatch { Alias = $"{aliases.HasCountLessThanOrEqualOperator}{caseInsensitiveAppendix}", Operator = $"{HasCountLessThanOrEqualOperator(true).Operator()}" });
         }
+        if(aliases.HasOperator != HasOperator().Operator())
+        {
+            matches.Add(new ComparisonAliasMatch { Alias = aliases.HasOperator, Operator = HasOperator().Operator() });
+            matches.Add(new ComparisonAliasMatch { Alias = $"{aliases.HasOperator}{caseInsensitiveAppendix}", Operator = $"{HasOperator(true).Operator()}" });
+        }
+        if(aliases.DoesNotHaveOperator != DoesNotHaveOperator().Operator())
+        {
+            matches.Add(new ComparisonAliasMatch { Alias = aliases.DoesNotHaveOperator, Operator = DoesNotHaveOperator().Operator() });
+            matches.Add(new ComparisonAliasMatch { Alias = $"{aliases.DoesNotHaveOperator}{caseInsensitiveAppendix}", Operator = $"{DoesNotHaveOperator(true).Operator()}" });
+        }
 
         return matches;
     }
@@ -792,7 +857,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
             : Expression.Call(anyMethod, left, anyLambda);
     }
 
-    public Expression GetCountExpression(Expression left, Expression right, string methodName)
+    private Expression GetCountExpression(Expression left, Expression right, string methodName)
     {
         var leftAsEnumerableType = left.Type.GetInterface(nameof(IEnumerable));
         if (leftAsEnumerableType == null)

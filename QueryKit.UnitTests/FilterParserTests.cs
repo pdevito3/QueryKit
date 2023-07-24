@@ -763,5 +763,41 @@ public class FilterParserTests
         filterExpression.ToString().Should()
             .Be(""""x => (x.Ingredients.Count() >= 0)"""");
     }
+    
+    [Fact]
+    public void primitive_collection_has()
+    {
+        var input = """Tags ^$ "winner" """;
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input);
+        filterExpression.ToString().Should()
+            .Be(""""x => x.Tags.Any(z => (z == "winner"))"""");
+    }
+    
+    [Fact]
+    public void primitive_collection_does_not_have()
+    {
+        var input = """Tags !^$ "winner" """;
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input);
+        filterExpression.ToString().Should()
+            .Be(""""x => x.Tags.Any(z => (z != "winner"))"""");
+    }
+    
+    [Fact]
+    public void primitive_collection_has_case_insensitive()
+    {
+        var input = """Tags ^$* "winner" """;
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input);
+        filterExpression.ToString().Should()
+            .Be(""""x => x.Tags.Any(z => (z.ToLower() == "winner".ToLower()))"""");
+    }
+    
+    [Fact]
+    public void primitive_collection_does_not_have_case_insensitive()
+    {
+        var input = """Tags !^$* "winner" """;
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input);
+        filterExpression.ToString().Should()
+            .Be(""""x => x.Tags.Any(z => (z.ToLower() != "winner".ToLower()))"""");
+    }
 }
     

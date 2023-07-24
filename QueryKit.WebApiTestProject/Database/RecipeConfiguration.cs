@@ -11,11 +11,13 @@ public sealed class RecipeConfiguration : IEntityTypeConfiguration<Recipe>
     /// </summary>
     public void Configure(EntityTypeBuilder<Recipe> builder)
     {
+        builder.Property(x => x.Tags).HasColumnType("text[]");
+
         // example for a simple 1:1 value object
         // builder.Property(x => x.Percent)
         //     .HasConversion(x => x.Value, x => new Percent(x))
         //     .HasColumnName("percent");
-        
+
         // example for a more complex value object
         // builder.OwnsOne(x => x.PhysicalAddress, opts =>
         // {

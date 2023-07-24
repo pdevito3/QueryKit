@@ -29,6 +29,8 @@ public interface IQueryKitConfiguration
     public string HasCountLessThanOperator { get; set; }
     public string HasCountGreaterThanOrEqualOperator { get; set; }
     public string HasCountLessThanOrEqualOperator { get; set; }
+    public string HasOperator { get; set; }
+    public string DoesNotHaveOperator { get; set; }
 }
 
 public class QueryKitConfiguration : IQueryKitConfiguration
@@ -55,6 +57,8 @@ public class QueryKitConfiguration : IQueryKitConfiguration
     public string HasCountLessThanOperator { get; set; }
     public string HasCountGreaterThanOrEqualOperator { get; set; }
     public string HasCountLessThanOrEqualOperator { get; set; }
+    public string HasOperator { get; set; }
+    public string DoesNotHaveOperator { get; set; }
     public string CaseInsensitiveAppendix { get; set; }
     public string AndOperator { get; set; }
     public string OrOperator { get; set; }
@@ -94,5 +98,7 @@ public class QueryKitConfiguration : IQueryKitConfiguration
         HasCountLessThanOperator = settings.HasCountLessThanOperator;
         HasCountGreaterThanOrEqualOperator = settings.HasCountGreaterThanOrEqualOperator;
         HasCountLessThanOrEqualOperator = settings.HasCountLessThanOrEqualOperator;
+        HasOperator = settings.HasOperator;
+        DoesNotHaveOperator = settings.DoesNotHaveOperator;
     }
 }
