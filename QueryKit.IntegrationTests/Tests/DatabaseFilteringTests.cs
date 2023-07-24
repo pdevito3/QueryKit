@@ -7,7 +7,9 @@ using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using SharedTestingHelper.Fakes;
 using SharedTestingHelper.Fakes.Author;
+using SharedTestingHelper.Fakes.Ingredients;
 using SharedTestingHelper.Fakes.Recipes;
+using WebApiTestProject.Database;
 using WebApiTestProject.Entities;
 using WebApiTestProject.Entities.Recipes;
 using WebApiTestProject.Features;
@@ -27,7 +29,7 @@ public class DatabaseFilteringTests : TestBase
         await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
         
         var input = $"""{nameof(TestingPerson.Title)} == "{fakePersonOne.Title}" """;
-
+        
         // Act
         var queryablePeople = testingServiceScope.DbContext().People;
         var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
@@ -36,6 +38,183 @@ public class DatabaseFilteringTests : TestBase
         // Assert
         people.Count.Should().Be(1);
         people[0].Id.Should().Be(fakePersonOne.Id);
+    }
+    
+    [Fact]
+    public async Task can_filter_by_string_for_collection()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var faker = new Faker();
+        var fakeIngredientOne = new FakeIngredientBuilder()
+            .WithName(faker.Lorem.Sentence())
+            .Build();
+        var fakeRecipeOne = new FakeRecipeBuilder().Build();
+        fakeRecipeOne.AddIngredient(fakeIngredientOne);
+        
+        var fakeIngredientTwo = new FakeIngredientBuilder()
+            .WithName(faker.Lorem.Sentence())
+            .Build();
+        var fakeRecipeTwo = new FakeRecipeBuilder().Build();
+        fakeRecipeTwo.AddIngredient(fakeIngredientTwo);
+        await testingServiceScope.InsertAsync(fakeRecipeOne, fakeRecipeTwo);
+        
+        var input = $"""Ingredients.Name == "{fakeIngredientOne.Name}" """;
+
+        // Act
+        var queryableRecipes = testingServiceScope.DbContext().Recipes;
+        var appliedQueryable = queryableRecipes.ApplyQueryKitFilter(input);
+        var recipes = await appliedQueryable.ToListAsync();
+
+        // Assert
+        recipes.Count.Should().Be(1);
+        recipes[0].Id.Should().Be(fakeRecipeOne.Id);
+    }
+    
+    [Fact]
+    public async Task can_filter_by_string_for_collection_with_count()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var faker = new Faker();
+        var fakeIngredientOne = new FakeIngredientBuilder()
+            .WithName(faker.Lorem.Sentence())
+            .Build();
+        var fakeRecipeOne = new FakeRecipeBuilder().Build();
+        fakeRecipeOne.AddIngredient(fakeIngredientOne);
+        
+        var fakeIngredientTwo = new FakeIngredientBuilder()
+            .WithName(faker.Lorem.Sentence())
+            .Build();
+        var fakeRecipeTwo = new FakeRecipeBuilder().Build();
+        fakeRecipeTwo.AddIngredient(fakeIngredientTwo);
+        await testingServiceScope.InsertAsync(fakeRecipeOne, fakeRecipeTwo);
+        
+        var input = $"""Title == "{fakeRecipeOne.Title}" && Ingredients #>= 1""";
+
+        // Act
+        var queryableRecipes = testingServiceScope.DbContext().Recipes;
+        var appliedQueryable = queryableRecipes.ApplyQueryKitFilter(input);
+        var recipes = await appliedQueryable.ToListAsync();
+
+        // Assert
+        recipes.Count.Should().Be(1);
+        recipes[0].Id.Should().Be(fakeRecipeOne.Id);
+    }
+    
+    [Fact]
+    public async Task can_filter_by_string_for_collection_contains()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var faker = new Faker();
+        var fakeIngredientOne = new FakeIngredientBuilder()
+            .WithName($"{faker.Lorem.Sentence()}partial")
+            .Build();
+        var fakeRecipeOne = new FakeRecipeBuilder().Build();
+        fakeRecipeOne.AddIngredient(fakeIngredientOne);
+        
+        var fakeIngredientTwo = new FakeIngredientBuilder()
+            .WithName(faker.Lorem.Sentence())
+            .Build();
+        var fakeRecipeTwo = new FakeRecipeBuilder().Build();
+        fakeRecipeTwo.AddIngredient(fakeIngredientTwo);
+        await testingServiceScope.InsertAsync(fakeRecipeOne, fakeRecipeTwo);
+        
+        var input = $"""Ingredients.Name @= "partial" """;
+
+        // Act
+        var queryableRecipes = testingServiceScope.DbContext().Recipes;
+        var appliedQueryable = queryableRecipes.ApplyQueryKitFilter(input);
+        var recipes = await appliedQueryable.ToListAsync();
+
+        // Assert
+        recipes.Count.Should().Be(1);
+        recipes[0].Id.Should().Be(fakeRecipeOne.Id);
+    }
+    
+    [Fact]
+    public async Task can_filter_by_string_for_collection_does_not_contain()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var faker = new Faker();
+        var fakeIngredientOne = new FakeIngredientBuilder()
+            .WithName($"{faker.Lorem.Sentence()}partial")
+            .Build();
+        var fakeRecipeOne = new FakeRecipeBuilder().Build();
+        fakeRecipeOne.AddIngredient(fakeIngredientOne);
+        
+        var fakeIngredientTwo = new FakeIngredientBuilder()
+            .WithName(faker.Lorem.Sentence())
+            .Build();
+        var fakeRecipeTwo = new FakeRecipeBuilder().Build();
+        fakeRecipeTwo.AddIngredient(fakeIngredientTwo);
+        await testingServiceScope.InsertAsync(fakeRecipeOne, fakeRecipeTwo);
+        
+        var input = $"""Ingredients.Name !@= "partial" """;
+
+        // Act
+        var queryableRecipes = testingServiceScope.DbContext().Recipes;
+        var appliedQueryable = queryableRecipes.ApplyQueryKitFilter(input);
+        var recipes = await appliedQueryable.ToListAsync();
+
+        // Assert
+        recipes.FirstOrDefault(x => x.Id == fakeRecipeOne.Id).Should().BeNull();
+        recipes.FirstOrDefault(x => x.Id == fakeRecipeTwo.Id).Should().NotBeNull();
+    }
+    
+    [Fact]
+    public async Task can_use_soundex_equals()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithTitle("DeVito")
+            .Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder().Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+        
+        var input = $"""{nameof(TestingPerson.Title)} ~~ "davito" """;
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input, new QueryKitConfiguration(o =>
+        {
+            o.DbContextType = typeof(TestingDbContext);
+        }));
+        var people = await appliedQueryable.ToListAsync();
+        
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakePersonOne.Id);
+    }
+    
+    [Fact]
+    public async Task can_use_soundex_not_equals()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithTitle("Jaime")
+            .Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder().Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+        
+        var input = $"""{nameof(TestingPerson.Title)} !~ "jaymee" """;
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input, new QueryKitConfiguration(o =>
+        {
+            o.DbContextType = typeof(TestingDbContext);
+        }));
+        var people = await appliedQueryable.ToListAsync();
+        
+        // Assert
+        people.Count(x => x.Id == fakePersonOne.Id).Should().Be(0);
     }
     
     [Fact]

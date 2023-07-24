@@ -30,6 +30,8 @@ public class Recipe : BaseEntity
     public DateOnly? DateOfOrigin { get; private set; }
 
     public bool HaveMadeItMyself { get; private set; }
+    
+    public List<string> Tags { get; set; } = new();
 
     [JsonIgnore, IgnoreDataMember]
     public Author Author { get; private set; }
@@ -38,6 +40,10 @@ public class Recipe : BaseEntity
     [JsonIgnore, IgnoreDataMember]
     public IReadOnlyCollection<Ingredient> Ingredients => _ingredients.AsReadOnly();
 
+    public void AddIngredient(Ingredient ingredient)
+    {
+        _ingredients.Add(ingredient);
+    }
 
     public static Recipe Create(RecipeForCreation recipeForCreation)
     {
@@ -72,6 +78,12 @@ public class Recipe : BaseEntity
     public Recipe SetIngredients(List<Ingredient> ingredients)
     {
         _ingredients = ingredients;
+        return this;
+    }
+    
+    public Recipe SetTags(List<string> tags)
+    {
+        Tags = tags;
         return this;
     }
 

@@ -97,20 +97,26 @@ var input = """(FirstName == "Jane" && Age < 10) || FirstName == "John" """;
 
 There's a wide variety of comparison operators that use the same base syntax as [Sieve](https://github.com/Biarity/Sieve)'s operators. To do a case-insensitive operation, just append a ` *` at the end of the operator.
 
-| Name                  | Operator | Case Insensitive Operator |
-| --------------------- | -------- | ------------------------- |
-| Equals                | ==       | ==*                       |
-| Not Equals            | !=       | !=*                        |
-| Greater Than          | >        | N/A                       |
-| Less Than             | <        | N/A                       |
-| Greater Than Or Equal | >=       | N/A                       |
-| Less Than Or Equal    | <=       | N/A                       |
-| Starts With           | _=       | _=*                       |
-| Does Not Start With   | !_=      | !_=*                      |
-| Ends With             | _-=      | _-=*                      |
-| Does Not End With     | !_-=     | !_-=*                     |
-| Contains              | @=       | @=*                       |
-| Does Not Contain      | !@=      | !@=*                      |
+| Name                  | Operator | Case Insensitive Operator | Count Operator |
+| --------------------- | -------- | ------------------------- | -------------- |
+| Equals                | ==       | ==*                       | #==            |
+| Not Equals            | !=       | !=*                       | #!=            |
+| Greater Than          | >        | N/A                       | #>             |
+| Less Than             | <        | N/A                       | #<             |
+| Greater Than Or Equal | >=       | N/A                       | #>=            |
+| Less Than Or Equal    | <=       | N/A                       | #<=            |
+| Starts With           | _=       | _=*                       | N/A            |
+| Does Not Start With   | !_=      | !_=*                      | N/A            |
+| Ends With             | _-=      | _-=*                      | N/A            |
+| Does Not End With     | !_-=     | !_-=*                     | N/A            |
+| Contains              | @=       | @=*                       | N/A            |
+| Does Not Contain      | !@=      | !@=*                      | N/A            |
+| Sounds Like           | ~~       | N/A                       | N/A            |
+| Does Not Sound Like   | !~       | N/A                       | N/A            |
+| Has                   | ^$       | ^$*                       | N/A            |
+| Does Not Have         | !^$      | !^$*                      | N/A            |
+
+> `Sounds Like` and `Does Not Sound Like` requires a soundex configuration on your DbContext. For more info see [the docs below](#soundex)
 
 ### Filtering Notes
 
@@ -148,6 +154,36 @@ There's a wide variety of comparison operators that use the same base syntax as 
 
 ```c#
 var input = """(Title == "lamb" && ((Age >= 25 && Rating < 4.5) || (SpecificDate <= 2022-07-01T00:00:03Z && Time == 00:00:03)) && (Favorite == true || Email.Value _= "hello@gmail.com"))""";
+```
+
+#### Filtering Collections
+
+You can also filter into collections with QueryKit by using most of the normal operators. For example, if I wanted to filter for recipes that only have an ingredient named `salt`, I could do something like this:
+
+```csharp
+var input = """"Ingredients.Name == "salt" """";
+```
+
+By default, QueryKit will use `Any` under the hood when building this filter, but if you want to use `All`, you just need to prefix the operator with a `%`:
+
+```csharp
+var input = """"Ingredients.Stock %>= 1"""";
+```
+
+> 🚧 At the moment, nested collections like `Ingredients.Suppliers.Rating > 4` is still under active development
+
+If you want to filter a primitve collection like `List<string>` you can use the `Has` or `DoesNotHave` operator (can be case insensitive with the appended `*`):
+
+```csharp
+var input = """Tags ^$ "winner" """;
+// or
+var input = """Tags !^$ "winner" """;
+```
+
+If you want to filter on the count of a collection, you can prefix some of the operators with a `#`. For example, if i wanted to get all recipes that have more than 0 ingredients:
+
+```csharp
+var input = """"Ingredients #>= 0"""";
 ```
 
 ### Settings
@@ -336,6 +372,27 @@ var config = new QueryKitConfiguration(config =>
 });
 ```
 
+## Aggregate QueryKit Application
+
+If you want to apply filtering and sorting in one fell swoop, you can do something like this:
+
+```csharp
+var config = new QueryKitConfiguration(config =>
+{
+    config.Property<Person>(x => x.FirstName).HasQueryName("first");
+});
+var people = _dbContext.People
+  	.ApplyQueryKit(new QueryKitData() 
+        {
+            Filters = """first == "Jane" && Age > 10""",
+            SortOrder = "first, Age desc",
+            Configuration = config
+        })
+  	.ToList();
+```
+
+
+
 ## Error Handling
 
 If you want to capture errors to easily throw a `400`, you can add error handling around these exceptions:
@@ -343,3 +400,57 @@ If you want to capture errors to easily throw a `400`, you can add error handlin
 * A `FilterParsingException` will be thrown when there is an invalid operator or bad syntax is used (e.g. not using double quotes around a string or guid).
 * An `UnknownFilterPropertyException` will be thrown if a property is not recognized during filtering
 * A `SortParsingException` will be thrown if a property or operation is not recognized during sorting
+* A `QueryKitDbContextTypeException` will be thrown when trying to use a `DbContext` specific workflow without passing that context (e.g. SoundEx)
+* A `SoundsLikeNotImplementedException` will be thrown when trying to use `soundex` on a `DbContext` that doesn't have it implemented.
+* A `QueryKitParsingException` is a more generic error that will include specific details on a more granular error in the parsing pipeline.
+
+## SoundEx
+
+The `Sounds Like` and `Does Not Sound Like` operators require a soundex configuration on any `DbContext` that contain your `DbSet` being filtered on. Something like the below should work. The `SoundsLike` method does not need to implement anything and is just used as a pointer to the db method.
+
+```csharp
+public class ExampleDbContext : DbContext
+{
+    public ExampleDbContext(DbContextOptions<TestingDbContext> options)
+        : base(options)
+    {
+    }
+    
+    [DbFunction (Name = "SOUNDEX", IsBuiltIn = true)]
+    public static string SoundsLike(string query) => throw new NotImplementedException();
+
+    public DbSet<People> MyPeople { get; set; }
+    
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
+        modelBuilder.HasPostgresExtension("fuzzystrmatch");
+    }
+}
+```
+
+> ⭐️ Note that with Postgres, something like `modelBuilder.HasPostgresExtension("fuzzystrmatch");` will need to be added like the example along with a migration for adding the extension.
+
+You can even use this on a normal `IQueryable` like this: 
+```csharp
+var waffleRecipes = _dbContext.MyPeople
+  .Where(x => ExampleDbContext.SoundsLike(x.LastName) == ExampleDbContext.SoundsLike("devito"))
+  .ToList();
+```
+
+### Usage
+
+Once your `DbContext` is configured to allow soundex, you'll need to provide that `DbContext` type in your QueryKit config. This is because, as of now, there is no reliable way to get the `DbContext` from an `IQueryable`.
+
+```csharp
+var input = $"""LastName ~~ "devito" """;
+
+// Act
+var queryablePeople = testingServiceScope.DbContext().People;
+var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input, new QueryKitConfiguration(o =>
+{
+    o.DbContextType = typeof(TestingDbContext);
+}));
+var people = await appliedQueryable.ToListAsync();
+```
+

@@ -4,14 +4,32 @@ using Configuration;
 
 public static class QueryableExtensions
 {
-    public static IQueryable<T> ApplyQueryKitFilter<T>(this IQueryable<T> source, string filter, IQueryKitConfiguration? config = null)
+    public static IQueryable<TEntity> ApplyQueryKit<TEntity>(this IQueryable<TEntity> source, QueryKitData queryKitData)
+        where TEntity : class
+    {
+        var appliedQueryable = source;
+        if (!string.IsNullOrWhiteSpace(queryKitData.Filters))
+        {
+            appliedQueryable = appliedQueryable.ApplyQueryKitFilter(queryKitData.Filters, queryKitData.Configuration);
+        }
+        
+        if (!string.IsNullOrWhiteSpace(queryKitData.SortOrder))
+        {
+            appliedQueryable = appliedQueryable.ApplyQueryKitSort(queryKitData.SortOrder, queryKitData.Configuration);
+        }
+
+        return appliedQueryable;
+    }
+    
+    public static IQueryable<TEntity> ApplyQueryKitFilter<TEntity>(this IQueryable<TEntity> source, string filter, IQueryKitConfiguration? config = null) 
+        where TEntity : class
     {
         if (string.IsNullOrWhiteSpace(filter))
         {
             return source;
         }
 
-        var expression = FilterParser.ParseFilter<T>(filter, config);
+        var expression = FilterParser.ParseFilter<TEntity>(filter, config);
         return source.Where(expression);
     }
 

@@ -1,8 +1,14 @@
+using QueryKit.Configuration;
+using QueryKit.WebApiTestProject.Entities.Ingredients;
+using QueryKit.WebApiTestProject.Entities.Ingredients.Models;
+using QueryKit.WebApiTestProject.Entities.Recipes;
+
 namespace QueryKit.UnitTests;
 
 using Bogus;
 using Exceptions;
 using FluentAssertions;
+using SharedTestingHelper.Fakes.Recipes;
 using WebApiTestProject.Entities;
 
 public class FilterParserTests
@@ -532,4 +538,266 @@ public class FilterParserTests
         act.Should().Throw<UnknownFilterPropertyException>()
             .WithMessage($"The filter property '{firstWord}' was not recognized.");
     }
+
+    [Fact]
+    public void can_filter_within_collection()
+    {
+        var faker = new Faker();
+        var ingredientName = faker.Lorem.Sentence();
+        var fakeRecipeOne = new FakeRecipeBuilder().Build();
+        fakeRecipeOne.AddIngredient(Ingredient.Create(new IngredientForCreation(){Name =  ingredientName}));
+        var input = $"Ingredients.Name == \"{ingredientName}\"";
+        var config = new QueryKitConfiguration(settings =>
+        {
+            settings.Property<Recipe>(x => x.Ingredients.Select(y => y.Name)).PreventSort();
+        });
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
+
+        filterExpression.Compile().Invoke(fakeRecipeOne).Should().BeTrue();
+    }
+
+    [Fact]
+    public void can_filter_within_nested_collection()
+    {
+        var faker = new Faker();
+        var ingredientName = faker.Lorem.Sentence();
+        var prepText = faker.Lorem.Sentence();
+        var fakeRecipeOne = new FakeRecipeBuilder().Build();
+        fakeRecipeOne.AddIngredient(Ingredient.Create(new IngredientForCreation(){Name =  ingredientName}));
+        fakeRecipeOne.Ingredients.First().Preparations.Add(new IngredientPreparation() { Text = prepText });
+        var input = $"Ingredients.Preparations.Text == \"{prepText}\"";
+        var config = new QueryKitConfiguration(settings =>
+        {
+            settings.Property<Recipe>(x => x.Ingredients.SelectMany(y => y.Preparations).Select(y=> y.Text)).PreventSort();
+        });
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
+
+        filterExpression.Compile().Invoke(fakeRecipeOne).Should().BeTrue();
+    }
+    
+    [Fact]
+    public void simple_child_collection_for_string_equal()
+    {
+        var input = """Ingredients.Name == "flour" """;
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input);
+        filterExpression.ToString().Should()
+            .Be(""""x => x.Ingredients.Select(y => y.Name).Any(z => (z == "flour"))"""");
+    }
+    
+    [Fact]
+    public void simple_child_collection_for_string_case_insensitive_equal()
+    {
+        var input = """Ingredients.Name ==* "flour" """;
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input);
+        filterExpression.ToString().Should()
+            .Be(""""x => x.Ingredients.Select(y => y.Name).Any(z => (z.ToLower() == "flour".ToLower()))"""");
+    }
+    
+    [Fact]
+    public void simple_child_collection_for_string_not_equal()
+    {
+        var input = """Ingredients.Name != "flour" """;
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input);
+        filterExpression.ToString().Should()
+            .Be(""""x => x.Ingredients.Select(y => y.Name).Any(z => (z != "flour"))"""");
+    }
+    
+    [Fact]
+    public void simple_child_collection_for_string_case_insensitive_not_equal()
+    {
+        var input = """Ingredients.Name !=* "flour" """;
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input);
+        filterExpression.ToString().Should()
+            .Be(""""x => x.Ingredients.Select(y => y.Name).Any(z => (z.ToLower() != "flour".ToLower()))"""");
+    }
+    
+    [Fact]
+    public void simple_child_collection_for_int_equals()
+    {
+        var input = """Ingredients.MinimumQuality == 5""";
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input);
+        filterExpression.ToString().Should()
+            .Be(""""x => x.Ingredients.Select(y => y.MinimumQuality).Any(z => (z == 5))"""");
+    }
+    
+    [Fact]
+    public void simple_child_collection_for_int_greater_than()
+    {
+        var input = """Ingredients.MinimumQuality > 5""";
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input);
+        filterExpression.ToString().Should()
+            .Be(""""x => x.Ingredients.Select(y => y.MinimumQuality).Any(z => (z > 5))"""");
+    }
+    
+    [Fact]
+    public void simple_child_collection_for_int_less_than()
+    {
+        var input = """Ingredients.MinimumQuality < 5""";
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input);
+        filterExpression.ToString().Should()
+            .Be(""""x => x.Ingredients.Select(y => y.MinimumQuality).Any(z => (z < 5))"""");
+    }
+    
+    [Fact]
+    public void simple_child_collection_for_int_greater_than_or_equal()
+    {
+        var input = """Ingredients.MinimumQuality >= 5""";
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input);
+        filterExpression.ToString().Should()
+            .Be(""""x => x.Ingredients.Select(y => y.MinimumQuality).Any(z => (z >= 5))"""");
+    }
+    
+    [Fact]
+    public void simple_child_collection_for_int_less_than_or_equal()
+    {
+        var input = """Ingredients.MinimumQuality <= 5""";
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input);
+        filterExpression.ToString().Should()
+            .Be(""""x => x.Ingredients.Select(y => y.MinimumQuality).Any(z => (z <= 5))"""");
+    }
+    
+    [Fact]
+    public void collection_contains_case_insensitive()
+    {
+        var input = """"Ingredients.Name @=* "waffle" """";
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input);
+        filterExpression.ToString().Should()
+            .Be(""""x => x.Ingredients.Select(y => y.Name).Any(z => z.ToLower().Contains("waffle".ToLower()))"""");
+    }
+    
+    [Fact]
+    public void collection_contains()
+    {
+        var input = """"Ingredients.Name @= "waffle" """";
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input);
+        filterExpression.ToString().Should()
+            .Be(""""x => x.Ingredients.Select(y => y.Name).Any(z => z.Contains("waffle"))"""");
+    }
+    
+    [Fact]
+    public void collection_starts_with()
+    {
+        var input = """"Ingredients.Name _= "waffle" """";
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input);
+        filterExpression.ToString().Should()
+            .Be(""""x => x.Ingredients.Select(y => y.Name).Any(z => z.StartsWith("waffle"))"""");
+    }
+    
+    [Fact]
+    public void collection_ends_with()
+    {
+        var input = """"Ingredients.Name _-= "waffle" """";
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input);
+        filterExpression.ToString().Should()
+            .Be(""""x => x.Ingredients.Select(y => y.Name).Any(z => z.EndsWith("waffle"))"""");
+    }
+    
+    [Fact]
+    public void collection_does_not_contains()
+    {
+        var input = """"Ingredients.Name !@= "waffle" """";
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input);
+        filterExpression.ToString().Should()
+            .Be(""""x => Not(x.Ingredients.Select(y => y.Name).Any(z => z.Contains("waffle")))"""");
+    }
+    
+    [Fact]
+    public void collection_does_not_starts_with()
+    {
+        var input = """"Ingredients.Name !_= "waffle" """";
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input);
+        filterExpression.ToString().Should()
+            .Be(""""x => Not(x.Ingredients.Select(y => y.Name).Any(z => z.StartsWith("waffle")))"""");
+    }
+    
+    [Fact]
+    public void collection_does_not_ends_with()
+    {
+        var input = """"Ingredients.Name !_-= "waffle" """";
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input);
+        filterExpression.ToString().Should()
+            .Be(""""x => Not(x.Ingredients.Select(y => y.Name).Any(z => z.EndsWith("waffle")))"""");
+    }
+    
+    [Fact]
+    public void collection_equals_with_all()
+    {
+        var input = """"Ingredients.Name %== "waffle" """";
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input);
+        filterExpression.ToString().Should()
+            .Be(""""x => x.Ingredients.Select(y => y.Name).All(z => (z == "waffle"))"""");
+    }
+    
+    [Fact]
+    public void collection_has_operator_greater_than()
+    {
+        var input = """"Ingredients #> 0"""";
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input);
+        filterExpression.ToString().Should()
+            .Be(""""x => (x.Ingredients.Count() > 0)"""");
+    }
+    
+    [Fact]
+    public void collection_has_operator_equal()
+    {
+        var input = """"Ingredients #== 0"""";
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input);
+        filterExpression.ToString().Should()
+            .Be(""""x => (x.Ingredients.Count() == 0)"""");
+    }
+    
+    [Fact]
+    public void collection_has_operator_not_equal()
+    {
+        var input = """"Ingredients #!= 3"""";
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input);
+        filterExpression.ToString().Should()
+            .Be(""""x => (x.Ingredients.Count() != 3)"""");
+    }
+    
+    [Fact]
+    public void collection_has_operator_greater_than_equal()
+    {
+        var input = """"Ingredients #>= 0"""";
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input);
+        filterExpression.ToString().Should()
+            .Be(""""x => (x.Ingredients.Count() >= 0)"""");
+    }
+    
+    [Fact]
+    public void primitive_collection_has()
+    {
+        var input = """Tags ^$ "winner" """;
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input);
+        filterExpression.ToString().Should()
+            .Be(""""x => x.Tags.Any(z => (z == "winner"))"""");
+    }
+    
+    [Fact]
+    public void primitive_collection_does_not_have()
+    {
+        var input = """Tags !^$ "winner" """;
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input);
+        filterExpression.ToString().Should()
+            .Be(""""x => x.Tags.Any(z => (z != "winner"))"""");
+    }
+    
+    [Fact]
+    public void primitive_collection_has_case_insensitive()
+    {
+        var input = """Tags ^$* "winner" """;
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input);
+        filterExpression.ToString().Should()
+            .Be(""""x => x.Tags.Any(z => (z.ToLower() == "winner".ToLower()))"""");
+    }
+    
+    [Fact]
+    public void primitive_collection_does_not_have_case_insensitive()
+    {
+        var input = """Tags !^$* "winner" """;
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input);
+        filterExpression.ToString().Should()
+            .Be(""""x => x.Tags.Any(z => (z.ToLower() != "winner".ToLower()))"""");
+    }
 }
+    
