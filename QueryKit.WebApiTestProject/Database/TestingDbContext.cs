@@ -1,5 +1,6 @@
 namespace QueryKit.WebApiTestProject.Database;
 
+using Entities.Ingredients;
 using Entities.Recipes;
 using Microsoft.EntityFrameworkCore;
 using QueryKit.WebApiTestProject.Entities;
@@ -16,6 +17,8 @@ public class TestingDbContext : DbContext
 
     public DbSet<TestingPerson> People { get; set; }
     public DbSet<Recipe> Recipes { get; set; }
+    public DbSet<IngredientPreparation> IngredientPreparations { get; set; }
+    public DbSet<Ingredient> Ingredients { get; set; }
     
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

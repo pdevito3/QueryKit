@@ -1,6 +1,7 @@
 ﻿
 namespace QueryKit;
 
+using System.Collections;
 using System.Globalization;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -43,23 +44,33 @@ public static class FilterParser
         select new string(first.Concat(rest).ToArray());
     
     private static Parser<ComparisonOperator> ComparisonOperatorParser =>
-        Parse.String(ComparisonOperator.EqualsOperator().Operator()).Text()
-            .Or(Parse.String(ComparisonOperator.NotEqualsOperator().Operator()).Text())
-            .Or(Parse.String(ComparisonOperator.GreaterThanOrEqualOperator().Operator()).Text())
-            .Or(Parse.String(ComparisonOperator.LessThanOrEqualOperator().Operator()).Text())
-            .Or(Parse.String(ComparisonOperator.GreaterThanOperator().Operator()).Text())
-            .Or(Parse.String(ComparisonOperator.LessThanOperator().Operator()).Text())
-            .Or(Parse.String(ComparisonOperator.ContainsOperator().Operator()).Text())
-            .Or(Parse.String(ComparisonOperator.StartsWithOperator().Operator()).Text())
-            .Or(Parse.String(ComparisonOperator.EndsWithOperator().Operator()).Text())
-            .Or(Parse.String(ComparisonOperator.NotContainsOperator().Operator()).Text())
-            .Or(Parse.String(ComparisonOperator.NotStartsWithOperator().Operator()).Text())
-            .Or(Parse.String(ComparisonOperator.NotEndsWithOperator().Operator()).Text())
-            .Or(Parse.String(ComparisonOperator.InOperator().Operator()).Text())
-            .Or(Parse.String(ComparisonOperator.SoundsLikeOperator().Operator()).Text())
-            .Or(Parse.String(ComparisonOperator.DoesNotSoundLikeOperator().Operator()).Text())
-        .SelectMany(op => Parse.Char(ComparisonOperator.CaseSensitiveAppendix).Optional(), (op, caseInsensitive) => new { op, caseInsensitive })
-        .Select(x => ComparisonOperator.GetByOperatorString(x.op, x.caseInsensitive.IsDefined));
+        Parse.Char(ComparisonOperator.AllPrefix).Optional().Select(opt => opt.IsDefined)
+            .Then(hasHash => 
+                Parse.String(ComparisonOperator.EqualsOperator().Operator()).Text()
+                    .Or(Parse.String(ComparisonOperator.NotEqualsOperator().Operator()).Text())
+                    .Or(Parse.String(ComparisonOperator.GreaterThanOrEqualOperator().Operator()).Text())
+                    .Or(Parse.String(ComparisonOperator.LessThanOrEqualOperator().Operator()).Text())
+                    .Or(Parse.String(ComparisonOperator.GreaterThanOperator().Operator()).Text())
+                    .Or(Parse.String(ComparisonOperator.LessThanOperator().Operator()).Text())
+                    .Or(Parse.String(ComparisonOperator.ContainsOperator().Operator()).Text())
+                    .Or(Parse.String(ComparisonOperator.StartsWithOperator().Operator()).Text())
+                    .Or(Parse.String(ComparisonOperator.EndsWithOperator().Operator()).Text())
+                    .Or(Parse.String(ComparisonOperator.NotContainsOperator().Operator()).Text())
+                    .Or(Parse.String(ComparisonOperator.NotStartsWithOperator().Operator()).Text())
+                    .Or(Parse.String(ComparisonOperator.NotEndsWithOperator().Operator()).Text())
+                    .Or(Parse.String(ComparisonOperator.InOperator().Operator()).Text())
+                    .Or(Parse.String(ComparisonOperator.SoundsLikeOperator().Operator()).Text())
+                    .Or(Parse.String(ComparisonOperator.DoesNotSoundLikeOperator().Operator()).Text())
+                    .Or(Parse.String(ComparisonOperator.HasCountEqualToOperator().Operator()).Text())
+                    .Or(Parse.String(ComparisonOperator.HasCountNotEqualToOperator().Operator()).Text())
+                    .Or(Parse.String(ComparisonOperator.HasCountGreaterThanOrEqualOperator().Operator()).Text())
+                    .Or(Parse.String(ComparisonOperator.HasCountLessThanOrEqualOperator().Operator()).Text())
+                    .Or(Parse.String(ComparisonOperator.HasCountGreaterThanOperator().Operator()).Text())
+                    .Or(Parse.String(ComparisonOperator.HasCountLessThanOperator().Operator()).Text())
+                    .Or(Parse.String(ComparisonOperator.HasOperator().Operator()).Text())
+                    .Or(Parse.String(ComparisonOperator.DoesNotHaveOperator().Operator()).Text())
+                    .SelectMany(op => Parse.Char(ComparisonOperator.CaseSensitiveAppendix).Optional(), (op, caseInsensitive) => new { op, caseInsensitive, hasHash })
+                    .Select(x => ComparisonOperator.GetByOperatorString(x.op, x.caseInsensitive.IsDefined, x.hasHash)));
 
     private static PropertyInfo? GetPropertyInfo(Type type, string propertyName)
         => type.GetProperty(propertyName, BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance);
@@ -151,6 +162,24 @@ public static class FilterParser
     private static Expression CreateRightExpr(Expression leftExpr, string right)
     {
         var targetType = leftExpr.Type;
+        return CreateRightExprFromType(targetType, right);
+    }
+
+    private static Expression CreateRightExprFromType(Type leftExprType, string right)
+    {
+        var isEnumerable = IsEnumerable(leftExprType);
+        var targetType = leftExprType;
+        if (isEnumerable)
+        {
+            if (int.TryParse(right, out var intVal))
+            {
+                // supports collection count
+                return Expression.Constant(intVal, typeof(int));
+            }
+            targetType = targetType.GetGenericArguments()[0];
+            return CreateRightExprFromType(targetType, right);
+        }
+        
         var rawType = targetType;
 
         targetType = TransformTargetTypeIfNullable(targetType);
@@ -159,9 +188,9 @@ public static class FilterParser
         {
             if (right == "null")
             {
-                return Expression.Constant(null, leftExpr.Type);
+                return Expression.Constant(null, leftExprType);
             }
-
+            
             if (right.StartsWith("[") && right.EndsWith("]"))
             {
                 var values = right.Trim('[', ']').Split(',').Select(x => x.Trim()).ToList();
@@ -273,7 +302,7 @@ public static class FilterParser
             }
 
             var convertedValue = conversionFunction(right);
-            return Expression.Constant(convertedValue, leftExpr.Type);
+            return Expression.Constant(convertedValue, leftExprType);
         }
 
         throw new InvalidOperationException($"Unsupported value '{right}' for type '{targetType.Name}'");
@@ -281,12 +310,26 @@ public static class FilterParser
 
     private static Type TransformTargetTypeIfNullable(Type targetType)
     {
-        if (targetType.IsGenericType && targetType.GetGenericTypeDefinition() == typeof(Nullable<>))
+        if (targetType.IsGenericType)
         {
-            targetType = Nullable.GetUnderlyingType(targetType);
+            if (targetType.GetGenericTypeDefinition() == typeof(Nullable<>))
+            {
+                targetType = Nullable.GetUnderlyingType(targetType);
+            }
         }
 
         return targetType;
+    }
+
+    private static bool IsEnumerable(Type targetType)
+    {
+        if (targetType == typeof(string))
+        {
+            return false;
+        }
+        return targetType.IsGenericType && targetType.GetGenericTypeDefinition() == typeof(IEnumerable<>) ||
+               targetType.GetInterfaces()
+                   .Any(x => x.IsGenericType && x.GetGenericTypeDefinition() == typeof(IEnumerable<>));
     }
 
     private static Parser<Expression> ComparisonExprParser<T>(ParameterExpression parameter, IQueryKitConfiguration? config)
@@ -320,6 +363,64 @@ public static class FilterParser
             var fullPropPath = leftList?.First();
             var propertyExpression = leftList?.Aggregate((Expression)parameter, (expr, propName) =>
             {
+                if (expr is MemberExpression member)
+                {
+                    if (IsEnumerable(member.Type))
+                    {
+                        var genericArgType = member.Type.GetGenericArguments()[0];
+                        var propertyType = genericArgType.GetProperty(propName).PropertyType;
+
+                        if (IsEnumerable(propertyType))
+                        {
+                            propertyType = propertyType.GetGenericArguments()[0];
+
+                            var linqMethod = "SelectMany";
+                            var selectMethod = typeof(Enumerable).GetMethods()
+                                .First(m => m.Name ==  linqMethod && m.GetParameters().Length == 2)
+                                .MakeGenericMethod(genericArgType, propertyType);
+
+                            var innerParameter = Expression.Parameter(genericArgType, "y");
+                            var propertyInfoForMethod = GetPropertyInfo(genericArgType, propName);
+                            Expression lambdaBody = Expression.PropertyOrField(innerParameter, propertyInfoForMethod.Name);
+
+                            var type = typeof(IEnumerable<>).MakeGenericType(propertyType);
+                            lambdaBody =  Expression.Lambda(Expression.Convert(lambdaBody, type), innerParameter);
+
+                            return Expression.Call(selectMethod, member, lambdaBody);
+                        }
+                        else
+                        {
+                            var selectMethod = typeof(Enumerable).GetMethods()
+                                .First(m => m.Name == "Select" && m.GetParameters().Length == 2)
+                                .MakeGenericMethod(genericArgType, genericArgType.GetProperty(propName).PropertyType);
+
+                            var innerParameter = Expression.Parameter(genericArgType, "y");
+                            var propertyInfoForMethod = GetPropertyInfo(genericArgType, propName);
+                            var lambdaBody = Expression.PropertyOrField(innerParameter, propertyInfoForMethod.Name);
+                            var selectLambda = Expression.Lambda(lambdaBody, innerParameter);
+
+                            return Expression.Call(null, selectMethod, member, selectLambda);
+                        }
+                    }
+                }
+
+                if (expr is MethodCallExpression call)
+                {
+                    var innerGenericType = GetInnerGenericType(call.Method.ReturnType);
+                    var propertyInfoForMethod = GetPropertyInfo(innerGenericType, propName);
+
+                    var linqMethod = IsEnumerable(innerGenericType) ? "SelectMany" : "Select";
+                    var selectMethod = typeof(Enumerable).GetMethods()
+                        .First(m => m.Name == linqMethod && m.GetParameters().Length == 2)
+                        .MakeGenericMethod(innerGenericType, propertyInfoForMethod.PropertyType);
+
+                    var innerParameter = Expression.Parameter(innerGenericType, "y");
+                    var lambdaBody = Expression.PropertyOrField(innerParameter, propertyInfoForMethod.Name);
+                    var selectLambda = Expression.Lambda(lambdaBody, innerParameter);
+
+                    return Expression.Call(selectMethod, expr, selectLambda);
+                }
+
                 var propertyInfo = GetPropertyInfo(expr.Type, propName);
                 var actualPropertyName = propertyInfo?.Name ?? propName;
                 try
@@ -344,6 +445,17 @@ public static class FilterParser
 
             return propertyExpression;
         });
+    }
+
+    private static Type? GetInnerGenericType(Type type)
+    {
+        if (!IsEnumerable(type))
+        {
+            return type;
+        }
+
+        var innerGenericType = type.GetGenericArguments()[0];
+        return GetInnerGenericType(innerGenericType);
     }
     
     private static Parser<Expression> AtomicExprParser<T>(ParameterExpression parameter, IQueryKitConfiguration? config = null)
