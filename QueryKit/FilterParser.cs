@@ -171,7 +171,7 @@ public static class FilterParser
         var targetType = leftExprType;
         if (isEnumerable)
         {
-            if (int.TryParse(right, out var intVal))
+            if (int.TryParse(right, out var intVal) && targetType.GetGenericArguments().All(arg => arg != typeof(string)))
             {
                 // supports collection count
                 return Expression.Constant(intVal, typeof(int));
