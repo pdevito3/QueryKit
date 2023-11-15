@@ -79,12 +79,6 @@ var input = """FirstName == "Jane" && Age < 10""";
 var input = """FirstName == "Jane" || FirstName == "John" """;
 ```
 
-Additionally, you can use `^^` for an `in` operator. You can add an `*` and use `^^*` for case-insensitivity as well:
-
-```c#
-var input = """(Age ^^ [20, 30, 40]) && (BirthMonth ^^* ["January", "February", "March"]) || (Id ^^ ["6d623e92-d2cf-4496-a2df-f49fa77328ee"])""";
-```
-
 ### Order of Operations
 
 You can use order of operation with parentheses like this:
@@ -115,8 +109,15 @@ There's a wide variety of comparison operators that use the same base syntax as 
 | Does Not Sound Like   | !~       | N/A                       | N/A            |
 | Has                   | ^$       | ^$*                       | N/A            |
 | Does Not Have         | !^$      | !^$*                      | N/A            |
+| In                    | ^^       | ^^*                       | N/A            |
 
 > `Sounds Like` and `Does Not Sound Like` requires a soundex configuration on your DbContext. For more info see [the docs below](#soundex)
+
+Here's Example for the `in` operator:
+
+```c#
+var input = """(Age ^^ [20, 30, 40]) && (BirthMonth ^^* ["January", "February", "March"]) || (Id ^^ ["6d623e92-d2cf-4496-a2df-f49fa77328ee"])""";
+```
 
 ### Filtering Notes
 
@@ -332,7 +333,7 @@ public sealed class PersonConfiguration : IEntityTypeConfiguration<SpecialPerson
 ```
 
 > **Warning**
-> EF properties configured with `HasConversion` are not supported at this time -- if this is a blocker for you, i'd love to hear your use case
+> EF properties configured with `HasConversion` are not supported at this time
 
 ## Sorting
 
