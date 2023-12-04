@@ -156,7 +156,6 @@ public static class FilterParser
         { typeof(ulong), value => ulong.Parse(value, CultureInfo.InvariantCulture) },
         { typeof(ushort), value => ushort.Parse(value, CultureInfo.InvariantCulture) },
         { typeof(sbyte), value => sbyte.Parse(value, CultureInfo.InvariantCulture) },
-        // { typeof(Enum), value => Enum.Parse(typeof(T), value) },
     };
 
     private static Expression CreateRightExpr(Expression leftExpr, string right)
@@ -303,6 +302,12 @@ public static class FilterParser
 
             var convertedValue = conversionFunction(right);
             return Expression.Constant(convertedValue, leftExprType);
+        }
+
+        if (targetType.IsEnum)
+        {
+            var enumValue = Enum.Parse(targetType, right);
+            return Expression.Constant(enumValue, targetType);
         }
 
         throw new InvalidOperationException($"Unsupported value '{right}' for type '{targetType.Name}'");
