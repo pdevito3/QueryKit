@@ -187,6 +187,21 @@ If you want to filter on the count of a collection, you can prefix some of the o
 var input = """"Ingredients #>= 0"""";
 ```
 
+#### Filtering Enums
+
+You can filter enums with their respective integer value:
+
+```csharp
+var input = "BirthMonth == 1";
+
+public enum BirthMonthEnum
+{
+    January = 1,
+    February = 2,
+	  //...
+}
+```
+
 ### Settings
 
 #### Property Settings

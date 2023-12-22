@@ -156,7 +156,6 @@ public static class FilterParser
         { typeof(ulong), value => ulong.Parse(value, CultureInfo.InvariantCulture) },
         { typeof(ushort), value => ushort.Parse(value, CultureInfo.InvariantCulture) },
         { typeof(sbyte), value => sbyte.Parse(value, CultureInfo.InvariantCulture) },
-        // { typeof(Enum), value => Enum.Parse(typeof(T), value) },
     };
 
     private static Expression CreateRightExpr(Expression leftExpr, string right)
@@ -181,7 +180,7 @@ public static class FilterParser
         }
         
         var rawType = targetType;
-
+        
         targetType = TransformTargetTypeIfNullable(targetType);
 
         if (TypeConversionFunctions.TryGetValue(targetType, out var conversionFunction))
@@ -303,6 +302,24 @@ public static class FilterParser
 
             var convertedValue = conversionFunction(right);
             return Expression.Constant(convertedValue, leftExprType);
+        }
+
+        if (rawType.IsEnum || (Nullable.GetUnderlyingType(rawType)?.IsEnum ?? false))
+        {
+            var enumType = Nullable.GetUnderlyingType(rawType) ?? rawType;
+    
+            if (right == "null" && Nullable.GetUnderlyingType(rawType) != null)
+            {
+                return Expression.Constant(null, rawType);
+            }
+            
+            var enumValue = Enum.Parse(enumType, right);
+            var constant = Expression.Constant(enumValue, enumType);
+
+            if (rawType == enumType) return constant;
+            
+            var nullableCtor = rawType.GetConstructor(new[] {enumType});
+            return Expression.New(nullableCtor, constant);
         }
 
         throw new InvalidOperationException($"Unsupported value '{right}' for type '{targetType.Name}'");

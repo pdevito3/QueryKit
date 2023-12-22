@@ -16,22 +16,22 @@ public class DatabaseSortingTests : TestBase
         var fakePersonOne = new FakeTestingPersonBuilder()
             .WithTitle("alpha")
             .WithAge(10)
-            .WithBirthMonth("January")
+            .WithBirthMonth(BirthMonthEnum.January)
             .Build();
         var fakePersonTwo = new FakeTestingPersonBuilder()
             .WithTitle("beta")
             .WithAge(100)
-            .WithBirthMonth("February")
+            .WithBirthMonth(BirthMonthEnum.February)
             .Build();
         var fakePersonThree = new FakeTestingPersonBuilder()
             .WithTitle("beta")
             .WithAge(50)
-            .WithBirthMonth("March")
+            .WithBirthMonth(BirthMonthEnum.March)
             .Build();
         var fakePersonFour = new FakeTestingPersonBuilder()
             .WithTitle("beta")
             .WithAge(20)
-            .WithBirthMonth("April")
+            .WithBirthMonth(BirthMonthEnum.April)
             .Build();
         await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo, fakePersonThree, fakePersonFour);
 
@@ -177,12 +177,12 @@ public class DatabaseSortingTests : TestBase
         var fakePersonOne = new FakeTestingPersonBuilder()
             .WithTitle("alpha")
             .WithAge(10)
-            .WithBirthMonth("January")
+            .WithBirthMonth(BirthMonthEnum.January)
             .Build();
         var fakePersonTwo = new FakeTestingPersonBuilder()
             .WithTitle("beta")
             .WithAge(100)
-            .WithBirthMonth("February")
+            .WithBirthMonth(BirthMonthEnum.February)
             .Build();
         await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
 
@@ -213,17 +213,17 @@ public class DatabaseSortingTests : TestBase
         var fakePersonTwo = new FakeTestingPersonBuilder()
             .WithTitle("alpha")
             .WithAge(100)
-            .WithBirthMonth("January")
+            .WithBirthMonth(BirthMonthEnum.January)
             .Build();
         var fakePersonThree = new FakeTestingPersonBuilder()
             .WithTitle("beta")
             .WithAge(50)
-            .WithBirthMonth("March")
+            .WithBirthMonth(BirthMonthEnum.March)
             .Build();
         var fakePersonFour = new FakeTestingPersonBuilder()
             .WithTitle("beta")
             .WithAge(20)
-            .WithBirthMonth("February")
+            .WithBirthMonth(BirthMonthEnum.February)
             .Build();
         await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo, fakePersonThree, fakePersonFour);
 
