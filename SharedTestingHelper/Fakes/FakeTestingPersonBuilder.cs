@@ -27,7 +27,7 @@ public class FakeTestingPersonBuilder
         return this;
     }
 
-    public FakeTestingPersonBuilder WithBirthMonth(string value)
+    public FakeTestingPersonBuilder WithBirthMonth(BirthMonthEnum? value)
     {
         _baseTestingPerson.BirthMonth = value;
         return this;

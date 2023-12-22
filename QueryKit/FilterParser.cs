@@ -180,7 +180,7 @@ public static class FilterParser
         }
         
         var rawType = targetType;
-
+        
         targetType = TransformTargetTypeIfNullable(targetType);
 
         if (TypeConversionFunctions.TryGetValue(targetType, out var conversionFunction))
@@ -304,10 +304,22 @@ public static class FilterParser
             return Expression.Constant(convertedValue, leftExprType);
         }
 
-        if (targetType.IsEnum)
+        if (rawType.IsEnum || (Nullable.GetUnderlyingType(rawType)?.IsEnum ?? false))
         {
-            var enumValue = Enum.Parse(targetType, right);
-            return Expression.Constant(enumValue, targetType);
+            var enumType = Nullable.GetUnderlyingType(rawType) ?? rawType;
+    
+            if (right == "null" && Nullable.GetUnderlyingType(rawType) != null)
+            {
+                return Expression.Constant(null, rawType);
+            }
+            
+            var enumValue = Enum.Parse(enumType, right);
+            var constant = Expression.Constant(enumValue, enumType);
+
+            if (rawType == enumType) return constant;
+            
+            var nullableCtor = rawType.GetConstructor(new[] {enumType});
+            return Expression.New(nullableCtor, constant);
         }
 
         throw new InvalidOperationException($"Unsupported value '{right}' for type '{targetType.Name}'");

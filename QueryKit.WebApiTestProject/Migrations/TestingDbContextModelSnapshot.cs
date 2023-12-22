@@ -18,7 +18,7 @@ namespace QueryKit.WebApiTestProject.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "7.0.5")
+                .HasAnnotation("ProductVersion", "8.0.0")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "fuzzystrmatch");
@@ -174,8 +174,8 @@ namespace QueryKit.WebApiTestProject.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("age");
 
-                    b.Property<string>("BirthMonth")
-                        .HasColumnType("text")
+                    b.Property<int?>("BirthMonth")
+                        .HasColumnType("integer")
                         .HasColumnName("birth_month");
 
                     b.Property<DateOnly?>("Date")

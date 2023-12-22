@@ -22,7 +22,7 @@ namespace QueryKit.WebApiTestProject.Migrations
                     id = table.Column<Guid>(type: "uuid", nullable: false),
                     title = table.Column<string>(type: "text", nullable: true),
                     age = table.Column<int>(type: "integer", nullable: true),
-                    birth_month = table.Column<string>(type: "text", nullable: true),
+                    birth_month = table.Column<int>(type: "integer", nullable: true),
                     rating = table.Column<decimal>(type: "numeric", nullable: true),
                     date = table.Column<DateOnly>(type: "date", nullable: true),
                     favorite = table.Column<bool>(type: "boolean", nullable: true),

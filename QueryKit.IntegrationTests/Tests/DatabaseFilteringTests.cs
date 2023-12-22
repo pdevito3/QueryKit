@@ -501,7 +501,7 @@ public class DatabaseFilteringTests : TestBase
         var fakePersonOne = new FakeTestingPersonBuilder()
             .WithTitle("Waffle & Chicken")
             .WithAge(35)
-            .WithBirthMonth("January")
+            .WithBirthMonth(BirthMonthEnum.January)
             .WithRating(4.0M)
             .WithSpecificDate(new DateTime(2022, 07, 01, 00, 00, 03, DateTimeKind.Utc))
             .WithDate(DateOnly.FromDateTime(new DateTime(2022, 07, 01)))
@@ -509,13 +509,13 @@ public class DatabaseFilteringTests : TestBase
         var fakePersonTwo = new FakeTestingPersonBuilder()
             .WithTitle("Lamb")
             .WithAge(17)
-            .WithBirthMonth("February")
+            .WithBirthMonth(BirthMonthEnum.February)
             .WithRating(3.4M)
             .WithSpecificDate(new DateTime(2022, 07, 01, 00, 00, 03, DateTimeKind.Utc))
             .Build();
         await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
         
-        var input = $"""""((Title @=* "waffle & chicken" && Age > 30) || Id == "{fakePersonOne.Id}" || Title == "lamb" || Title == null) && (Age < 18 || (BirthMonth == "January" && Title _= "ally")) || Rating > 3.5 || SpecificDate == 2022-07-01T00:00:03Z && (Date == 2022-07-01 || Time == 00:00:03)""""";
+        var input = $"""""((Title @=* "waffle & chicken" && Age > 30) || Id == "{fakePersonOne.Id}" || Title == "lamb" || Title == null) && (Age < 18 || (BirthMonth == 1 && Title _= "ally")) || Rating > 3.5 || SpecificDate == 2022-07-01T00:00:03Z && (Date == 2022-07-01 || Time == 00:00:03)""""";
 
         // Act
         var queryablePeople = testingServiceScope.DbContext().People;
