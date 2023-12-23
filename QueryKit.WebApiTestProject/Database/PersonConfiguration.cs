@@ -26,5 +26,18 @@ public sealed class PersonConfiguration : IEntityTypeConfiguration<TestingPerson
             opts.Property(x => x.Country).HasColumnName("physical_address_country");
         }).Navigation(x => x.PhysicalAddress)
             .IsRequired();
+
+        // builder.ComplexProperty(
+        //     x => x.PhysicalAddress,
+        //     y =>
+        //     {
+        //         y.Property(e => e.Line1).HasColumnName("physical_address_line1");
+        //         y.Property(e => e.Line2).HasColumnName("physical_address_line2");
+        //         y.Property(e => e.City).HasColumnName("physical_address_city");
+        //         y.Property(e => e.State).HasColumnName("physical_address_state");
+        //         y.ComplexProperty(e => e.PostalCode, z
+        //             => z.Property(s => s.Value).HasColumnName("physical_address_postal_code"));
+        //         y.Property(e => e.Country).HasColumnName("physical_address_country");
+        //     });
     }
 }
