@@ -13,7 +13,7 @@ using QueryKit.WebApiTestProject.Database;
 namespace QueryKit.WebApiTestProject.Migrations
 {
     [DbContext(typeof(TestingDbContext))]
-    [Migration("20231222014351_BaseTestingMigration")]
+    [Migration("20231223182524_BaseTestingMigration")]
     partial class BaseTestingMigration
     {
         /// <inheritdoc />
@@ -159,6 +159,15 @@ namespace QueryKit.WebApiTestProject.Migrations
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("visibility");
+
+                    b.ComplexProperty<Dictionary<string, object>>("CollectionEmail", "QueryKit.WebApiTestProject.Entities.Recipes.Recipe.CollectionEmail#EmailAddress", b1 =>
+                        {
+                            b1.IsRequired();
+
+                            b1.Property<string>("Value")
+                                .HasColumnType("text")
+                                .HasColumnName("collection_email");
+                        });
 
                     b.HasKey("Id")
                         .HasName("pk_recipes");

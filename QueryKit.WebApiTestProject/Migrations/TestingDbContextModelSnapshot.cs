@@ -157,6 +157,15 @@ namespace QueryKit.WebApiTestProject.Migrations
                         .HasColumnType("text")
                         .HasColumnName("visibility");
 
+                    b.ComplexProperty<Dictionary<string, object>>("CollectionEmail", "QueryKit.WebApiTestProject.Entities.Recipes.Recipe.CollectionEmail#EmailAddress", b1 =>
+                        {
+                            b1.IsRequired();
+
+                            b1.Property<string>("Value")
+                                .HasColumnType("text")
+                                .HasColumnName("collection_email");
+                        });
+
                     b.HasKey("Id")
                         .HasName("pk_recipes");
 

@@ -49,6 +49,12 @@ public class FakeRecipeBuilder
         return this;
     }
     
+    public FakeRecipeBuilder WithCollectionEmail(string collectionEmail)
+    {
+        _creationData.CollectionEmail = collectionEmail;
+        return this;
+    }
+    
     public Recipe Build()
     {
         var result = Recipe.Create(_creationData);

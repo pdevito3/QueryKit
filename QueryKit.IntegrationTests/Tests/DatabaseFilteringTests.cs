@@ -468,6 +468,35 @@ public class DatabaseFilteringTests : TestBase
     }
     
     [Fact]
+    public async Task can_filter_nested_property_using_ownsone_with_alias()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var faker = new Faker();
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithPhysicalAddress(new Address(faker.Address.StreetAddress()
+                , faker.Address.SecondaryAddress()
+                , faker.Address.City()
+                , faker.Address.State()
+                , faker.Address.ZipCode()
+                , faker.Address.Country()))
+            .Build();
+        await testingServiceScope.InsertAsync(fakePersonOne);
+        var input = $"""state == "{fakePersonOne.PhysicalAddress.State}" """;
+
+        // Act
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.PhysicalAddress.State).HasQueryName("state");
+        });
+        var people = testingServiceScope.DbContext().People.ApplyQueryKitFilter(input, config).ToList();
+
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakePersonOne.Id);
+    }
+    
+    [Fact]
     public async Task can_filter_by_decimal()
     {
         // Arrange
@@ -726,5 +755,63 @@ public class DatabaseFilteringTests : TestBase
         people.Count.Should().Be(1);
         people.FirstOrDefault(x => x.Id == fakeRecipeOne.Id).Should().NotBeNull();
         people.FirstOrDefault(x => x.Id == fakeRecipeTwo.Id).Should().BeNull();
+    }
+    
+    [Fact]
+    public async Task can_filter_with_child_props_for_complex_property()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var faker = new Faker();
+        var fakePersonOne = new FakeRecipeBuilder()
+            .WithCollectionEmail(faker.Internet.Email())
+            .Build();
+        var fakePersonTwo = new FakeRecipeBuilder()
+            .Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+        
+        var input = $"""CollectionEmail.Value == "{fakePersonOne.CollectionEmail.Value}" """;
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().Recipes;
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<Recipe>(x => x.CollectionEmail.Value);//.HasQueryName("email");
+        });
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input, config);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakePersonOne.Id);
+    }
+    
+    [Fact]
+    public async Task can_filter_with_child_props_for_complex_property_with_alias()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var faker = new Faker();
+        var fakePersonOne = new FakeRecipeBuilder()
+            .WithCollectionEmail(faker.Internet.Email())
+            .Build();
+        var fakePersonTwo = new FakeRecipeBuilder()
+            .Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+        
+        var input = $"""email == "{fakePersonOne.CollectionEmail.Value}" """;
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().Recipes;
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<Recipe>(x => x.CollectionEmail.Value).HasQueryName("email");
+        });
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input, config);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakePersonOne.Id);
     }
 }

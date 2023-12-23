@@ -8,5 +8,5 @@ public sealed class RecipeForCreation
     public int? Rating { get; set; }
     public DateOnly? DateOfOrigin { get; set; }
     public bool HaveMadeItMyself { get; set; }
-
+    public string CollectionEmail { get; set; }
 }

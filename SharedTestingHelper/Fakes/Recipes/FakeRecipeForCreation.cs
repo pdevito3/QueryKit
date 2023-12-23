@@ -9,5 +9,6 @@ public sealed class FakeRecipeForCreation : AutoFaker<RecipeForCreation>
     public FakeRecipeForCreation()
     {
         RuleFor(r => r.Visibility, f => f.PickRandom<VisibilityEnum>(VisibilityEnum.List).Name);
+        RuleFor(x => x.CollectionEmail, f => f.Person.Email);
     }
 }

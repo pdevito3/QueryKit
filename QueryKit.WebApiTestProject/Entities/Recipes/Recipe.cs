@@ -23,6 +23,8 @@ public class Recipe : BaseEntity
         }
     }
 
+    public EmailAddress CollectionEmail { get; private set; }
+    
     public string Directions { get; private set; }
 
     public int? Rating { get; private set; }
@@ -55,6 +57,7 @@ public class Recipe : BaseEntity
         newRecipe.Rating = recipeForCreation.Rating;
         newRecipe.DateOfOrigin = recipeForCreation.DateOfOrigin;
         newRecipe.HaveMadeItMyself = recipeForCreation.HaveMadeItMyself;
+        newRecipe.CollectionEmail = new EmailAddress(recipeForCreation.CollectionEmail);
         return newRecipe;
     }
 
@@ -66,6 +69,7 @@ public class Recipe : BaseEntity
         Rating = recipeForUpdate.Rating;
         DateOfOrigin = recipeForUpdate.DateOfOrigin;
         HaveMadeItMyself = recipeForUpdate.HaveMadeItMyself;
+        CollectionEmail = new EmailAddress(recipeForUpdate.CollectionEmail);
         return this;
     }
     

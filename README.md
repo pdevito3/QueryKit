@@ -331,13 +331,18 @@ public sealed class PersonConfiguration : IEntityTypeConfiguration<SpecialPerson
     public void Configure(EntityTypeBuilder<SpecialPerson> builder)
     {
         builder.HasKey(x => x.Id);
-        
-      // Option 1
+      
+      	// Option 1 (as of .NET 8)
+      	builder.ComplexProperty(x => x.Email,
+            x => x.Property(y => y.Value)
+                .HasColumnName("email")); 
+      
+      	// Option 2
         builder.Property(x => x.Email)
             .HasConversion(x => x.Value, x => new EmailAddress(x))
             .HasColumnName("email");      
       
-        // Option 2      
+        // Option 3   
         builder.OwnsOne(x => x.Email, opts =>
         {
             opts.Property(x => x.Value).HasColumnName("email");

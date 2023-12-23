@@ -13,6 +13,10 @@ public sealed class RecipeConfiguration : IEntityTypeConfiguration<Recipe>
     {
         builder.Property(x => x.Tags).HasColumnType("text[]");
 
+        builder.ComplexProperty(x => x.CollectionEmail,
+            x => x.Property(y => y.Value)
+                .HasColumnName("collection_email"));
+
         // example for a simple 1:1 value object
         // builder.Property(x => x.Percent)
         //     .HasConversion(x => x.Value, x => new Percent(x))
