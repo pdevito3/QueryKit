@@ -114,7 +114,7 @@ There's a wide variety of comparison operators that use the same base syntax as 
 
 > `Sounds Like` and `Does Not Sound Like` requires a soundex configuration on your DbContext. For more info see [the docs below](#soundex)
 
-Here's Example for the `in` operator:
+Here's an example for the `in` operator:
 
 ```c#
 var input = """(Age ^^ [20, 30, 40]) && (BirthMonth ^^* ["January", "February", "March"]) || (Id ^^ ["6d623e92-d2cf-4496-a2df-f49fa77328ee"])""";
