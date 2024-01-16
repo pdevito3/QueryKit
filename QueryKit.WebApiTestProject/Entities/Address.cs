@@ -22,4 +22,6 @@ public class Address : ValueObject
         PostalCode = postalCode;
         Country = country;
     }
+
+    private Address() { }
 }

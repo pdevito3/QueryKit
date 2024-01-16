@@ -22,6 +22,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
     public static ComparisonOperator CaseSensitiveNotStartsWithOperator = new NotStartsWithType();
     public static ComparisonOperator CaseSensitiveNotEndsWithOperator = new NotEndsWithType();
     public static ComparisonOperator CaseSensitiveInOperator = new InType();
+    public static ComparisonOperator CaseSensitiveNotInOperator = new NotInType();
     public static ComparisonOperator CaseSensitiveSoundsLikeOperator = new SoundsLikeType();
     public static ComparisonOperator CaseSensitiveDoesNotSoundLikeOperator = new DoesNotSoundLikeType();
     public static ComparisonOperator CaseSensitiveHasCountEqualToOperator = new HasCountEqualToType();
@@ -46,6 +47,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
     public static ComparisonOperator NotStartsWithOperator(bool caseInsensitive = false, bool usesAll = false) => new NotStartsWithType(caseInsensitive);
     public static ComparisonOperator NotEndsWithOperator(bool caseInsensitive = false, bool usesAll = false) => new NotEndsWithType(caseInsensitive);
     public static ComparisonOperator InOperator(bool caseInsensitive = false, bool usesAll = false) => new InType(caseInsensitive);
+    public static ComparisonOperator NotInOperator(bool caseInsensitive = false, bool usesAll = false) => new NotInType(caseInsensitive);
     public static ComparisonOperator SoundsLikeOperator(bool caseInsensitive = false, bool usesAll = false) => new SoundsLikeType(caseInsensitive);
     public static ComparisonOperator DoesNotSoundLikeOperator(bool caseInsensitive = false, bool usesAll = false) => new DoesNotSoundLikeType(caseInsensitive);
     public static ComparisonOperator HasCountEqualToOperator(bool caseInsensitive = false, bool usesAll = false) => new HasCountEqualToType(caseInsensitive);
@@ -119,6 +121,10 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         if (comparisonOperator is InType)
         {
             newOperator = new InType(caseInsensitive, usesAll);
+        }
+        if (comparisonOperator is NotInType)
+        {
+            newOperator = new NotInType(caseInsensitive, usesAll);
         }
         if (comparisonOperator is SoundsLikeType)
         {
@@ -683,6 +689,54 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
             throw new QueryKitParsingException("DoesNotHaveType is only supported for collections");
         }
     }
+    
+    private class NotInType : ComparisonOperator
+    {
+        public NotInType(bool caseInsensitive = false, bool usesAll = false) : base("!^^", 23, caseInsensitive, usesAll)
+        {
+        }
+
+        public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
+        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
+        {
+            var leftType = left.Type;
+
+            if (right is NewArrayExpression newArrayExpression)
+            {
+                var listType = typeof(List<>).MakeGenericType(leftType);
+                var list = Activator.CreateInstance(listType);
+
+                foreach (var value in newArrayExpression.Expressions)
+                {
+                    listType.GetMethod("Add").Invoke(list, new[] { ((ConstantExpression)value).Value });
+                }
+
+                right = Expression.Constant(list, listType);
+            }
+
+            // Get the Contains method with the correct generic type
+            var containsMethod = typeof(ICollection<>)
+                .MakeGenericType(leftType)
+                .GetMethod("Contains");
+
+            if (CaseInsensitive && leftType == typeof(string))
+            {
+                var listType = typeof(List<string>);
+                var toLowerList = Activator.CreateInstance(listType);
+
+                var originalList = ((ConstantExpression)right).Value as IEnumerable<string>;
+                foreach (var value in originalList)
+                {
+                    listType.GetMethod("Add").Invoke(toLowerList, new[] { value.ToLower() });
+                }
+                right = Expression.Constant(toLowerList, listType);
+                left = Expression.Call(left, typeof(string).GetMethod("ToLower", Type.EmptyTypes));
+            }
+
+            var containsExpression = Expression.Call(right, containsMethod, left);
+            return Expression.Not(containsExpression);
+        }
+    }
 
     internal class ComparisonAliasMatch
     {
@@ -758,6 +812,11 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         {
             matches.Add(new ComparisonAliasMatch { Alias = aliases.InOperator, Operator = InOperator().Operator() });
             matches.Add(new ComparisonAliasMatch { Alias = $"{aliases.InOperator}{caseInsensitiveAppendix}", Operator = $"{InOperator(true).Operator()}" });
+        }
+        if(aliases.NotInOperator != NotInOperator().Operator())
+        {
+            matches.Add(new ComparisonAliasMatch { Alias = aliases.NotInOperator, Operator = NotInOperator().Operator() });
+            matches.Add(new ComparisonAliasMatch { Alias = $"{aliases.NotInOperator}{caseInsensitiveAppendix}", Operator = $"{NotInOperator(true).Operator()}" });
         }
         if(aliases.HasCountEqualToOperator != HasCountEqualToOperator().Operator())
         {

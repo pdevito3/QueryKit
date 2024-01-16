@@ -110,6 +110,7 @@ There's a wide variety of comparison operators that use the same base syntax as 
 | Has                   | ^$       | ^$*                       | N/A            |
 | Does Not Have         | !^$      | !^$*                      | N/A            |
 | In                    | ^^       | ^^*                       | N/A            |
+| Not In                | !^^      | !^^*                      | N/A            |
 
 > `Sounds Like` and `Does Not Sound Like` requires a soundex configuration on your DbContext. For more info see [the docs below](#soundex)
 
