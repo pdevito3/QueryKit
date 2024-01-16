@@ -16,6 +16,7 @@ public interface IQueryKitConfiguration
     public string NotStartsWithOperator { get; set; }
     public string NotEndsWithOperator { get; set; }
     public string InOperator { get; set; }
+    public string NotInOperator { get; set; }
     public string SoundsLikeOperator { get; set; }
     public string DoesNotSoundLikeOperator { get; set; }
     public string CaseInsensitiveAppendix { get; set; }
@@ -49,6 +50,7 @@ public class QueryKitConfiguration : IQueryKitConfiguration
     public string NotStartsWithOperator { get; set; }
     public string NotEndsWithOperator { get; set; }
     public string InOperator { get; set; }
+    public string NotInOperator { get; set; }
     public string SoundsLikeOperator { get; set; }
     public string DoesNotSoundLikeOperator { get; set; }
     public string HasCountEqualToOperator { get; set; }

@@ -697,6 +697,73 @@ public class DatabaseFilteringTests : TestBase
     }
 
     [Fact]
+    public async Task can_handle_not_in_for_int()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithAge(77435)
+            .Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder()
+            .WithAge(33451)
+            .Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+
+        var input = """Age !^^ [77435]""";
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+        
+        // Assert
+        people.Count.Should().BeGreaterOrEqualTo(1);
+        people.FirstOrDefault(x => x.Id == fakePersonOne.Id).Should().BeNull();
+        people.FirstOrDefault(x => x.Id == fakePersonTwo.Id).Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task can_handle_case_insensitive_not_in_for_string()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var fakePersonOne = new FakeTestingPersonBuilder().Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder().Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+
+        var input = $"""Title !^^* ["{fakePersonOne.Title.ToUpper()}"]""";
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+        
+        // Assert
+        people.Count.Should().BeGreaterOrEqualTo(1);
+        people.FirstOrDefault(x => x.Id == fakePersonOne.Id).Should().BeNull();
+        people.FirstOrDefault(x => x.Id == fakePersonTwo.Id).Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task can_handle_case_sensitive_not_in_for_string()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var fakePersonOne = new FakeTestingPersonBuilder().Build();
+        await testingServiceScope.InsertAsync(fakePersonOne);
+
+        var input = $"""Title !^^ ["{fakePersonOne.Title}"]""";
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+        
+        // Assert
+        people.FirstOrDefault(x => x.Id == fakePersonOne.Id).Should().BeNull();
+    }
+
+    [Fact]
     public async Task can_filter_on_child_entity()
     {
         // Arrange

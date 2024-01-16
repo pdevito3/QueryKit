@@ -59,6 +59,7 @@ public static class FilterParser
                     .Or(Parse.String(ComparisonOperator.NotStartsWithOperator().Operator()).Text())
                     .Or(Parse.String(ComparisonOperator.NotEndsWithOperator().Operator()).Text())
                     .Or(Parse.String(ComparisonOperator.InOperator().Operator()).Text())
+                    .Or(Parse.String(ComparisonOperator.NotInOperator().Operator()).Text())
                     .Or(Parse.String(ComparisonOperator.SoundsLikeOperator().Operator()).Text())
                     .Or(Parse.String(ComparisonOperator.DoesNotSoundLikeOperator().Operator()).Text())
                     .Or(Parse.String(ComparisonOperator.HasCountEqualToOperator().Operator()).Text())
