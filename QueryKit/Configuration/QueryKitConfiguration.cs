@@ -87,6 +87,7 @@ public class QueryKitConfiguration : IQueryKitConfiguration
         NotEndsWithOperator = settings.NotEndsWithOperator;
         InOperator = settings.InOperator;
         SoundsLikeOperator = settings.SoundsLikeOperator;
+        NotInOperator = settings.NotInOperator;
         DoesNotSoundLikeOperator = settings.DoesNotSoundLikeOperator;
         CaseInsensitiveAppendix = settings.CaseInsensitiveAppendix;
         AndOperator = settings.AndOperator;
