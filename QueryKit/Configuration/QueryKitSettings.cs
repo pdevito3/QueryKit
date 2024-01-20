@@ -19,6 +19,7 @@ public class QueryKitSettings
     public string NotStartsWithOperator { get; set; } = ComparisonOperator.NotStartsWithOperator().Operator();
     public string NotEndsWithOperator { get; set; } = ComparisonOperator.NotEndsWithOperator().Operator();
     public string InOperator { get; set; } = ComparisonOperator.InOperator().Operator();
+    public string NotInOperator { get; set; } = ComparisonOperator.NotInOperator().Operator();
     public string SoundsLikeOperator { get; set; } = ComparisonOperator.SoundsLikeOperator().Operator();
     public string DoesNotSoundLikeOperator { get; set; } = ComparisonOperator.DoesNotSoundLikeOperator().Operator();
     public string HasCountEqualToOperator { get; set; } = ComparisonOperator.HasCountEqualToOperator().Operator();
