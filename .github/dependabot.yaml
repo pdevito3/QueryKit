@@ -1,0 +1,31 @@
+version: 2
+
+updates:
+  - package-ecosystem: "nuget"
+    # Targeted directory, it will look for any csProj file recursively.
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    groups:
+      microsoft:
+        patterns:
+          - "Microsoft*"
+        update-types:
+          - "minor"
+          - "patch"
+      xunit:
+        patterns:
+          - "xunit*"
+        update-types:
+          - "minor"
+          - "patch"
+      testcontainers:
+        patterns:
+          - "Testcontainers*"
+        update-types:
+          - "minor"
+          - "patch"
+    commit-message:
+      prefix: "Package Dependencies"
+    # Temporarily disable PR limit, till initial dependency update goes through
+    open-pull-requests-limit: 1000
