@@ -22,15 +22,15 @@
     </ItemGroup>
 
     <ItemGroup Condition="'$(TargetFramework)' == 'net6.0'">
-        <PackageReference Include="Ardalis.SmartEnum" Version="2.1.0" />
+        <PackageReference Include="Ardalis.SmartEnum" Version="8.0.0" />
     </ItemGroup>
 
     <ItemGroup Condition="'$(TargetFramework)' == 'net7.0'">
-        <PackageReference Include="Ardalis.SmartEnum" Version="7.0.0" />
+        <PackageReference Include="Ardalis.SmartEnum" Version="8.0.0" />
     </ItemGroup>
 
     <ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
-        <PackageReference Include="Ardalis.SmartEnum" Version="7.0.0" />
+        <PackageReference Include="Ardalis.SmartEnum" Version="8.0.0" />
     </ItemGroup>
 
     <ItemGroup>
