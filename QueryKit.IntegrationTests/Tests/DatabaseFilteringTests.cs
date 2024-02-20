@@ -277,6 +277,34 @@ public class DatabaseFilteringTests : TestBase
     }
     
     [Fact]
+    public async Task can_filter_by_datetime_with_milliseconds_full_fractional()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var dateUtcNow = DateTime.UtcNow;
+        var dateInMilliPast = dateUtcNow.AddMilliseconds(-100);
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithSpecificDateTime(dateUtcNow)
+            .Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder()
+            .WithSpecificDateTime(dateInMilliPast)
+            .Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+
+        var input = $"""SpecificDateTime == "{fakePersonOne.SpecificDateTime:o}" """;
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakePersonOne.Id);
+    }
+    
+    [Fact]
     public async Task can_filter_by_dateonly()
     {
         // Arrange
@@ -843,7 +871,65 @@ public class DatabaseFilteringTests : TestBase
         var queryablePeople = testingServiceScope.DbContext().Recipes;
         var config = new QueryKitConfiguration(config =>
         {
-            config.Property<Recipe>(x => x.CollectionEmail.Value);//.HasQueryName("email");
+            config.Property<Recipe>(x => x.CollectionEmail.Value);
+        });
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input, config);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakePersonOne.Id);
+    }
+    
+    [Fact]
+    public async Task can_filter_with_child_props_for_aliased_complex_property()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var faker = new Faker();
+        var fakePersonOne = new FakeRecipeBuilder()
+            .WithCollectionEmail(faker.Internet.Email())
+            .Build();
+        var fakePersonTwo = new FakeRecipeBuilder()
+            .Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+        
+        var input = $"""email == "{fakePersonOne.CollectionEmail.Value}" """;
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().Recipes;
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<Recipe>(x => x.CollectionEmail.Value).HasQueryName("email");
+        });
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input, config);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakePersonOne.Id);
+    }
+    
+    [Fact]
+    public async Task can_filter_with_child_props_for_null_aliased_complex_property()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var faker = new Faker();
+        var fakePersonOne = new FakeRecipeBuilder()
+            .WithCollectionEmail(null)
+            .Build();
+        var fakePersonTwo = new FakeRecipeBuilder()
+            .Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+        
+        var input = $"""email == null""";
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().Recipes;
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<Recipe>(x => x.CollectionEmail.Value).HasQueryName("email");
         });
         var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input, config);
         var people = await appliedQueryable.ToListAsync();
