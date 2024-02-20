@@ -134,18 +134,18 @@ var input = """(Age ^^ [20, 30, 40]) && (BirthMonth ^^* ["January", "February", 
     var input = """""""""Title == """"lamb is great on a "gee-ro" not a "gy-ro" sandwich"""" """"""""";
     ```
 
-* Dates and times use ISO 8601 format:
+* Dates and times use ISO 8601 format and should be surrounded by double quotes:
 
-  * `DateOnly`: `var filterInput = "Birthday == 2022-07-01";`
+  * `DateOnly`: `var filterInput = """Birthday == "2022-07-01" """;`
   * `DateTimeOffset`: 
-    * `var filterInput = "Birthday == 2022-07-01T00:00:03Z";` 
-  * `DateTime`: `var filterInput = "Birthday == 2022-07-01";`
-    * `var filterInput = "Birthday == 2022-07-01T00:00:03";` 
-    * `var filterInput = "Birthday ==  2022-07-01T00:00:03+01:00";` 
+    * `var filterInput = """Birthday == "2022-07-01T00:00:03Z" """;` 
+  * `DateTime`: `var filterInput = """Birthday == "2022-07-01" """;`
+    * `var filterInput = """Birthday == "2022-07-01T00:00:03" """;` 
+    * `var filterInput = """Birthday == "2022-07-01T00:00:03+01:00" """;` 
 
   * `TimeOnly`: 
-    * `var filterInput = "Time == 12:30:00";`
-    * `var filterInput = "Time == 12:30:00.678722";`
+    * `var filterInput = """Time == "12:30:00" """;`
+    * `var filterInput = """Time == "12:30:00.678722" """;`
 
 * `bool` properties need to use `== true`, `== false`, or the same using the `!=` operator. they can not be standalone properies: 
 
@@ -155,7 +155,7 @@ var input = """(Age ^^ [20, 30, 40]) && (BirthMonth ^^* ["January", "February", 
 #### Complex Example
 
 ```c#
-var input = """(Title == "lamb" && ((Age >= 25 && Rating < 4.5) || (SpecificDate <= 2022-07-01T00:00:03Z && Time == 00:00:03)) && (Favorite == true || Email.Value _= "hello@gmail.com"))""";
+var input = """(Title == "lamb" && ((Age >= 25 && Rating < 4.5) || (SpecificDate <= "2022-07-01T00:00:03Z" && Time == "00:00:03")) && (Favorite == true || Email.Value _= "hello@gmail.com"))""";
 ```
 
 #### Filtering Collections
