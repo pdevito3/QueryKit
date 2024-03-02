@@ -31,6 +31,9 @@ public static class FilterParser
         {
             expr = ExprParser<T>(parameter, config).End().Parse(input);
         }
+        catch (InvalidOperationException e) {
+            throw new ParsingException(e);
+        }
         catch (ParseException e)
         {
             throw new ParsingException(e);
@@ -314,7 +317,12 @@ public static class FilterParser
                 return Expression.Constant(null, rawType);
             }
             
-            var enumValue = Enum.Parse(enumType, right);
+            var parsed = Enum.TryParse(enumType, right, out var enumValue);
+            if (!parsed) 
+            {
+                throw new InvalidOperationException($"Unsupported value '{right}' for type '{targetType.Name}'");
+            }
+            
             var constant = Expression.Constant(enumValue, enumType);
 
             if (rawType == enumType) return constant;
