@@ -1,8 +1,8 @@
 ﻿
 namespace QueryKit;
 
-using System.Collections;
 using System.Globalization;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using Configuration;
@@ -312,6 +312,28 @@ public static class FilterParser
             if (right == "null" && Nullable.GetUnderlyingType(rawType) != null)
             {
                 return Expression.Constant(null, rawType);
+            }
+            
+            if (right.StartsWith("[") && right.EndsWith("]"))
+            {
+                var values = right.Trim('[', ']').Split(',').Select(x => x.Trim()).ToList();
+                var elementType = targetType.IsArray ? targetType.GetElementType() : targetType;
+            
+                var expressions = values.Select<string, Expression>(x =>
+                {
+                    if (elementType == typeof(string) && x.StartsWith("\"") && x.EndsWith("\""))
+                    {
+                        x = x.Trim('"');
+                    }
+            
+                    var enumValue = Enum.Parse(enumType, x);
+                    var constant = Expression.Constant(enumValue, enumType);
+
+                    return constant;
+                }).ToArray();
+            
+                var newArrayExpression = Expression.NewArrayInit(enumType, expressions);
+                return newArrayExpression;
             }
             
             var enumValue = Enum.Parse(enumType, right);
