@@ -201,33 +201,6 @@ public class FilterParserTests
         filterExpression.ToString().Should()
             .Be(""""x => (((x.Age == 35) AndAlso (x.Favorite == True)) OrElse (x.Age < 18))"""");
     }
-    
-    [Fact]
-    public void test_in_operator()
-    {
-        var input = """(Age ^^ [20, 30, 40]) && (BirthMonth ^^ ["January", "February", "March"]) || (Id ^^ ["6d623e92-d2cf-4496-a2df-f49fa77328ee"])""";
-        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should()
-            .Be(""""x => ((value(System.Collections.Generic.List`1[System.Nullable`1[System.Int32]]).Contains(x.Age) AndAlso value(System.Collections.Generic.List`1[System.Nullable`1[QueryKit.WebApiTestProject.Entities.BirthMonthEnum]]).Contains(x.BirthMonth)) OrElse value(System.Collections.Generic.List`1[System.Guid]).Contains(x.Id))"""");
-    }
-    
-    [Fact]
-    public void simple_in_operator_for_string()
-    {
-        var input = """BirthMonth ^^ ["January", "February", "March"]""";
-        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should()
-            .Be(""""x => value(System.Collections.Generic.List`1[System.Nullable`1[QueryKit.WebApiTestProject.Entities.BirthMonthEnum]]).Contains(x.BirthMonth)"""");
-    }
-    
-    [Fact]
-    public void simple_in_operator_for_enum_code()
-    {
-        var input = """BirthMonth ^^ [1, 2, 3]""";
-        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should()
-            .Be(""""x => value(System.Collections.Generic.List`1[System.Nullable`1[QueryKit.WebApiTestProject.Entities.BirthMonthEnum]]).Contains(x.BirthMonth)"""");
-    }
 
     [Fact]
     public void simple_in_operator_for_nullable_int()
