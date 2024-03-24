@@ -419,7 +419,9 @@ var people = _dbContext.People
 
 If you want to capture errors to easily throw a `400`, you can add error handling around these exceptions:
 
-* A `FilterParsingException` will be thrown when there is an invalid operator or bad syntax is used (e.g. not using double quotes around a string or guid).
+* A `QueryKitException` is the base class for all of the exceptions listed below. This can be caught to catch
+any exception thrown by QueryKit.
+* A `ParsingException` will be thrown when there is an invalid operator or bad syntax is used (e.g. not using double quotes around a string or guid).
 * An `UnknownFilterPropertyException` will be thrown if a property is not recognized during filtering
 * A `SortParsingException` will be thrown if a property or operation is not recognized during sorting
 * A `QueryKitDbContextTypeException` will be thrown when trying to use a `DbContext` specific workflow without passing that context (e.g. SoundEx)
