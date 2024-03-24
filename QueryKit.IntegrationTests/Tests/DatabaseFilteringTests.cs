@@ -967,4 +967,104 @@ public class DatabaseFilteringTests : TestBase
         people.Count.Should().Be(1);
         people[0].Id.Should().Be(fakePersonOne.Id);
     }
+    
+    [Fact]
+    public async Task can_filter_by_enum_name()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var faker = new Faker();
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithTitle(faker.Lorem.Sentence())
+            .WithBirthMonth(BirthMonthEnum.January)
+            .Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder().Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+        
+        var input = $"""{nameof(TestingPerson.BirthMonth)} == "January" && {nameof(TestingPerson.Title)} == "{fakePersonOne.Title}" """;
+        
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakePersonOne.Id);
+    }
+    
+    [Fact]
+    public async Task can_filter_by_in_enum_names()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var faker = new Faker();
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithTitle(faker.Lorem.Sentence())
+            .WithBirthMonth(BirthMonthEnum.January)
+            .Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder().Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+        
+        var input = $"""{nameof(TestingPerson.BirthMonth)} ^^ ["January", "March"] && {nameof(TestingPerson.Title)} == "{fakePersonOne.Title}" """;
+        
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakePersonOne.Id);
+    }
+    
+    [Fact]
+    public async Task can_filter_by_enum_number()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var faker = new Faker();
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithTitle(faker.Lorem.Sentence())
+            .WithBirthMonth(BirthMonthEnum.June)
+            .Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder().Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+        
+        var input = $"""{nameof(TestingPerson.BirthMonth)} == "6" && {nameof(TestingPerson.Title)} == "{fakePersonOne.Title}" """;
+        
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakePersonOne.Id);
+    }
+    
+    [Fact]
+    public async Task can_filter_by_in_enum_numbers()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var faker = new Faker();
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithTitle(faker.Lorem.Sentence())
+            .WithBirthMonth(BirthMonthEnum.January)
+            .Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder().Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+        
+        var input = $"""{nameof(TestingPerson.BirthMonth)} ^^ ["1", "3"] && {nameof(TestingPerson.Title)} == "{fakePersonOne.Title}" """;
+        
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakePersonOne.Id);
+    }
 }

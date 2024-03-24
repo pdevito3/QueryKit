@@ -208,7 +208,7 @@ public class FilterParserTests
         var input = """(Age ^^ [20, 30, 40]) && (BirthMonth ^^ ["January", "February", "March"]) || (Id ^^ ["6d623e92-d2cf-4496-a2df-f49fa77328ee"])""";
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
         filterExpression.ToString().Should()
-            .Be(""""x => ((value(System.Collections.Generic.List`1[System.Nullable`1[System.Int32]]).Contains(x.Age) AndAlso value(System.Collections.Generic.List`1[System.String]).Contains(x.BirthMonth)) OrElse value(System.Collections.Generic.List`1[System.Guid]).Contains(x.Id))"""");
+            .Be(""""x => ((value(System.Collections.Generic.List`1[System.Nullable`1[System.Int32]]).Contains(x.Age) AndAlso value(System.Collections.Generic.List`1[System.Nullable`1[QueryKit.WebApiTestProject.Entities.BirthMonthEnum]]).Contains(x.BirthMonth)) OrElse value(System.Collections.Generic.List`1[System.Guid]).Contains(x.Id))"""");
     }
     
     [Fact]
@@ -217,7 +217,16 @@ public class FilterParserTests
         var input = """BirthMonth ^^ ["January", "February", "March"]""";
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
         filterExpression.ToString().Should()
-            .Be(""""x => value(System.Collections.Generic.List`1[System.String]).Contains(x.BirthMonth)"""");
+            .Be(""""x => value(System.Collections.Generic.List`1[System.Nullable`1[QueryKit.WebApiTestProject.Entities.BirthMonthEnum]]).Contains(x.BirthMonth)"""");
+    }
+    
+    [Fact]
+    public void simple_in_operator_for_enum_code()
+    {
+        var input = """BirthMonth ^^ [1, 2, 3]""";
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
+        filterExpression.ToString().Should()
+            .Be(""""x => value(System.Collections.Generic.List`1[System.Nullable`1[QueryKit.WebApiTestProject.Entities.BirthMonthEnum]]).Contains(x.BirthMonth)"""");
     }
 
     [Fact]
