@@ -3,6 +3,7 @@ namespace QueryKit.IntegrationTests.Tests;
 using Bogus;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using QueryKit.Exceptions;
 using SharedTestingHelper.Fakes;
 using WebApiTestProject.Entities;
 
@@ -165,7 +166,7 @@ public class DatabaseSortingTests : TestBase
         var act = () => appliedQueryable.ToListAsync();
 
         // Assert
-        await act.Should().ThrowAsync<InvalidOperationException>();
+        await act.Should().ThrowAsync<ParsingException>();
     }
     
     [Fact]
