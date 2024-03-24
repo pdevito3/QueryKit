@@ -1,8 +1,8 @@
 namespace QueryKit.Exceptions;
 
-public sealed class QueryKitParsingException : Exception
+public sealed class QueryKitParsingException : QueryKitException
 {
-    public QueryKitParsingException(string message) 
+    public QueryKitParsingException(string message)
         : base(message)
     {
     }

@@ -31,6 +31,9 @@ public static class FilterParser
         {
             expr = ExprParser<T>(parameter, config).End().Parse(input);
         }
+        catch (InvalidOperationException e) {
+            throw new ParsingException(e);
+        }
         catch (ParseException e)
         {
             throw new ParsingException(e);
@@ -314,29 +317,12 @@ public static class FilterParser
                 return Expression.Constant(null, rawType);
             }
             
-            if (right.StartsWith("[") && right.EndsWith("]"))
+            var parsed = Enum.TryParse(enumType, right, out var enumValue);
+            if (!parsed) 
             {
-                var values = right.Trim('[', ']').Split(',').Select(x => x.Trim()).ToList();
-                var elementType = targetType.IsArray ? targetType.GetElementType() : targetType;
-            
-                var expressions = values.Select<string, Expression>(x =>
-                {
-                    if (elementType == typeof(string) && x.StartsWith("\"") && x.EndsWith("\""))
-                    {
-                        x = x.Trim('"');
-                    }
-            
-                    var enumValue = Enum.Parse(enumType, x);
-                    var constant = Expression.Constant(enumValue, enumType);
-
-                    return constant;
-                }).ToArray();
-            
-                var newArrayExpression = Expression.NewArrayInit(enumType, expressions);
-                return newArrayExpression;
+                throw new InvalidOperationException($"Unsupported value '{right}' for type '{targetType.Name}'");
             }
             
-            var enumValue = Enum.Parse(enumType, right);
             var constant = Expression.Constant(enumValue, enumType);
 
             if (rawType == enumType) return constant;

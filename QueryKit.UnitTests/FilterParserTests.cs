@@ -808,5 +808,14 @@ public class FilterParserTests
         filterExpression.ToString().Should()
             .Be(""""x => x.Tags.Any(z => (z.ToLower() != "winner".ToLower()))"""");
     }
+    
+    [Fact]
+    public void can_throw_exception_when_invalid_enum_value()
+    {
+        var input = $"""BirthMonth == invalid""";
+        var act = () => FilterParser.ParseFilter<TestingPerson>(input);
+        act.Should().Throw<ParsingException>()
+        .WithMessage("There was a parsing failure, likely due to an invalid comparison or logical operator. You may also be missing double quotes surrounding a string or guid.");
+    }
 }
     
