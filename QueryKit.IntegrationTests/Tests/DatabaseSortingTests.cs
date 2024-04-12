@@ -166,7 +166,7 @@ public class DatabaseSortingTests : TestBase
         var act = () => appliedQueryable.ToListAsync();
 
         // Assert
-        await act.Should().ThrowAsync<ParsingException>();
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
     
     [Fact]
