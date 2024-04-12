@@ -318,7 +318,6 @@ public static class FilterParser
             }
             
             if (right.StartsWith("[") && right.EndsWith("]"))
-
             {
                 var values = right.Trim('[', ']').Split(',').Select(x => x.Trim()).ToList();
                 var elementType = targetType.IsArray ? targetType.GetElementType() : targetType;
@@ -332,7 +331,7 @@ public static class FilterParser
             
                     var enumValue = Enum.Parse(enumType, x);
                     var constant = Expression.Constant(enumValue, enumType);
-
+            
                     return constant;
                 }).ToArray();
             
@@ -340,7 +339,6 @@ public static class FilterParser
                 return newArrayExpression;
             }
             
-            // var enumValue = Enum.Parse(enumType, right);
             var parsed = Enum.TryParse(enumType, right, out var enumValue);
             if (!parsed) 
             {
