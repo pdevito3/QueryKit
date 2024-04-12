@@ -407,6 +407,27 @@ public class DatabaseFilteringTests : TestBase
         people.Count.Should().Be(1);
         people[0].Id.Should().Be(fakePersonOne.Id);
     }
+
+    [Fact]
+    public async Task can_filter_by_guid_contains()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var fakePersonOne = new FakeTestingPersonBuilder().Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder().Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+        
+        var input = $"""{nameof(TestingPerson.Id)} @=* "{fakePersonOne.Id}" """;
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakePersonOne.Id);
+    }
     
     [Fact]
     public async Task return_no_records_when_no_match()

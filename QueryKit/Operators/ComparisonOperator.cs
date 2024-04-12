@@ -474,7 +474,9 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
         public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
         {
-            var leftType = left.Type;
+            var leftType = left.Type == typeof(Guid) || left.Type == typeof(Guid?) 
+                ? typeof(string) 
+                : left.Type;
         
             if (right is NewArrayExpression newArrayExpression)
             {

@@ -42,7 +42,7 @@ public class FilterParserTests
 
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
         filterExpression.ToString().Should()
-            .Be(""""x => (((((((x.Title.ToLower().Contains("waffle & chicken".ToLower()) AndAlso (x.Age > 30)) OrElse (x.Id == Parse("aa648248-cb69-4217-ac95-d7484795afb2"))) OrElse (x.Title == "lamb")) OrElse (x.Title == null)) AndAlso ((x.Age < 18) OrElse ((x.BirthMonth == new Nullable`1(January)) AndAlso x.Title.StartsWith("ally")))) OrElse (x.Rating > 3.5)) OrElse ((x.SpecificDate == new Nullable`1(new DateTimeOffset(637922304030000000, 00:00:00))) AndAlso ((x.Date == new Nullable`1(new DateOnly(2022, 7, 1))) OrElse (x.Time == new Nullable`1(new TimeOnly(0, 0, 3, 0, 0))))))"""");
+            .Be(""""x => (((((((x.Title.ToLower().Contains("waffle & chicken".ToLower()) AndAlso (x.Age > 30)) OrElse (x.Id.ToString() == "aa648248-cb69-4217-ac95-d7484795afb2")) OrElse (x.Title == "lamb")) OrElse (x.Title == null)) AndAlso ((x.Age < 18) OrElse ((x.BirthMonth == new Nullable`1(January)) AndAlso x.Title.StartsWith("ally")))) OrElse (x.Rating > 3.5)) OrElse ((x.SpecificDate == new Nullable`1(new DateTimeOffset(637922304030000000, 00:00:00))) AndAlso ((x.Date == new Nullable`1(new DateOnly(2022, 7, 1))) OrElse (x.Time == new Nullable`1(new TimeOnly(0, 0, 3, 0, 0))))))"""");
     }
     
     [Fact]
@@ -76,7 +76,7 @@ public class FilterParserTests
         var guid = Guid.NewGuid();
         var input = $"""Id == "{guid}" """;
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be($"x => (x.Id == Parse(\"{guid}\"))");
+        filterExpression.ToString().Should().Be($"x => (x.Id.ToString() == \"{guid}\")");
     }
     
     [Fact]
@@ -85,7 +85,7 @@ public class FilterParserTests
         var guid = Guid.NewGuid();
         var input = $"""Id == {guid} """;
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be($"x => (x.Id == Parse(\"{guid}\"))");
+        filterExpression.ToString().Should().Be($"x => (x.Id.ToString() == \"{guid}\")");
     }
     
     [Fact]
@@ -217,7 +217,7 @@ public class FilterParserTests
         var input = """Id ^^ ["6d623e92-d2cf-4496-a2df-f49fa77328ee"]""";
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
         filterExpression.ToString().Should()
-            .Be(""""x => value(System.Collections.Generic.List`1[System.Guid]).Contains(x.Id)"""");
+            .Be(""""x => value(System.Collections.Generic.List`1[System.String]).Contains(x.Id.ToString())"""");
     }
 
     [Fact]

@@ -196,6 +196,7 @@ public static class FilterParser
             
             if (right.StartsWith("[") && right.EndsWith("]"))
             {
+                targetType = targetType == typeof(Guid) || targetType == typeof(Guid?) ? typeof(string) : targetType;
                 var values = right.Trim('[', ']').Split(',').Select(x => x.Trim()).ToList();
                 var elementType = targetType.IsArray ? targetType.GetElementType() : targetType;
             
@@ -300,8 +301,14 @@ public static class FilterParser
 
             if (targetType == typeof(Guid))
             {
-                var guidParseMethod = typeof(Guid).GetMethod("Parse", new[] { typeof(string) });
-                return Expression.Call(guidParseMethod, Expression.Constant(right, typeof(string)));
+                // if (comparisonOperator == ComparisonOperator.InOperator() ||
+                //     comparisonOperator == ComparisonOperator.NotInOperator())
+                // {
+                //     var guidParseMethod = typeof(Guid).GetMethod("Parse", new[] { typeof(string) });
+                //     return Expression.Call(guidParseMethod, Expression.Constant(right, typeof(string)));
+                // }
+                
+                return Expression.Constant(right, typeof(string)); 
             }
 
             var convertedValue = conversionFunction(right);
@@ -392,6 +399,13 @@ public static class FilterParser
                 if (temp.leftExpr.NodeType == ExpressionType.Constant && ((ConstantExpression)temp.leftExpr).Value!.Equals(true))
                 {
                     return Expression.Equal(Expression.Constant(true), Expression.Constant(true));
+                }
+                
+                if (temp.leftExpr.Type == typeof(Guid) || temp.leftExpr.Type == typeof(Guid?))
+                {
+                    var toStringMethod = typeof(Guid).GetMethod("ToString", Type.EmptyTypes);
+                    var leftExpr = Expression.Call(temp.leftExpr, toStringMethod!);
+                    return temp.op.GetExpression<T>(leftExpr, CreateRightExpr(temp.leftExpr, temp.right), config?.DbContextType);
                 }
 
                 var rightExpr = CreateRightExpr(temp.leftExpr, temp.right);
