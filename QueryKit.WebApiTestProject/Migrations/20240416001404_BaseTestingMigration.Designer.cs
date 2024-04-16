@@ -13,7 +13,7 @@ using QueryKit.WebApiTestProject.Database;
 namespace QueryKit.WebApiTestProject.Migrations
 {
     [DbContext(typeof(TestingDbContext))]
-    [Migration("20231223182524_BaseTestingMigration")]
+    [Migration("20240416001404_BaseTestingMigration")]
     partial class BaseTestingMigration
     {
         /// <inheritdoc />
@@ -21,7 +21,7 @@ namespace QueryKit.WebApiTestProject.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.0")
+                .HasAnnotation("ProductVersion", "8.0.1")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "fuzzystrmatch");
@@ -144,6 +144,10 @@ namespace QueryKit.WebApiTestProject.Migrations
                     b.Property<int?>("Rating")
                         .HasColumnType("integer")
                         .HasColumnName("rating");
+
+                    b.Property<Guid?>("SecondaryId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("secondary_id");
 
                     b.Property<List<string>>("Tags")
                         .IsRequired()

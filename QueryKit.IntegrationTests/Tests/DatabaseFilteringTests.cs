@@ -413,11 +413,13 @@ public class DatabaseFilteringTests : TestBase
     {
         // Arrange
         var testingServiceScope = new TestingServiceScope();
-        var fakePersonOne = new FakeTestingPersonBuilder().Build();
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithId(Guid.Parse("3644bceb-d362-4044-9edb-a3ec71c9b1a1"))
+            .Build();
         var fakePersonTwo = new FakeTestingPersonBuilder().Build();
         await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
         
-        var input = $"""{nameof(TestingPerson.Id)} @=* "{fakePersonOne.Id}" """;
+        var input = $"""(id @=* "9edb")""";
 
         // Act
         var queryablePeople = testingServiceScope.DbContext().People;
@@ -427,6 +429,31 @@ public class DatabaseFilteringTests : TestBase
         // Assert
         people.Count.Should().Be(1);
         people[0].Id.Should().Be(fakePersonOne.Id);
+    }
+
+    [Fact]
+    public async Task can_filter_by_nullable_guid_contains()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var fakeRecipeOne = new FakeRecipeBuilder()
+            .WithSecondaryId(Guid.Parse("385b1d2c-3b10-4ce0-b19b-f2b76280d57d"))
+            .Build();
+        var fakeRecipeTwo = new FakeRecipeBuilder().Build();
+        await testingServiceScope.InsertAsync(fakeRecipeOne, fakeRecipeTwo);
+        
+        var input = $"""(secondaryId @=* "4ce0")""";
+
+        // Act
+        var queryableRecipe = testingServiceScope.DbContext().Recipes;
+        var appliedQueryable = queryableRecipe.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+        // var people = testingServiceScope.DbContext().Recipes
+        //     .Where(x => x.SecondaryId.ToString().Contains("4ce0")).ToList();
+
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakeRecipeOne.Id);
     }
     
     [Fact]

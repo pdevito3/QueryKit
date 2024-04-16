@@ -54,6 +54,12 @@ public class FakeRecipeBuilder
         _creationData.CollectionEmail = collectionEmail;
         return this;
     }
+
+    public FakeRecipeBuilder WithSecondaryId(Guid? guid)
+    {
+        _creationData.SecondaryId = guid;
+        return this;
+    }
     
     public Recipe Build()
     {

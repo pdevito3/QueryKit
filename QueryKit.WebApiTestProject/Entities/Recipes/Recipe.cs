@@ -31,6 +31,8 @@ public class Recipe : BaseEntity
 
     public DateOnly? DateOfOrigin { get; private set; }
 
+    public Guid? SecondaryId { get; private set; }
+
     public bool HaveMadeItMyself { get; private set; }
     
     public List<string> Tags { get; set; } = new();
@@ -58,6 +60,7 @@ public class Recipe : BaseEntity
         newRecipe.DateOfOrigin = recipeForCreation.DateOfOrigin;
         newRecipe.HaveMadeItMyself = recipeForCreation.HaveMadeItMyself;
         newRecipe.CollectionEmail = new EmailAddress(recipeForCreation.CollectionEmail);
+        newRecipe.SecondaryId = recipeForCreation.SecondaryId;
         return newRecipe;
     }
 
@@ -70,6 +73,7 @@ public class Recipe : BaseEntity
         DateOfOrigin = recipeForUpdate.DateOfOrigin;
         HaveMadeItMyself = recipeForUpdate.HaveMadeItMyself;
         CollectionEmail = new EmailAddress(recipeForUpdate.CollectionEmail);
+        SecondaryId = recipeForUpdate.SecondaryId;
         return this;
     }
     

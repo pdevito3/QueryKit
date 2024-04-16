@@ -52,6 +52,7 @@ namespace QueryKit.WebApiTestProject.Migrations
                     directions = table.Column<string>(type: "text", nullable: false),
                     rating = table.Column<int>(type: "integer", nullable: true),
                     date_of_origin = table.Column<DateOnly>(type: "date", nullable: true),
+                    secondary_id = table.Column<Guid>(type: "uuid", nullable: true),
                     have_made_it_myself = table.Column<bool>(type: "boolean", nullable: false),
                     tags = table.Column<List<string>>(type: "text[]", nullable: false),
                     collection_email = table.Column<string>(type: "text", nullable: true)

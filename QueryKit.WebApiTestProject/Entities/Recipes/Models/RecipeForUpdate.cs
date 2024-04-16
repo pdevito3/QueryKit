@@ -9,4 +9,5 @@ public sealed class RecipeForUpdate
     public DateOnly? DateOfOrigin { get; set; }
     public bool HaveMadeItMyself { get; set; }
     public string CollectionEmail { get; set; }
+    public Guid? SecondaryId { get; set; }
 }

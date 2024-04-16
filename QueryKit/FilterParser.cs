@@ -404,9 +404,18 @@ public static class FilterParser
                 if (temp.leftExpr.Type == typeof(Guid) || temp.leftExpr.Type == typeof(Guid?))
                 {
                     var toStringMethod = typeof(Guid).GetMethod("ToString", Type.EmptyTypes);
-                    var leftExpr = Expression.Call(temp.leftExpr, toStringMethod!);
+
+                    Expression leftExpr = temp.leftExpr.Type == typeof(Guid?) ?
+                        Expression.Condition(
+                            Expression.Property(temp.leftExpr, "HasValue"),
+                            Expression.Call(Expression.Property(temp.leftExpr, "Value"), toStringMethod!),
+                            Expression.Constant(null, typeof(string))
+                        ) :
+                        Expression.Call(temp.leftExpr, toStringMethod!);
+                    
                     return temp.op.GetExpression<T>(leftExpr, CreateRightExpr(temp.leftExpr, temp.right), config?.DbContextType);
                 }
+
 
                 var rightExpr = CreateRightExpr(temp.leftExpr, temp.right);
                 return temp.op.GetExpression<T>(temp.leftExpr, rightExpr, config?.DbContextType);
