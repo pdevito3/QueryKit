@@ -123,6 +123,64 @@ public class DatabaseFilteringTests(ITestOutputHelper testOutputHelper) : TestBa
         people[0].Id.Should().Be(fakePersonOne.Id);
     }
     
+    [Theory]
+    [InlineData(88448)]
+    [InlineData(-83388)]
+    public async Task can_filter_by_int(int age)
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithAge(age)
+            .Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder()
+            .WithFirstName(fakePersonOne.FirstName)
+            .Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+        
+        var input = $"""age == {fakePersonOne.Age}""";
+        var config = new QueryKitConfiguration(_ =>
+        {
+        });
+        
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input, config);
+        var people = await appliedQueryable.ToListAsync();
+        
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakePersonOne.Id);
+    }
+
+    [Fact]
+    public async Task can_filter_by_and_also_bool()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithFirstName("John")
+            .WithAge(18)
+            .Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder().Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+        
+        var input = $"""adult_johns == true""";
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.DerivedProperty<TestingPerson>(tp => tp.Age >= 18 && tp.FirstName == "John").HasQueryName("adult_johns");
+        });
+        
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input, config);
+        var people = await appliedQueryable.ToListAsync();
+        
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakePersonOne.Id);
+    }
+    
     [Fact]
     public async Task can_filter_by_combo()
     {
@@ -691,7 +749,7 @@ public class DatabaseFilteringTests(ITestOutputHelper testOutputHelper) : TestBa
             .WithPhysicalAddress(new Address(faker.Address.StreetAddress()
                 , faker.Address.SecondaryAddress()
                 , faker.Address.City()
-                , faker.Address.State()
+                , Guid.NewGuid().ToString()
                 , faker.Address.ZipCode()
                 , faker.Address.Country()))
             .Build();
@@ -725,6 +783,31 @@ public class DatabaseFilteringTests(ITestOutputHelper testOutputHelper) : TestBa
         await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
 
         var input = $"""{nameof(TestingPerson.Rating)} > 3.5""";
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert
+        people.Count(x => x.Id == fakePersonOne.Id).Should().Be(1);
+    }
+    
+    [Fact]
+    public async Task can_filter_by_negative_decimal()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var faker = new Faker();
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithRating(-3.533M)
+            .Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder()
+            .WithRating(2M)
+            .Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+
+        var input = $"""{nameof(TestingPerson.Rating)} == -3.533""";
 
         // Act
         var queryablePeople = testingServiceScope.DbContext().People;
@@ -801,14 +884,17 @@ public class DatabaseFilteringTests(ITestOutputHelper testOutputHelper) : TestBa
         // Arrange
         var testingServiceScope = new TestingServiceScope();
         var fakePersonOne = new FakeTestingPersonBuilder()
-            .WithAge(22)
+            .WithAge(-22)
             .Build();
         var fakePersonTwo = new FakeTestingPersonBuilder()
+            .WithAge(40)
+            .Build();
+        var fakePersonThree = new FakeTestingPersonBuilder()
             .WithAge(60)
             .Build();
-        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo, fakePersonThree);
 
-        var input = """Age ^^ [22, 30, 40]""";
+        var input = """Age ^^ [-22, 60]""";
 
         // Act
         var queryablePeople = testingServiceScope.DbContext().People;
@@ -816,9 +902,40 @@ public class DatabaseFilteringTests(ITestOutputHelper testOutputHelper) : TestBa
         var people = await appliedQueryable.ToListAsync();
         
         // Assert
-        people.Count.Should().BeGreaterOrEqualTo(1);
+        people.Count.Should().BeGreaterOrEqualTo(2);
         people.FirstOrDefault(x => x.Id == fakePersonOne.Id).Should().NotBeNull();
         people.FirstOrDefault(x => x.Id == fakePersonTwo.Id).Should().BeNull();
+        people.FirstOrDefault(x => x.Id == fakePersonThree.Id).Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task can_handle_in_for_decimal()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithRating(-22.44M)
+            .Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder()
+            .WithRating(40.55M)
+            .Build();
+        var fakePersonThree = new FakeTestingPersonBuilder()
+            .WithRating(60.99M)
+            .Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo, fakePersonThree);
+
+        var input = """Rating ^^ [-22.44, 60.99]""";
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+        
+        // Assert
+        people.Count.Should().BeGreaterOrEqualTo(2);
+        people.FirstOrDefault(x => x.Id == fakePersonOne.Id).Should().NotBeNull();
+        people.FirstOrDefault(x => x.Id == fakePersonTwo.Id).Should().BeNull();
+        people.FirstOrDefault(x => x.Id == fakePersonThree.Id).Should().NotBeNull();
     }
 
     [Fact]
