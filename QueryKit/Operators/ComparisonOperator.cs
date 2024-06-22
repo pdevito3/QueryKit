@@ -205,6 +205,12 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
                     Expression.Call(right, typeof(string).GetMethod("ToLower", Type.EmptyTypes))
                 );
             }
+            
+            // for some complex derived expressions
+            if (left.NodeType == ExpressionType.Convert)
+            {
+                left = Expression.Convert(left, typeof(bool));
+            }
 
             return Expression.Equal(left, right);
         }
@@ -230,6 +236,12 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
                     Expression.Call(left, typeof(string).GetMethod("ToLower", Type.EmptyTypes)),
                     Expression.Call(right, typeof(string).GetMethod("ToLower", Type.EmptyTypes))
                 );
+            }
+            
+            // for some complex derived expressions
+            if (left.NodeType == ExpressionType.Convert)
+            {
+                left = Expression.Convert(left, typeof(bool));
             }
 
             return Expression.NotEqual(left, right);

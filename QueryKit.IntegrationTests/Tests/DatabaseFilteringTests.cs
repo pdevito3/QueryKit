@@ -1,6 +1,5 @@
 namespace QueryKit.IntegrationTests.Tests;
 
-using System.Linq.Expressions;
 using Bogus;
 using Configuration;
 using FluentAssertions;
@@ -12,9 +11,9 @@ using SharedTestingHelper.Fakes.Recipes;
 using WebApiTestProject.Database;
 using WebApiTestProject.Entities;
 using WebApiTestProject.Entities.Recipes;
-using WebApiTestProject.Features;
+using Xunit.Abstractions;
 
-public class DatabaseFilteringTests : TestBase
+public class DatabaseFilteringTests(ITestOutputHelper testOutputHelper) : TestBase
 {
     [Fact]
     public async Task can_filter_by_string()
@@ -35,6 +34,121 @@ public class DatabaseFilteringTests : TestBase
         var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
         var people = await appliedQueryable.ToListAsync();
 
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakePersonOne.Id);
+    }
+    
+    [Fact]
+    public async Task can_filter_by_boolean()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var faker = new Faker();
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithTitle(faker.Lorem.Sentence())
+            .WithFavorite(true)
+            .Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder()
+            .WithTitle(faker.Lorem.Sentence())
+            .WithFavorite(false)
+            .Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+        
+        var input = $"""{nameof(TestingPerson.Title)} == "{fakePersonOne.Title}" && {nameof(TestingPerson.Favorite)} == true""";
+        
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakePersonOne.Id);
+    }
+    
+    [Fact]
+    public async Task can_filter_by_combo_multi_value_pass()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var fakePersonOne = new FakeTestingPersonBuilder().Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder()
+            .WithFirstName(fakePersonOne.FirstName)
+            .Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+        
+        var input = $"""fullname @=* "{fakePersonOne.FirstName} {fakePersonOne.LastName}" """;
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.DerivedProperty<TestingPerson>(tp => tp.FirstName + " " + tp.LastName).HasQueryName("fullname");
+        });
+        
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input, config);
+        var people = await appliedQueryable.ToListAsync();
+        
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakePersonOne.Id);
+    }
+    
+    [Fact]
+    public async Task can_filter_by_combo_complex()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithAge(8888)
+            .Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder()
+            .WithFirstName(fakePersonOne.FirstName)
+            .Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+        
+        var input = $"""(fullname @=* "{fakePersonOne.FirstName} {fakePersonOne.LastName}") && age >= {fakePersonOne.Age}""";
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.DerivedProperty<TestingPerson>(tp => tp.FirstName + " " + tp.LastName).HasQueryName("fullname");
+        });
+        
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input, config);
+        var people = await appliedQueryable.ToListAsync();
+        
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakePersonOne.Id);
+    }
+    
+    [Fact]
+    public async Task can_filter_by_combo()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithFirstName(Guid.NewGuid().ToString())
+            .Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder().Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+        
+        var input = $"""fullname @=* "{fakePersonOne.FirstName}" """;
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.DerivedProperty<TestingPerson>(tp => tp.FirstName + " " + tp.LastName).HasQueryName("fullname");
+        });
+        
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input, config);
+        var people = await appliedQueryable.ToListAsync();
+        // var people = testingServiceScope.DbContext().People
+        //     // .Where(p => (p.FirstName + " " + p.LastName).ToLower().Contains(fakePersonOne.FirstName.ToLower()))
+        //     // .Where(x => ((x.FirstName + " ") + x.LastName).ToLower().Contains("ito".ToLower()))
+        //     .ToList();
+        
         // Assert
         people.Count.Should().Be(1);
         people[0].Id.Should().Be(fakePersonOne.Id);

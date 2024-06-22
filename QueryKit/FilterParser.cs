@@ -1,7 +1,5 @@
-﻿
-namespace QueryKit;
+﻿namespace QueryKit;
 
-using System.Collections;
 using System.Globalization;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -26,20 +24,34 @@ public static class FilterParser
         input = config?.PropertyMappings?.ReplaceAliasesWithPropertyPaths(input) ?? input;
         
         var parameter = Expression.Parameter(typeof(T), "x");
-        Expression expr; 
+        Expression expr;
         try
         {
             expr = ExprParser<T>(parameter, config).End().Parse(input);
+            expr = ReplaceDerivedProperties(expr, config, parameter);
         }
-        catch (InvalidOperationException e) {
+        catch (InvalidOperationException e)
+        {
             throw new ParsingException(e);
         }
         catch (ParseException e)
         {
             throw new ParsingException(e);
         }
+
         return Expression.Lambda<Func<T, bool>>(expr, parameter);
     }
+    
+    private static Expression ReplaceDerivedProperties(Expression expr, IQueryKitConfiguration? config, ParameterExpression parameter)
+    {
+        if (config?.PropertyMappings == null)
+        {
+            return expr;
+        }
+
+        return new ParameterReplacer(parameter).Visit(expr);
+    }
+
 
     private static readonly Parser<string> Identifier =
         from first in Parse.Letter.Once()
@@ -358,6 +370,20 @@ public static class FilterParser
             var nullableCtor = rawType.GetConstructor(new[] {enumType});
             return Expression.New(nullableCtor, constant);
         }
+        
+        // for some complex derived expressions
+        if (targetType == typeof(object))
+        {
+            if (right == "null")
+            {
+                return Expression.Constant(null, typeof(object));
+            }
+
+            if (bool.TryParse(right, out var boolVal))
+            {
+                return Expression.Constant(boolVal, typeof(bool));
+            }
+        }
 
         throw new InvalidOperationException($"Unsupported value '{right}' for type '{targetType.Name}'");
     }
@@ -499,10 +525,17 @@ public static class FilterParser
                 }
                 catch(ArgumentException)
                 {
+                    var derivedPropertyInfo = config?.PropertyMappings?.GetDerivedPropertyInfoByQueryName(fullPropPath);
+                    if (derivedPropertyInfo?.DerivedExpression != null)
+                    {
+                        return derivedPropertyInfo.DerivedExpression;
+                    }
+                    
                     if(config?.AllowUnknownProperties == true)
                     {
                         return Expression.Constant(true, typeof(bool));
                     }
+
                     throw new UnknownFilterPropertyException(actualPropertyName);
                 }
             });
@@ -516,7 +549,7 @@ public static class FilterParser
             return propertyExpression;
         });
     }
-
+    
     private static Type? GetInnerGenericType(Type type)
     {
         if (!IsEnumerable(type))
@@ -549,3 +582,5 @@ public static class FilterParser
             (op, left, right) => op.GetExpression<T>(left, right)
         );
 }
+
+

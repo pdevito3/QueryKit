@@ -2,7 +2,9 @@ namespace QueryKit.WebApiTestProject.Entities;
 
 public class TestingPerson
 {
-    public string? Title { get; set; }
+    public string? Title { get; set; } = default!;
+    public string? FirstName { get; set; } = default!;
+    public string? LastName { get; set; } = default!;
     public int? Age { get; set; }
     public BirthMonthEnum? BirthMonth { get; set; }
     public decimal? Rating { get; set; }

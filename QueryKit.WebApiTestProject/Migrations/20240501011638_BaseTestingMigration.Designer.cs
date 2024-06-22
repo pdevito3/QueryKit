@@ -13,7 +13,7 @@ using QueryKit.WebApiTestProject.Database;
 namespace QueryKit.WebApiTestProject.Migrations
 {
     [DbContext(typeof(TestingDbContext))]
-    [Migration("20240416001404_BaseTestingMigration")]
+    [Migration("20240501011638_BaseTestingMigration")]
     partial class BaseTestingMigration
     {
         /// <inheritdoc />
@@ -205,6 +205,14 @@ namespace QueryKit.WebApiTestProject.Migrations
                     b.Property<bool?>("Favorite")
                         .HasColumnType("boolean")
                         .HasColumnName("favorite");
+
+                    b.Property<string>("FirstName")
+                        .HasColumnType("text")
+                        .HasColumnName("first_name");
+
+                    b.Property<string>("LastName")
+                        .HasColumnType("text")
+                        .HasColumnName("last_name");
 
                     b.Property<decimal?>("Rating")
                         .HasColumnType("numeric")

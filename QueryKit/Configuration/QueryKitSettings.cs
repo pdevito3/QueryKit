@@ -40,4 +40,9 @@ public class QueryKitSettings
     {
         return PropertyMappings.Property(propertySelector);
     }
+    
+    public QueryKitPropertyMapping<TModel> DerivedProperty<TModel>(Expression<Func<TModel, object>>? propertySelector)
+    {
+        return PropertyMappings.DerivedProperty(propertySelector);
+    }
 }

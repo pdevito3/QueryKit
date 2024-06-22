@@ -6,6 +6,8 @@ using QueryKit.WebApiTestProject.Entities;
 public class FakeTestingPersonBuilder
 {
     private readonly TestingPerson _baseTestingPerson = new AutoFaker<TestingPerson>()
+        .RuleFor(x => x.FirstName, faker => faker.Name.FirstName())
+        .RuleFor(x => x.LastName, faker => faker.Name.LastName())
         .RuleFor(x => x.Title, faker => faker.Lorem.Sentence())
         .Generate();
     
@@ -18,6 +20,12 @@ public class FakeTestingPersonBuilder
     public FakeTestingPersonBuilder WithAge(int age)
     {
         _baseTestingPerson.Age = age;
+        return this;
+    }
+
+    public FakeTestingPersonBuilder WithFavorite(bool favorite)
+    {
+        _baseTestingPerson.Favorite = favorite;
         return this;
     }
 
@@ -72,6 +80,18 @@ public class FakeTestingPersonBuilder
     public FakeTestingPersonBuilder WithTime(TimeOnly? time)
     {
         _baseTestingPerson.Time = time;
+        return this;
+    }
+
+    public FakeTestingPersonBuilder WithFirstName(string firstName)
+    {
+        _baseTestingPerson.FirstName = firstName;
+        return this;
+    }
+    
+    public FakeTestingPersonBuilder WithLastName(string lastName)
+    {
+        _baseTestingPerson.LastName = lastName;
         return this;
     }
 
