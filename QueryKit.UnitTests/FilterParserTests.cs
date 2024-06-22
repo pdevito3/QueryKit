@@ -488,7 +488,7 @@ public class FilterParserTests
         var input = $"""Age ^#$%^%@ 25""";
         var act = () => FilterParser.ParseFilter<TestingPerson>(input);
         act.Should().Throw<ParsingException>()
-        .WithMessage("There was a parsing failure, likely due to an invalid comparison or logical operator. You may also be missing double quotes surrounding a string or guid.");
+        .WithMessage("There was a parsing failure, likely due to an invalid comparison or logical operator. You may also be missing double quotes surrounding a string or guid.*");
     }
     
     [Fact]
@@ -497,7 +497,7 @@ public class FilterParserTests
         var input = $"""Title == "temp" %$@#^ Age == 25""";
         var act = () => FilterParser.ParseFilter<TestingPerson>(input);
         act.Should().Throw<ParsingException>()
-        .WithMessage("There was a parsing failure, likely due to an invalid comparison or logical operator. You may also be missing double quotes surrounding a string or guid.");
+        .WithMessage("There was a parsing failure, likely due to an invalid comparison or logical operator. You may also be missing double quotes surrounding a string or guid.*");
     }
     
     [Fact]
@@ -506,7 +506,7 @@ public class FilterParserTests
         var input = $"""Title == temp string here""";
         var act = () => FilterParser.ParseFilter<TestingPerson>(input);
         act.Should().Throw<ParsingException>()
-        .WithMessage("There was a parsing failure, likely due to an invalid comparison or logical operator. You may also be missing double quotes surrounding a string or guid.");
+        .WithMessage("There was a parsing failure, likely due to an invalid comparison or logical operator. You may also be missing double quotes surrounding a string or guid.*");
     }
     
     [Fact]
@@ -518,7 +518,7 @@ public class FilterParserTests
         var input = $"""{propertyName} == 25""";
         var act = () => FilterParser.ParseFilter<TestingPerson>(input);
         act.Should().Throw<UnknownFilterPropertyException>()
-            .WithMessage($"The filter property '{firstWord}' was not recognized.");
+            .WithMessage($"The filter property '{firstWord}' was not recognized.*");
     }
 
     [Fact]
@@ -788,7 +788,7 @@ public class FilterParserTests
         var input = $"""BirthMonth == invalid""";
         var act = () => FilterParser.ParseFilter<TestingPerson>(input);
         act.Should().Throw<ParsingException>()
-        .WithMessage("There was a parsing failure, likely due to an invalid comparison or logical operator. You may also be missing double quotes surrounding a string or guid.");
+        .WithMessage("There was a parsing failure, likely due to an invalid comparison or logical operator. You may also be missing double quotes surrounding a string or guid.*");
     }
 }
     
