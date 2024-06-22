@@ -203,6 +203,14 @@ namespace QueryKit.WebApiTestProject.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("favorite");
 
+                    b.Property<string>("FirstName")
+                        .HasColumnType("text")
+                        .HasColumnName("first_name");
+
+                    b.Property<string>("LastName")
+                        .HasColumnType("text")
+                        .HasColumnName("last_name");
+
                     b.Property<decimal?>("Rating")
                         .HasColumnType("numeric")
                         .HasColumnName("rating");

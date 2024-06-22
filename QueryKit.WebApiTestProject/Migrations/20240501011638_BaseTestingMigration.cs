@@ -21,6 +21,8 @@ namespace QueryKit.WebApiTestProject.Migrations
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
                     title = table.Column<string>(type: "text", nullable: true),
+                    first_name = table.Column<string>(type: "text", nullable: true),
+                    last_name = table.Column<string>(type: "text", nullable: true),
                     age = table.Column<int>(type: "integer", nullable: true),
                     birth_month = table.Column<int>(type: "integer", nullable: true),
                     rating = table.Column<decimal>(type: "numeric", nullable: true),

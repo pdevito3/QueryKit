@@ -223,6 +223,22 @@ var config = new QueryKitConfiguration(config =>
 });
 ```
 
+#### Derived Properties
+
+You can also expose custom derived properties for consumption. Just be sure that Linq can handle them in a db query if you're using it that way.
+
+```csharp
+var config = new QueryKitConfiguration(config =>
+{
+    config.DerivedProperty<Person>(p => p.FirstName + " " + p.LastName).HasQueryName("fullname");
+    config.DerivedProperty<Person>(p => p.Age >= 18 && p.FirstName == "John").HasQueryName("adult_johns");
+});
+
+var input = $"""(fullname @=* "John Doe") && age >= 18""";
+// or
+var input = $"""adult_johns == true""";
+```
+
 #### Custom Operators
 
 You can also add custom comparison operators to your config if you'd like:
