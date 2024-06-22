@@ -114,6 +114,10 @@ public static class FilterParser
         from micros in Parse.Regex(@"\.\d{1,6}").Text().Optional().Select(x => x.GetOrElse(""))
         select dateFormat + timeFormat + micros + timeZone;
 
+    private static Parser<string> NumberParser =>
+        from sign in Parse.Char('-').Optional().Select(x => x.IsDefined ? "-" : "")
+        from number in Parse.Decimal
+        select sign + number;
 
     private static Parser<string> GuidFormatParser => Parse.Regex(@"[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}").Text();
     
@@ -132,8 +136,7 @@ public static class FilterParser
             .XOr(Identifier)
             .XOr(DateTimeFormatParser)
             .XOr(TimeFormatParser)
-            .XOr(Parse.Decimal)
-            .XOr(Parse.Number)
+            .XOr(NumberParser)
             .XOr(RawStringLiteralParser.Or(DoubleQuoteParser))
             .XOr(SquareBracketParser) 
         from trailingSpaces in Parse.WhiteSpace.Many()
@@ -141,11 +144,13 @@ public static class FilterParser
     
     private static Parser<string> SquareBracketParser =>
         from openingBracket in Parse.Char('[')
-        from content in DoubleQuoteParser
+        from content in Parse.String("null").Text()
             .Or(GuidFormatParser)
-            .Or(Parse.Decimal)
-            .Or(Parse.Number)
             .Or(Identifier)
+            .Or(DateTimeFormatParser)
+            .Or(TimeFormatParser)
+            .Or(NumberParser)
+            .Or(RawStringLiteralParser.Or(DoubleQuoteParser))
             .DelimitedBy(Parse.Char(',').Token())
         from closingBracket in Parse.Char(']')
         select "[" + string.Join(",", content) + "]";
