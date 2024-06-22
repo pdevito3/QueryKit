@@ -6,6 +6,7 @@ using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using SharedTestingHelper.Fakes;
 using SharedTestingHelper.Fakes.Author;
+using SharedTestingHelper.Fakes.IngredientPreparations;
 using SharedTestingHelper.Fakes.Ingredients;
 using SharedTestingHelper.Fakes.Recipes;
 using WebApiTestProject.Database;
@@ -329,6 +330,44 @@ public class DatabaseFilteringTests(ITestOutputHelper testOutputHelper) : TestBa
         // Act
         var queryableRecipes = testingServiceScope.DbContext().Recipes;
         var appliedQueryable = queryableRecipes.ApplyQueryKitFilter(input);
+        var recipes = await appliedQueryable.ToListAsync();
+
+        // Assert
+        recipes.Count.Should().Be(1);
+        recipes[0].Id.Should().Be(fakeRecipeOne.Id);
+    }
+    
+    [Fact(Skip = "Can not handle nested collections yet.")]
+    public async Task can_filter_by_string_for_nested_collection()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var faker = new Faker();
+        var preparationOne = new FakeIngredientPreparation().Generate();
+        var preparationTwo = new FakeIngredientPreparation().Generate();
+        var fakeIngredientOne = new FakeIngredientBuilder()
+            .WithPreparation(preparationOne)
+            .Build();
+        var fakeRecipeOne = new FakeRecipeBuilder().Build();
+        fakeRecipeOne.AddIngredient(fakeIngredientOne);
+        
+        var fakeIngredientTwo = new FakeIngredientBuilder()
+            .WithName(faker.Lorem.Sentence())
+            .WithPreparation(preparationTwo)
+            .Build();
+        var fakeRecipeTwo = new FakeRecipeBuilder().Build();
+        fakeRecipeTwo.AddIngredient(fakeIngredientTwo);
+        await testingServiceScope.InsertAsync(fakeRecipeOne, fakeRecipeTwo);
+        
+        var input = $"""Ingredients.Preparations.Text == "{preparationOne.Text}" """;
+        var config = new QueryKitConfiguration(settings =>
+        {
+            settings.Property<Recipe>(x => x.Ingredients.SelectMany(y => y.Preparations).Select(y => y.Text));
+        });
+
+        // Act
+        var queryableRecipes = testingServiceScope.DbContext().Recipes;
+        var appliedQueryable = queryableRecipes.ApplyQueryKitFilter(input, config);
         var recipes = await appliedQueryable.ToListAsync();
 
         // Assert
