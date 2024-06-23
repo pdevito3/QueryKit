@@ -26,6 +26,12 @@ public class FakeIngredientBuilder
         return this;
     }
     
+    public FakeIngredientBuilder WithQualityLevel(long qualityLevel)
+    {
+        _creationData.QualityLevel = qualityLevel;
+        return this;
+    }
+    
     public Ingredient Build()
     {
         var result = Ingredient.Create(_creationData);

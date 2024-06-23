@@ -75,6 +75,10 @@ namespace QueryKit.WebApiTestProject.Migrations
                         .HasColumnType("text")
                         .HasColumnName("name");
 
+                    b.Property<long?>("QualityLevel")
+                        .HasColumnType("bigint")
+                        .HasColumnName("quality_level");
+
                     b.Property<string>("Quantity")
                         .IsRequired()
                         .HasColumnType("text")

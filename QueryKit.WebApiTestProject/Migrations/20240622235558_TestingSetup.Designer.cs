@@ -13,8 +13,8 @@ using QueryKit.WebApiTestProject.Database;
 namespace QueryKit.WebApiTestProject.Migrations
 {
     [DbContext(typeof(TestingDbContext))]
-    [Migration("20240501011638_BaseTestingMigration")]
-    partial class BaseTestingMigration
+    [Migration("20240622235558_TestingSetup")]
+    partial class TestingSetup
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -77,6 +77,10 @@ namespace QueryKit.WebApiTestProject.Migrations
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("name");
+
+                    b.Property<long?>("QualityLevel")
+                        .HasColumnType("bigint")
+                        .HasColumnName("quality_level");
 
                     b.Property<string>("Quantity")
                         .IsRequired()

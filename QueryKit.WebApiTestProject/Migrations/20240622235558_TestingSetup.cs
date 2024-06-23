@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace QueryKit.WebApiTestProject.Migrations
 {
     /// <inheritdoc />
-    public partial class BaseTestingMigration : Migration
+    public partial class TestingSetup : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -90,6 +90,7 @@ namespace QueryKit.WebApiTestProject.Migrations
                     id = table.Column<Guid>(type: "uuid", nullable: false),
                     name = table.Column<string>(type: "text", nullable: false),
                     quantity = table.Column<string>(type: "text", nullable: false),
+                    quality_level = table.Column<long>(type: "bigint", nullable: true),
                     expires_on = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     measure = table.Column<string>(type: "text", nullable: false),
                     minimum_quality = table.Column<int>(type: "integer", nullable: false),

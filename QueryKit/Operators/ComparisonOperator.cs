@@ -58,7 +58,6 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
     public static ComparisonOperator HasCountLessThanOrEqualOperator(bool caseInsensitive = false, bool usesAll = false) => new HasCountLessThanOrEqualType(caseInsensitive);
     public static ComparisonOperator HasOperator(bool caseInsensitive = false, bool usesAll = false) => new HasType(caseInsensitive);
     public static ComparisonOperator DoesNotHaveOperator(bool caseInsensitive = false, bool usesAll = false) => new DoesNotHaveType(caseInsensitive);
-
     
     public static ComparisonOperator GetByOperatorString(string op, bool caseInsensitive = false, bool usesAll = false)
     {
@@ -175,6 +174,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
     public const char CaseSensitiveAppendix = '*';
     public const char AllPrefix = '%';
     public abstract string Operator();
+    public abstract bool IsCountOperator();
     public bool CaseInsensitive { get; protected set; }
     public bool UsesAll { get; protected set; }
     public abstract Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType);
@@ -191,6 +191,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         }
 
         public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
+        public override bool IsCountOperator() => false; 
         public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
         {
             if (left.Type.IsGenericType && left.Type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
@@ -223,6 +224,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         }
 
         public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
+        public override bool IsCountOperator() => false; 
         public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
         {
             if (left.Type.IsGenericType && left.Type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
@@ -255,6 +257,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         }
 
         public override string Operator() => Name;
+        public override bool IsCountOperator() => false; 
         public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
         {
             if (left.Type.IsGenericType && left.Type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
@@ -272,6 +275,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         }
 
         public override string Operator() => Name;
+        public override bool IsCountOperator() => false; 
         public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
         {
             if (left.Type.IsGenericType && left.Type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
@@ -285,6 +289,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
     private class GreaterThanOrEqualType : ComparisonOperator
     {
         public override string Operator() => Name;
+        public override bool IsCountOperator() => false; 
         public GreaterThanOrEqualType(bool caseInsensitive = false, bool usesAll = false) : base(">=", 4, caseInsensitive, usesAll)
         {
         }
@@ -304,6 +309,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         {
         }
         public override string Operator() => Name;
+        public override bool IsCountOperator() => false; 
         public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
         {
             if (left.Type.IsGenericType && left.Type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
@@ -321,6 +327,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         }
 
         public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
+        public override bool IsCountOperator() => false; 
         public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
         {
             if (left.Type.IsGenericType && left.Type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
@@ -348,6 +355,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         }
 
         public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
+        public override bool IsCountOperator() => false; 
         public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
         {
             if (left.Type.IsGenericType && left.Type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
@@ -375,6 +383,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         }
 
         public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
+        public override bool IsCountOperator() => false; 
         public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
         {
             if (left.Type.IsGenericType && left.Type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
@@ -402,6 +411,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         }
 
         public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
+        public override bool IsCountOperator() => false; 
         public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
         {
             if (left.Type.IsGenericType && left.Type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
@@ -430,6 +440,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         }
 
         public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
+        public override bool IsCountOperator() => false; 
         public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
         {
             if (left.Type.IsGenericType && left.Type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
@@ -457,6 +468,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         }
 
         public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
+        public override bool IsCountOperator() => false; 
         public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
         {
             if (left.Type.IsGenericType && left.Type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
@@ -484,6 +496,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         }
 
         public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
+        public override bool IsCountOperator() => false; 
         public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
         {
             var leftType = left.Type == typeof(Guid) || left.Type == typeof(Guid?) 
@@ -533,6 +546,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         }
 
         public override string Operator() => Name;
+        public override bool IsCountOperator() => false; 
 
         public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
         {
@@ -561,6 +575,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         }
 
         public override string Operator() => Name;
+        public override bool IsCountOperator() => false; 
 
         public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
         {
@@ -589,6 +604,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         }
 
         public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
+        public override bool IsCountOperator() => true; 
         public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
         {
             return GetCountExpression(left, right, nameof(Expression.Equal));
@@ -602,6 +618,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         }
 
         public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
+        public override bool IsCountOperator() => true; 
         public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
         {
             return GetCountExpression(left, right, nameof(Expression.NotEqual));
@@ -615,6 +632,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         }
 
         public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
+        public override bool IsCountOperator() => true; 
         public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
         {
             return GetCountExpression(left, right, nameof(Expression.GreaterThan));
@@ -628,6 +646,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         }
 
         public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
+        public override bool IsCountOperator() => true; 
         public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
         {
             return GetCountExpression(left, right, nameof(Expression.LessThan));
@@ -641,6 +660,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         }
 
         public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
+        public override bool IsCountOperator() => true; 
         public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
         {
             return GetCountExpression(left, right, nameof(Expression.GreaterThanOrEqual));
@@ -654,6 +674,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         }
 
         public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
+        public override bool IsCountOperator() => true; 
         public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
         {
             return GetCountExpression(left, right, nameof(Expression.LessThanOrEqual));
@@ -667,6 +688,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         }
 
         public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
+        public override bool IsCountOperator() => false; 
         public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
         {
             if (left.Type.IsGenericType && 
@@ -689,6 +711,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         }
 
         public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
+        public override bool IsCountOperator() => false; 
         public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
         {
             if (left.Type.IsGenericType && 
@@ -711,6 +734,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         }
 
         public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
+        public override bool IsCountOperator() => false; 
         public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
         {
             var leftType = left.Type;

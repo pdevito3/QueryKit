@@ -11,6 +11,8 @@ using SharedTestingHelper.Fakes.Ingredients;
 using SharedTestingHelper.Fakes.Recipes;
 using WebApiTestProject.Database;
 using WebApiTestProject.Entities;
+using WebApiTestProject.Entities.Ingredients;
+using WebApiTestProject.Entities.Ingredients.Models;
 using WebApiTestProject.Entities.Recipes;
 using Xunit.Abstractions;
 
@@ -333,6 +335,33 @@ public class DatabaseFilteringTests(ITestOutputHelper testOutputHelper) : TestBa
         var recipes = await appliedQueryable.ToListAsync();
 
         // Assert
+        recipes.Count.Should().Be(1);
+        recipes[0].Id.Should().Be(fakeRecipeOne.Id);
+    }
+    
+    [Fact]
+    public async Task can_filter_within_collection_long()
+    {
+        var testingServiceScope = new TestingServiceScope();
+        var qualityLevel = 2L;
+        var fakeRecipeOne = new FakeRecipeBuilder().Build();
+        var ingredient = new FakeIngredientBuilder()
+            .WithQualityLevel(qualityLevel)
+            .Build();
+        fakeRecipeOne.AddIngredient(ingredient);
+        
+        await testingServiceScope.InsertAsync(fakeRecipeOne);
+        
+        var input = $"Ingredients.QualityLevel == {qualityLevel}";
+        var config = new QueryKitConfiguration(settings =>
+        {
+            settings.Property<Recipe>(x => x.Ingredients.Select(y => y.QualityLevel)).PreventSort();
+        });
+        
+        var queryableRecipes = testingServiceScope.DbContext().Recipes;
+        var appliedQueryable = queryableRecipes.ApplyQueryKitFilter(input);
+        var recipes = await appliedQueryable.ToListAsync();
+        
         recipes.Count.Should().Be(1);
         recipes[0].Id.Should().Be(fakeRecipeOne.Id);
     }

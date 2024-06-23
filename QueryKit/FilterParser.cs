@@ -179,25 +179,24 @@ public static class FilterParser
         { typeof(sbyte), value => sbyte.Parse(value, CultureInfo.InvariantCulture) },
     };
 
-    private static Expression CreateRightExpr(Expression leftExpr, string right)
+    private static Expression CreateRightExpr(Expression leftExpr, string right, ComparisonOperator op)
     {
         var targetType = leftExpr.Type;
-        return CreateRightExprFromType(targetType, right);
+        return CreateRightExprFromType(targetType, right, op);
     }
 
-    private static Expression CreateRightExprFromType(Type leftExprType, string right)
+    private static Expression CreateRightExprFromType(Type leftExprType, string right, ComparisonOperator op)
     {
         var isEnumerable = IsEnumerable(leftExprType);
         var targetType = leftExprType;
         if (isEnumerable)
         {
-            if (int.TryParse(right, out var intVal) && targetType.GetGenericArguments().All(arg => arg != typeof(string)))
+            if (op.IsCountOperator() && int.TryParse(right, out var intVal))
             {
-                // supports collection count
                 return Expression.Constant(intVal, typeof(int));
             }
             targetType = targetType.GetGenericArguments()[0];
-            return CreateRightExprFromType(targetType, right);
+            return CreateRightExprFromType(targetType, right, op);
         }
         
         var rawType = targetType;
@@ -444,11 +443,11 @@ public static class FilterParser
                         ) :
                         Expression.Call(temp.leftExpr, toStringMethod!);
                     
-                    return temp.op.GetExpression<T>(leftExpr, CreateRightExpr(temp.leftExpr, temp.right), config?.DbContextType);
+                    return temp.op.GetExpression<T>(leftExpr, CreateRightExpr(temp.leftExpr, temp.right, temp.op), config?.DbContextType);
                 }
 
 
-                var rightExpr = CreateRightExpr(temp.leftExpr, temp.right);
+                var rightExpr = CreateRightExpr(temp.leftExpr, temp.right, temp.op);
                 return temp.op.GetExpression<T>(temp.leftExpr, rightExpr, config?.DbContextType);
             });
     }
