@@ -394,12 +394,9 @@ public static class FilterParser
 
     private static Type TransformTargetTypeIfNullable(Type targetType)
     {
-        if (targetType.IsGenericType)
+        if (targetType.IsNullable())
         {
-            if (targetType.GetGenericTypeDefinition() == typeof(Nullable<>))
-            {
-                targetType = Nullable.GetUnderlyingType(targetType);
-            }
+            targetType = Nullable.GetUnderlyingType(targetType);
         }
 
         return targetType;
