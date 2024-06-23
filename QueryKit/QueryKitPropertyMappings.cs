@@ -70,15 +70,6 @@ public class QueryKitPropertyMappings
             }
         }
         
-        // foreach (var alias in _derivedPropertyMappings.Values)
-        // {
-        //     foreach (var op in operators)
-        //     {
-        //         // Use regular expression to isolate left side of the expression
-        //         var regex = new Regex($@"\b{alias.QueryName}\b(?=\s*{op})", RegexOptions.IgnoreCase);
-        //         input = regex.Replace(input, $"~||~||~{alias.QueryName}");
-        //     }
-        // }
         return input;
     }
 
@@ -126,6 +117,10 @@ public class QueryKitPropertyMappings
             case ExpressionType.GreaterThanOrEqual:
             case ExpressionType.LessThanOrEqual:
             case ExpressionType.Equal:
+            case ExpressionType.NotEqual:
+            case ExpressionType.AddChecked:
+            case ExpressionType.MultiplyChecked:
+            case ExpressionType.SubtractChecked:
                 var binary = (BinaryExpression)expression;
                 var left = GetFullPropertyPath(binary.Left);
                 var right = GetFullPropertyPath(binary.Right);
@@ -134,6 +129,132 @@ public class QueryKitPropertyMappings
             case ExpressionType.Constant:
                 var constant = (ConstantExpression)expression;
                 return constant.Value?.ToString() ?? "";
+            
+            case ExpressionType.Conditional:
+                var conditional = (ConditionalExpression)expression;
+                var test = GetFullPropertyPath(conditional.Test);
+                var ifTrue = GetFullPropertyPath(conditional.IfTrue);
+                var ifFalse = GetFullPropertyPath(conditional.IfFalse);
+                return $"({test}) ? ({ifTrue}) : ({ifFalse})";
+            
+            case ExpressionType.New:
+                var newExpression = (NewExpression)expression;
+                var arguments = newExpression.Arguments.Select(GetFullPropertyPath);
+                return $"{newExpression.Constructor.DeclaringType.Name}({string.Join(", ", arguments)})";
+            
+            case ExpressionType.Invoke:
+                var invocation = (InvocationExpression)expression;
+                var invocationArguments = invocation.Arguments.Select(GetFullPropertyPath);
+                return $"{GetFullPropertyPath(invocation.Expression)}({string.Join(", ", invocationArguments)})";
+            
+            case ExpressionType.ListInit:
+                var listInit = (ListInitExpression)expression;
+                var newExpr = GetFullPropertyPath(listInit.NewExpression);
+                var initializers = listInit.Initializers.Select(init => string.Join(", ", init.Arguments.Select(GetFullPropertyPath)));
+                return $"{newExpr} {{ {string.Join(", ", initializers)} }}";
+            
+            case ExpressionType.MemberInit:
+                var memberInit = (MemberInitExpression)expression;
+                var newExpressionPath = GetFullPropertyPath(memberInit.NewExpression);
+                var bindings = memberInit.Bindings.Select(binding => $"{binding.Member.Name} = {GetFullPropertyPath(((MemberAssignment)binding).Expression)}");
+                return $"{newExpressionPath} {{ {string.Join(", ", bindings)} }}";
+
+
+            case ExpressionType.ArrayLength:
+                var unaryArrayLength = (UnaryExpression)expression;
+                return $"Length({GetFullPropertyPath(unaryArrayLength.Operand)})";
+
+            case ExpressionType.ArrayIndex:
+                var binaryArrayIndex = (BinaryExpression)expression;
+                return $"{GetFullPropertyPath(binaryArrayIndex.Left)}[{GetFullPropertyPath(binaryArrayIndex.Right)}]";
+
+            case ExpressionType.TypeAs:
+            case ExpressionType.TypeIs:
+                var typeBinary = (TypeBinaryExpression)expression;
+                return $"{GetFullPropertyPath(typeBinary.Expression)} is {typeBinary.TypeOperand.Name}";
+
+            case ExpressionType.Coalesce:
+                var binaryCoalesce = (BinaryExpression)expression;
+                return $"{GetFullPropertyPath(binaryCoalesce.Left)} ?? {GetFullPropertyPath(binaryCoalesce.Right)}";
+
+            case ExpressionType.Block:
+                var block = (BlockExpression)expression;
+                var blockExpressions = block.Expressions.Select(GetFullPropertyPath);
+                return $"{{ {string.Join("; ", blockExpressions)} }}";
+
+            case ExpressionType.Throw:
+                var unaryThrow = (UnaryExpression)expression;
+                return $"throw {GetFullPropertyPath(unaryThrow.Operand)}";
+
+            case ExpressionType.Try:
+                var tryExpression = (TryExpression)expression;
+                var body = GetFullPropertyPath(tryExpression.Body);
+                var handlers = string.Join(" ", tryExpression.Handlers.Select(handler => $"catch ({handler.Test.Name}) {{ {GetFullPropertyPath(handler.Body)} }}"));
+                var @finally = tryExpression.Finally != null ? $"finally {{ {GetFullPropertyPath(tryExpression.Finally)} }}" : "";
+                return $"try {{ {body} }} {handlers} {@finally}";
+
+            case ExpressionType.Index:
+                var index = (IndexExpression)expression;
+                var objectPath = GetFullPropertyPath(index.Object);
+                var argumentsPath = string.Join(", ", index.Arguments.Select(GetFullPropertyPath));
+                return $"{objectPath}[{argumentsPath}]";
+
+            case ExpressionType.NewArrayInit:
+                var newArrayInit = (NewArrayExpression)expression;
+                var arrayInitElements = newArrayInit.Expressions.Select(GetFullPropertyPath);
+                return $"new {newArrayInit.Type.GetElementType().Name}[] {{ {string.Join(", ", arrayInitElements)} }}";
+
+            case ExpressionType.NewArrayBounds:
+                var newArrayBounds = (NewArrayExpression)expression;
+                var arrayBounds = newArrayBounds.Expressions.Select(GetFullPropertyPath);
+                return $"new {newArrayBounds.Type.GetElementType().Name}[{string.Join(", ", arrayBounds)}]";
+
+            case ExpressionType.ConvertChecked:
+            case ExpressionType.ExclusiveOr:
+            case ExpressionType.LeftShift:
+            case ExpressionType.Negate:
+            case ExpressionType.UnaryPlus:
+            case ExpressionType.NegateChecked:
+            case ExpressionType.Not:
+            case ExpressionType.Parameter:
+            case ExpressionType.Power:
+            case ExpressionType.Quote:
+            case ExpressionType.RightShift:
+            case ExpressionType.Assign:
+            case ExpressionType.DebugInfo:
+            case ExpressionType.Decrement:
+            case ExpressionType.Dynamic:
+            case ExpressionType.Default:
+            case ExpressionType.Extension:
+            case ExpressionType.Goto:
+            case ExpressionType.Increment:
+            case ExpressionType.Label:
+            case ExpressionType.RuntimeVariables:
+            case ExpressionType.Loop:
+            case ExpressionType.Switch:
+            case ExpressionType.Unbox:
+            case ExpressionType.AddAssign:
+            case ExpressionType.AndAssign:
+            case ExpressionType.DivideAssign:
+            case ExpressionType.ExclusiveOrAssign:
+            case ExpressionType.LeftShiftAssign:
+            case ExpressionType.ModuloAssign:
+            case ExpressionType.MultiplyAssign:
+            case ExpressionType.OrAssign:
+            case ExpressionType.PowerAssign:
+            case ExpressionType.RightShiftAssign:
+            case ExpressionType.SubtractAssign:
+            case ExpressionType.AddAssignChecked:
+            case ExpressionType.MultiplyAssignChecked:
+            case ExpressionType.SubtractAssignChecked:
+            case ExpressionType.PreIncrementAssign:
+            case ExpressionType.PreDecrementAssign:
+            case ExpressionType.PostIncrementAssign:
+            case ExpressionType.PostDecrementAssign:
+            case ExpressionType.TypeEqual:
+            case ExpressionType.OnesComplement:
+            case ExpressionType.IsTrue:
+            case ExpressionType.IsFalse:
             default:
                 throw new NotSupportedException($"Expression type '{expression.NodeType}' is not supported.");
         }
