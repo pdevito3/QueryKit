@@ -16,6 +16,7 @@ public class Ingredient : BaseEntity
     public string Name { get; private set; }
 
     public string Quantity { get; private set; }
+    public long? QualityLevel { get; set; }
 
     public DateTime? ExpiresOn { get; private set; }
 
@@ -39,6 +40,7 @@ public class Ingredient : BaseEntity
         newIngredient.ExpiresOn = ingredientForCreation.ExpiresOn;
         newIngredient.Measure = ingredientForCreation.Measure;
         newIngredient.RecipeId = ingredientForCreation.RecipeId;
+        newIngredient.QualityLevel = ingredientForCreation.QualityLevel;
         return newIngredient;
     }
 
@@ -49,6 +51,7 @@ public class Ingredient : BaseEntity
         ExpiresOn = ingredientForUpdate.ExpiresOn;
         Measure = ingredientForUpdate.Measure;
         RecipeId = ingredientForUpdate.RecipeId;
+        QualityLevel = ingredientForUpdate.QualityLevel;
         return this;
     }
     
