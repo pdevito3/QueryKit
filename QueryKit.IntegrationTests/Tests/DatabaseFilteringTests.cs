@@ -366,6 +366,27 @@ public class DatabaseFilteringTests(ITestOutputHelper testOutputHelper) : TestBa
         recipes[0].Id.Should().Be(fakeRecipeOne.Id);
     }
     
+    [Fact]
+    public async Task can_filter_by_guid_for_collection()
+    {
+        var testingServiceScope = new TestingServiceScope();
+        var fakeRecipeOne = new FakeRecipeBuilder().Build();
+        var ingredient = new FakeIngredientBuilder()
+            .Build();
+
+        fakeRecipeOne.AddIngredient(ingredient);
+
+        await testingServiceScope.InsertAsync(fakeRecipeOne);
+
+        var input = $""" Ingredients.Id == "{ingredient.Id}" """;
+        var queryableRecipes = testingServiceScope.DbContext().Recipes;
+        var appliedQueryable = queryableRecipes.ApplyQueryKitFilter(input);
+        var recipes = await appliedQueryable.ToListAsync();
+
+        recipes.Count.Should().Be(1);
+        recipes[0].Ingredients.First().Id.Should().Be(ingredient.Id);
+    }
+    
     [Fact(Skip = "Can not handle nested collections yet.")]
     public async Task can_filter_by_string_for_nested_collection()
     {
