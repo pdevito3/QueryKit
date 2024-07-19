@@ -430,19 +430,10 @@ public static class FilterParser
                 
                 if (temp.leftExpr.Type == typeof(Guid) || temp.leftExpr.Type == typeof(Guid?))
                 {
-                    var toStringMethod = typeof(Guid).GetMethod("ToString", Type.EmptyTypes);
-
-                    Expression leftExpr = temp.leftExpr.Type == typeof(Guid?) ?
-                        Expression.Condition(
-                            Expression.Property(temp.leftExpr, "HasValue"),
-                            Expression.Call(Expression.Property(temp.leftExpr, "Value"), toStringMethod!),
-                            Expression.Constant(null, typeof(string))
-                        ) :
-                        Expression.Call(temp.leftExpr, toStringMethod!);
-                    
-                    return temp.op.GetExpression<T>(leftExpr, CreateRightExpr(temp.leftExpr, temp.right, temp.op), config?.DbContextType);
+                    var guidStringExpr = HandleGuidConversion(temp.leftExpr, temp.leftExpr.Type);
+                    return temp.op.GetExpression<T>(guidStringExpr, CreateRightExpr(temp.leftExpr, temp.right, temp.op),
+                        config?.DbContextType);
                 }
-
 
                 var rightExpr = CreateRightExpr(temp.leftExpr, temp.right, temp.op);
                 return temp.op.GetExpression<T>(temp.leftExpr, rightExpr, config?.DbContextType);
@@ -495,8 +486,9 @@ public static class FilterParser
                             var propertyInfoForMethod = GetPropertyInfo(genericArgType, propName);
                             var lambdaBody = Expression.PropertyOrField(innerParameter, propertyInfoForMethod.Name);
                             var selectLambda = Expression.Lambda(lambdaBody, innerParameter);
+                            var selectResult = Expression.Call(null, selectMethod, member, selectLambda);
 
-                            return Expression.Call(null, selectMethod, member, selectLambda);
+                            return HandleGuidConversion(selectResult, propertyType, "Select");
                         }
                     }
                 }
@@ -582,6 +574,35 @@ public static class FilterParser
             AndExprParser<T>(parameter, config),
             (op, left, right) => op.GetExpression<T>(left, right)
         );
+    
+    private static Expression GetGuidToStringExpression(Expression leftExpr)
+    {
+        var toStringMethod = typeof(Guid).GetMethod("ToString", Type.EmptyTypes);
+
+        return leftExpr.Type == typeof(Guid?) ?
+            Expression.Condition(
+                Expression.Property(leftExpr, "HasValue"),
+                Expression.Call(Expression.Property(leftExpr, "Value"), toStringMethod!),
+                Expression.Constant(null, typeof(string))
+            ) :
+            Expression.Call(leftExpr, toStringMethod!);
+    }
+
+    private static Expression HandleGuidConversion(Expression expression, Type propertyType, string? selectMethodName = null)
+    {
+        if (propertyType != typeof(Guid) && propertyType != typeof(Guid?)) return expression;
+
+        if (string.IsNullOrWhiteSpace(selectMethodName)) return GetGuidToStringExpression(expression);
+
+        var selectMethod = typeof(Enumerable).GetMethods()
+            .First(m => m.Name == selectMethodName && m.GetParameters().Length == 2)
+            .MakeGenericMethod(propertyType, typeof(string));
+
+        var param = Expression.Parameter(propertyType, "g");
+        var toStringLambda = Expression.Lambda(GetGuidToStringExpression(param), param);
+
+        return Expression.Call(selectMethod, expression, toStringLambda);
+    }
 }
 
 
