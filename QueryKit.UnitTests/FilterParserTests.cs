@@ -22,7 +22,7 @@ public class FilterParserTests
         asString.Should()
             .Be(""""x => (x.Title == "lamb is great on a "gee-ro" not a "gy-ro" sandwich")"""");
     }
-    
+
     [Fact]
     public void escaped_double_quote()
     {
@@ -33,7 +33,7 @@ public class FilterParserTests
         asString.Should()
             .Be(""""x => (x.Title == "lamb is great on a "gee-ro" not a "gy-ro" sandwich")"""");
     }
-    
+
     [Fact]
     public void complex_with_lots_of_types()
     {
@@ -44,7 +44,7 @@ public class FilterParserTests
         filterExpression.ToString().Should()
             .Be(""""x => (((((((x.Title.ToLower().Contains("waffle & chicken".ToLower()) AndAlso (x.Age > 30)) OrElse (x.Id.ToString() == "aa648248-cb69-4217-ac95-d7484795afb2")) OrElse (x.Title == "lamb")) OrElse (x.Title == null)) AndAlso ((x.Age < 18) OrElse ((x.BirthMonth == new Nullable`1(January)) AndAlso x.Title.StartsWith("ally")))) OrElse (x.Rating > 3.5)) OrElse ((x.SpecificDate == new Nullable`1(new DateTimeOffset(637922304030000000, 00:00:00))) AndAlso ((x.Date == new Nullable`1(new DateOnly(2022, 7, 1))) OrElse (x.Time == new Nullable`1(new TimeOnly(0, 0, 3, 0, 0))))))"""");
     }
-    
+
     [Fact]
     public void order_of_ops_quote_on_string()
     {
@@ -53,7 +53,7 @@ public class FilterParserTests
         filterExpression.ToString().Should()
             .Be(""""x => ((x.Title.ToLower().Contains("waffle".ToLower()) OrElse (x.Age > 30)) OrElse (x.Age < 18))"""");
     }
-    
+
     [Fact]
     public void simple_string()
     {
@@ -61,7 +61,7 @@ public class FilterParserTests
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
         filterExpression.ToString().Should().Be(""""x => x.Title.ToLower().Contains("waffle".ToLower())"""");
     }
-    
+
     [Fact]
     public void can_handle_null()
     {
@@ -69,7 +69,7 @@ public class FilterParserTests
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
         filterExpression.ToString().Should().Be("x => (x.Title == null)");
     }
-    
+
     [Fact]
     public void can_handle_guid_with_double_quotes()
     {
@@ -78,7 +78,7 @@ public class FilterParserTests
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
         filterExpression.ToString().Should().Be($"x => (x.Id.ToString() == \"{guid}\")");
     }
-    
+
     [Fact]
     public void can_handle_guid_without_double_quotes()
     {
@@ -87,7 +87,15 @@ public class FilterParserTests
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
         filterExpression.ToString().Should().Be($"x => (x.Id.ToString() == \"{guid}\")");
     }
-    
+
+    [Fact]
+    public void can_handle_guid_with_null()
+    {
+        var input = $"""SecondaryId == null """;
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input);
+        filterExpression.ToString().Should().Be($"x => (IIF(x.SecondaryId.HasValue, x.SecondaryId.Value.ToString(), null) == null)");
+    }
+
     [Fact]
     public void equality_operator()
     {
@@ -183,7 +191,7 @@ public class FilterParserTests
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
         filterExpression.ToString().Should().Be("x => x.Title.EndsWith(\"b\")");
     }
-    
+
     [Fact]
     public void test_logical_operators()
     {
@@ -192,7 +200,7 @@ public class FilterParserTests
         filterExpression.ToString().Should()
             .Be(""""x => (((x.Age == 35) AndAlso (x.Favorite == True)) OrElse (x.Age < 18))"""");
     }
-    
+
     [Fact]
     public void can_handle_case_insensitive_props()
     {
@@ -210,7 +218,7 @@ public class FilterParserTests
         filterExpression.ToString().Should()
             .Be(""""x => value(System.Collections.Generic.List`1[System.Nullable`1[System.Int32]]).Contains(x.Age)"""");
     }
-    
+
     [Fact]
     public void simple_in_operator_for_guid()
     {
@@ -227,7 +235,7 @@ public class FilterParserTests
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
         filterExpression.ToString().Should().Be("x => (((x.Title == \"lamb\") AndAlso (x.Age > 30)) OrElse ((x.Title == \"chicken\") AndAlso (x.Age < 18)))");
     }
-    
+
     [Fact]
     public void can_handle_decimal_comparison()
     {
@@ -243,7 +251,7 @@ public class FilterParserTests
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
         filterExpression.ToString().Should().Be(""""x => (x.Date == new Nullable`1(new DateOnly(2022, 7, 1)))"""");
     }
-    
+
     [Fact]
     public void can_handle_date_time_offset()
     {
@@ -251,7 +259,7 @@ public class FilterParserTests
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
         filterExpression.ToString().Should().Be(""""x => (x.SpecificDate == new Nullable`1(new DateTimeOffset(637922304030000000, 00:00:00)))"""");
     }
-    
+
     [Fact]
     public void can_handle_datetime()
     {
@@ -275,34 +283,34 @@ public class FilterParserTests
     {
         var dateTimeOffset = DateTimeOffset.Parse("2022-07-01T00:00:03Z").ToString(format);
         var input = $"""SpecificDate == "{dateTimeOffset}" """;
-        var filterExpression =  FilterParser.ParseFilter<TestingPerson>(input);
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
         filterExpression.ToString().Should().Be(""""x => (x.SpecificDate == new Nullable`1(new DateTimeOffset(637922304030000000, 00:00:00)))"""");
     }
-    
+
     [Fact]
     public void can_handle_datetime_another()
     {
         var input = """SpecificDateTime == "2022-07-01T00:00:03" """;
-        var filterExpression =  FilterParser.ParseFilter<TestingPerson>(input);
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
         filterExpression.ToString().Should().Be(""""x => (x.SpecificDateTime == new DateTime(637922304030000000, Local))"""");
     }
-    
+
     [Fact]
     public void can_handle_datetime_utc()
     {
         var input = """SpecificDateTime == "2022-07-01T00:00:03Z" """;
-        var filterExpression =  FilterParser.ParseFilter<TestingPerson>(input);
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
         filterExpression.ToString().Should().Be(""""x => (x.SpecificDateTime == new DateTime(637922304030000000, Utc))"""");
     }
-    
+
     [Fact]
     public void can_handle_datetime_comparison_with_timezone_another()
     {
         var input = """SpecificDate == "2022-07-01T00:00:03+01:00" """;
-        var filterExpression =  FilterParser.ParseFilter<TestingPerson>(input);
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
         filterExpression.ToString().Should().Be("x => (x.SpecificDate == new Nullable`1(new DateTimeOffset(637922304030000000, 01:00:00)))");
     }
-    
+
     [Fact]
     public void can_handle_time_only()
     {
@@ -310,7 +318,7 @@ public class FilterParserTests
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
         filterExpression.ToString().Should().Be("x => (x.Time == new Nullable`1(new TimeOnly(12, 30, 0, 0, 0)))");
     }
-    
+
     [Fact]
     public void can_handle_datetime_comparison_with_negative_timezone()
     {
@@ -382,7 +390,7 @@ public class FilterParserTests
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
         filterExpression.ToString().Should().Be("x => (x.Email.Value == null)");
     }
-    
+
     [Fact]
     public void contains_can_be_case_insensitive()
     {
@@ -390,7 +398,7 @@ public class FilterParserTests
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
         filterExpression.ToString().Should().Be("x => x.Title.ToLower().Contains(\"lamb\".ToLower())");
     }
-    
+
     [Fact]
     public void not_equals_can_be_case_insensitive()
     {
@@ -398,7 +406,7 @@ public class FilterParserTests
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
         filterExpression.ToString().Should().Be("x => (x.Title.ToLower() != \"lamb\".ToLower())");
     }
-    
+
     [Fact]
     public void ends_with_works()
     {
@@ -406,7 +414,7 @@ public class FilterParserTests
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
         filterExpression.ToString().Should().Be("x => x.Title.EndsWith(\"lamb\")");
     }
-    
+
     [Fact]
     public void ends_with_can_be_case_insensitive()
     {
@@ -414,7 +422,7 @@ public class FilterParserTests
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
         filterExpression.ToString().Should().Be("x => x.Title.ToLower().EndsWith(\"lamb\".ToLower())");
     }
-    
+
     [Fact]
     public void contains_is_case_sensitive()
     {
@@ -422,7 +430,7 @@ public class FilterParserTests
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
         filterExpression.ToString().Should().Be("x => x.Title.Contains(\"lamb\")");
     }
-    
+
     [Fact]
     public void not_contains_works()
     {
@@ -430,7 +438,7 @@ public class FilterParserTests
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
         filterExpression.ToString().Should().Be("x => Not(x.Title.Contains(\"lamb\"))");
     }
-    
+
     [Fact]
     public void can_filter_bools()
     {
@@ -438,7 +446,7 @@ public class FilterParserTests
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
         filterExpression.ToString().Should().Be("x => (x.Favorite == True)");
     }
-    
+
     [Fact]
     public void can_filter_nullable_ints()
     {
@@ -446,7 +454,7 @@ public class FilterParserTests
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
         filterExpression.ToString().Should().Be("x => (x.Age >= 25)");
     }
-    
+
     [Fact]
     public void can_filter_nullable_ints_with_not_equal()
     {
@@ -454,7 +462,7 @@ public class FilterParserTests
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
         filterExpression.ToString().Should().Be("x => (x.Age != 25)");
     }
-    
+
     [Fact]
     public void can_filter_with_comma()
     {
@@ -462,7 +470,7 @@ public class FilterParserTests
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
         filterExpression.ToString().Should().Be("x => (x.Title == \"lamb, lamb\")");
     }
-    
+
     [Fact]
     public void equals_doesnt_fail_with_non_string_types()
     {
@@ -470,7 +478,7 @@ public class FilterParserTests
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
         filterExpression.ToString().Should().Be("x => (x.Age == 25)");
     }
-    
+
     [Fact]
     public void can_throw_error_when_property_not_recognized()
     {
@@ -481,7 +489,7 @@ public class FilterParserTests
         act.Should().Throw<UnknownFilterPropertyException>()
             .WithMessage($"The filter property '{propertyName}' was not recognized.");
     }
-    
+
     [Fact]
     public void can_throw_error_when_comparison_operator_not_recognized()
     {
@@ -490,7 +498,7 @@ public class FilterParserTests
         act.Should().Throw<ParsingException>()
         .WithMessage("There was a parsing failure, likely due to an invalid comparison or logical operator. You may also be missing double quotes surrounding a string or guid.*");
     }
-    
+
     [Fact]
     public void can_throw_error_when_logical_operator_not_recognized()
     {
@@ -499,7 +507,7 @@ public class FilterParserTests
         act.Should().Throw<ParsingException>()
         .WithMessage("There was a parsing failure, likely due to an invalid comparison or logical operator. You may also be missing double quotes surrounding a string or guid.*");
     }
-    
+
     [Fact]
     public void can_throw_error_when_missing_double_quotes_not_recognized()
     {
@@ -508,7 +516,7 @@ public class FilterParserTests
         act.Should().Throw<ParsingException>()
         .WithMessage("There was a parsing failure, likely due to an invalid comparison or logical operator. You may also be missing double quotes surrounding a string or guid.*");
     }
-    
+
     [Fact]
     public void can_throw_error_when_property_has_space()
     {
@@ -520,7 +528,7 @@ public class FilterParserTests
         act.Should().Throw<UnknownFilterPropertyException>()
             .WithMessage($"The filter property '{firstWord}' was not recognized.*");
     }
-    
+
     [Fact]
     public void simple_child_collection_for_string_equal()
     {
@@ -529,7 +537,7 @@ public class FilterParserTests
         filterExpression.ToString().Should()
             .Be(""""x => x.Ingredients.Select(y => y.Name).Any(z => (z == "flour"))"""");
     }
-    
+
     [Fact]
     public void simple_child_collection_for_string_case_insensitive_equal()
     {
@@ -538,7 +546,7 @@ public class FilterParserTests
         filterExpression.ToString().Should()
             .Be(""""x => x.Ingredients.Select(y => y.Name).Any(z => (z.ToLower() == "flour".ToLower()))"""");
     }
-    
+
     [Fact]
     public void simple_child_collection_for_string_not_equal()
     {
@@ -547,7 +555,7 @@ public class FilterParserTests
         filterExpression.ToString().Should()
             .Be(""""x => x.Ingredients.Select(y => y.Name).Any(z => (z != "flour"))"""");
     }
-    
+
     [Fact]
     public void simple_child_collection_for_string_case_insensitive_not_equal()
     {
@@ -556,7 +564,7 @@ public class FilterParserTests
         filterExpression.ToString().Should()
             .Be(""""x => x.Ingredients.Select(y => y.Name).Any(z => (z.ToLower() != "flour".ToLower()))"""");
     }
-    
+
     [Fact]
     public void simple_child_collection_for_int_equals()
     {
@@ -565,7 +573,7 @@ public class FilterParserTests
         filterExpression.ToString().Should()
             .Be(""""x => x.Ingredients.Select(y => y.MinimumQuality).Any(z => (z == 5))"""");
     }
-    
+
     [Fact]
     public void simple_child_collection_for_int_greater_than()
     {
@@ -574,7 +582,7 @@ public class FilterParserTests
         filterExpression.ToString().Should()
             .Be(""""x => x.Ingredients.Select(y => y.MinimumQuality).Any(z => (z > 5))"""");
     }
-    
+
     [Fact]
     public void simple_child_collection_for_int_less_than()
     {
@@ -583,7 +591,7 @@ public class FilterParserTests
         filterExpression.ToString().Should()
             .Be(""""x => x.Ingredients.Select(y => y.MinimumQuality).Any(z => (z < 5))"""");
     }
-    
+
     [Fact]
     public void simple_child_collection_for_int_greater_than_or_equal()
     {
@@ -592,7 +600,7 @@ public class FilterParserTests
         filterExpression.ToString().Should()
             .Be(""""x => x.Ingredients.Select(y => y.MinimumQuality).Any(z => (z >= 5))"""");
     }
-    
+
     [Fact]
     public void simple_child_collection_for_int_less_than_or_equal()
     {
@@ -601,7 +609,7 @@ public class FilterParserTests
         filterExpression.ToString().Should()
             .Be(""""x => x.Ingredients.Select(y => y.MinimumQuality).Any(z => (z <= 5))"""");
     }
-    
+
     [Fact]
     public void collection_contains_case_insensitive()
     {
@@ -610,7 +618,7 @@ public class FilterParserTests
         filterExpression.ToString().Should()
             .Be(""""x => x.Ingredients.Select(y => y.Name).Any(z => z.ToLower().Contains("waffle".ToLower()))"""");
     }
-    
+
     [Fact]
     public void collection_contains()
     {
@@ -619,7 +627,7 @@ public class FilterParserTests
         filterExpression.ToString().Should()
             .Be(""""x => x.Ingredients.Select(y => y.Name).Any(z => z.Contains("waffle"))"""");
     }
-    
+
     [Fact]
     public void collection_starts_with()
     {
@@ -628,7 +636,7 @@ public class FilterParserTests
         filterExpression.ToString().Should()
             .Be(""""x => x.Ingredients.Select(y => y.Name).Any(z => z.StartsWith("waffle"))"""");
     }
-    
+
     [Fact]
     public void collection_ends_with()
     {
@@ -637,7 +645,7 @@ public class FilterParserTests
         filterExpression.ToString().Should()
             .Be(""""x => x.Ingredients.Select(y => y.Name).Any(z => z.EndsWith("waffle"))"""");
     }
-    
+
     [Fact]
     public void collection_does_not_contains()
     {
@@ -646,7 +654,7 @@ public class FilterParserTests
         filterExpression.ToString().Should()
             .Be(""""x => Not(x.Ingredients.Select(y => y.Name).Any(z => z.Contains("waffle")))"""");
     }
-    
+
     [Fact]
     public void collection_does_not_starts_with()
     {
@@ -655,7 +663,7 @@ public class FilterParserTests
         filterExpression.ToString().Should()
             .Be(""""x => Not(x.Ingredients.Select(y => y.Name).Any(z => z.StartsWith("waffle")))"""");
     }
-    
+
     [Fact]
     public void collection_does_not_ends_with()
     {
@@ -664,7 +672,7 @@ public class FilterParserTests
         filterExpression.ToString().Should()
             .Be(""""x => Not(x.Ingredients.Select(y => y.Name).Any(z => z.EndsWith("waffle")))"""");
     }
-    
+
     [Fact]
     public void collection_equals_with_all()
     {
@@ -673,7 +681,7 @@ public class FilterParserTests
         filterExpression.ToString().Should()
             .Be(""""x => x.Ingredients.Select(y => y.Name).All(z => (z == "waffle"))"""");
     }
-    
+
     [Fact]
     public void collection_has_operator_greater_than()
     {
@@ -682,7 +690,7 @@ public class FilterParserTests
         filterExpression.ToString().Should()
             .Be(""""x => (x.Ingredients.Count() > 0)"""");
     }
-    
+
     [Fact]
     public void collection_has_operator_equal()
     {
@@ -691,7 +699,7 @@ public class FilterParserTests
         filterExpression.ToString().Should()
             .Be(""""x => (x.Ingredients.Count() == 0)"""");
     }
-    
+
     [Fact]
     public void collection_has_operator_not_equal()
     {
@@ -700,7 +708,7 @@ public class FilterParserTests
         filterExpression.ToString().Should()
             .Be(""""x => (x.Ingredients.Count() != 3)"""");
     }
-    
+
     [Fact]
     public void collection_has_operator_greater_than_equal()
     {
@@ -709,7 +717,7 @@ public class FilterParserTests
         filterExpression.ToString().Should()
             .Be(""""x => (x.Ingredients.Count() >= 0)"""");
     }
-    
+
     [Fact]
     public void primitive_collection_has()
     {
@@ -718,7 +726,7 @@ public class FilterParserTests
         filterExpression.ToString().Should()
             .Be(""""x => x.Tags.Any(z => (z == "winner"))"""");
     }
-    
+
     [Fact]
     public void primitive_collection_does_not_have()
     {
@@ -727,7 +735,7 @@ public class FilterParserTests
         filterExpression.ToString().Should()
             .Be(""""x => x.Tags.Any(z => (z != "winner"))"""");
     }
-    
+
     [Fact]
     public void primitive_collection_has_case_insensitive()
     {
@@ -736,7 +744,7 @@ public class FilterParserTests
         filterExpression.ToString().Should()
             .Be(""""x => x.Tags.Any(z => (z.ToLower() == "winner".ToLower()))"""");
     }
-    
+
     [Fact]
     public void primitive_collection_does_not_have_case_insensitive()
     {
@@ -745,7 +753,7 @@ public class FilterParserTests
         filterExpression.ToString().Should()
             .Be(""""x => x.Tags.Any(z => (z.ToLower() != "winner".ToLower()))"""");
     }
-    
+
     [Fact]
     public void can_throw_exception_when_invalid_enum_value()
     {
@@ -755,4 +763,3 @@ public class FilterParserTests
         .WithMessage("There was a parsing failure, likely due to an invalid comparison or logical operator. You may also be missing double quotes surrounding a string or guid.*");
     }
 }
-    

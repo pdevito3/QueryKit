@@ -207,6 +207,11 @@ public static class FilterParser
         {
             if (right == "null")
             {
+                if (rawType == typeof(Guid?))
+                {
+                    return Expression.Constant(null, typeof(string));
+                }
+                
                 return Expression.Constant(null, leftExprType);
             }
             
@@ -317,13 +322,6 @@ public static class FilterParser
 
             if (targetType == typeof(Guid))
             {
-                // if (comparisonOperator == ComparisonOperator.InOperator() ||
-                //     comparisonOperator == ComparisonOperator.NotInOperator())
-                // {
-                //     var guidParseMethod = typeof(Guid).GetMethod("Parse", new[] { typeof(string) });
-                //     return Expression.Call(guidParseMethod, Expression.Constant(right, typeof(string)));
-                // }
-                
                 return Expression.Constant(right, typeof(string)); 
             }
 

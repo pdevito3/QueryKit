@@ -740,6 +740,32 @@ public class DatabaseFilteringTests(ITestOutputHelper testOutputHelper) : TestBa
         people.Count.Should().Be(1);
         people[0].Id.Should().Be(fakeRecipeTwo.Id);
     }
+
+    [Fact]
+    public async Task can_filter_by_nullable_guid_is_null()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var fakeRecipeOne = new FakeRecipeBuilder()
+            .WithSecondaryId(null)
+            .Build();
+        var fakeRecipeTwo = new FakeRecipeBuilder().Build();
+        await testingServiceScope.InsertAsync(fakeRecipeOne, fakeRecipeTwo);
+        
+        var input = $"""(secondaryId == null)""";
+
+        // Act
+        var queryableRecipe = testingServiceScope.DbContext().Recipes;
+        var appliedQueryable = queryableRecipe.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+        // var people = testingServiceScope.DbContext().Recipes
+        //     .Where(x => x.SecondaryId == null)
+        //     .ToList();
+
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakeRecipeOne.Id);
+    }
     
     [Fact]
     public async Task return_no_records_when_no_match()
