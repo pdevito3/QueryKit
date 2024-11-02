@@ -188,6 +188,38 @@ public class CustomFilterPropertyTests
     }
     
     [Fact]
+    public void can_have_custom_prop_work_with_collection_filters()
+    {
+        var faker = new Faker();
+        var stringValue = faker.Lorem.Word();
+        var input = $"""special_title == "{stringValue}" && Ingredients.Name == "flour" """;
+
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<Recipe>(x => x.Title).HasQueryName("special_title");
+        });
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
+        filterExpression.ToString().Should().Be(
+            $"""x => ((x.Title == "{stringValue}") AndAlso x.Ingredients.Select(y => y.Name).Any(z => (z == "flour")))""");
+    }
+    
+    [Fact]
+    public void can_have_derived_prop_work_with_collection_filters()
+    {
+        var faker = new Faker();
+        var stringValue = faker.Lorem.Word();
+        var input = $"""special_title_directions == "{stringValue}" && Ingredients.Name == "flour" """;
+
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.DerivedProperty<Recipe>(x => x.Title + x.Directions).HasQueryName("special_title_directions");
+        });
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
+        filterExpression.ToString().Should().Be(
+            $"""x => (((x.Title + x.Directions) == "{stringValue}") AndAlso x.Ingredients.Select(y => y.Name).Any(z => (z == "flour")))""");
+    }
+    
+    [Fact]
     public void filter_prevented_props_always_have_true_equals_true_regardless_of_comparison()
     {
         var faker = new Faker();
