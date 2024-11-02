@@ -1286,12 +1286,12 @@ public class DatabaseFilteringTests(ITestOutputHelper testOutputHelper) : TestBa
         var input = $"""CollectionEmail.Value == "{fakePersonOne.CollectionEmail.Value}" """;
 
         // Act
-        var queryablePeople = testingServiceScope.DbContext().Recipes;
+        var queryableRecipes = testingServiceScope.DbContext().Recipes;
         var config = new QueryKitConfiguration(config =>
         {
             config.Property<Recipe>(x => x.CollectionEmail.Value);
         });
-        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input, config);
+        var appliedQueryable = queryableRecipes.ApplyQueryKitFilter(input, config);
         var people = await appliedQueryable.ToListAsync();
 
         // Assert
@@ -1315,12 +1315,12 @@ public class DatabaseFilteringTests(ITestOutputHelper testOutputHelper) : TestBa
         var input = $"""email == "{fakePersonOne.CollectionEmail.Value}" """;
 
         // Act
-        var queryablePeople = testingServiceScope.DbContext().Recipes;
+        var queryableRecipes = testingServiceScope.DbContext().Recipes;
         var config = new QueryKitConfiguration(config =>
         {
             config.Property<Recipe>(x => x.CollectionEmail.Value).HasQueryName("email");
         });
-        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input, config);
+        var appliedQueryable = queryableRecipes.ApplyQueryKitFilter(input, config);
         var people = await appliedQueryable.ToListAsync();
 
         // Assert
@@ -1344,12 +1344,12 @@ public class DatabaseFilteringTests(ITestOutputHelper testOutputHelper) : TestBa
         var input = $"""email == null""";
 
         // Act
-        var queryablePeople = testingServiceScope.DbContext().Recipes;
+        var queryableRecipes = testingServiceScope.DbContext().Recipes;
         var config = new QueryKitConfiguration(config =>
         {
             config.Property<Recipe>(x => x.CollectionEmail.Value).HasQueryName("email");
         });
-        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input, config);
+        var appliedQueryable = queryableRecipes.ApplyQueryKitFilter(input, config);
         var people = await appliedQueryable.ToListAsync();
 
         // Assert
@@ -1373,12 +1373,12 @@ public class DatabaseFilteringTests(ITestOutputHelper testOutputHelper) : TestBa
         var input = $"""email == "{fakePersonOne.CollectionEmail.Value}" """;
 
         // Act
-        var queryablePeople = testingServiceScope.DbContext().Recipes;
+        var queryableRecipes = testingServiceScope.DbContext().Recipes;
         var config = new QueryKitConfiguration(config =>
         {
             config.Property<Recipe>(x => x.CollectionEmail.Value).HasQueryName("email");
         });
-        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input, config);
+        var appliedQueryable = queryableRecipes.ApplyQueryKitFilter(input, config);
         var people = await appliedQueryable.ToListAsync();
 
         // Assert
@@ -1484,5 +1484,54 @@ public class DatabaseFilteringTests(ITestOutputHelper testOutputHelper) : TestBa
         // Assert
         people.Count.Should().Be(1);
         people[0].Id.Should().Be(fakePersonOne.Id);
+    }
+    
+    [Fact]
+    public async Task can_have_derived_prop_work_with_collection_filters()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var ingredient = new FakeIngredientBuilder().Build();
+        var recipe = new FakeRecipeBuilder().Build();
+        recipe.AddIngredient(ingredient);
+        await testingServiceScope.InsertAsync(recipe);
+        
+        var input = $"""special_title_directions == "{recipe.Title + recipe.Directions}" && Ingredients.Name == "{ingredient.Name}" """;
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.DerivedProperty<Recipe>(x => x.Title + x.Directions).HasQueryName("special_title_directions");
+        });
+        var queryableRecipes = testingServiceScope.DbContext().Recipes;
+        var appliedQueryable = queryableRecipes.ApplyQueryKitFilter(input, config);
+        var recipes = await appliedQueryable.ToListAsync();
+
+        // Assert
+        recipes.Count.Should().Be(1);
+        recipes[0].Id.Should().Be(recipe.Id);
+    }
+    
+    
+    [Fact]
+    public async Task can_have_custom_prop_work_with_collection_filters()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var ingredient = new FakeIngredientBuilder().Build();
+        var recipe = new FakeRecipeBuilder().Build();
+        recipe.AddIngredient(ingredient);
+        await testingServiceScope.InsertAsync(recipe);
+        
+        var input = $"""special_title == "{recipe.Title}" && Ingredients.Name == "{ingredient.Name}" """;
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<Recipe>(x => x.Title).HasQueryName("special_title");
+        });
+        var queryableRecipes = testingServiceScope.DbContext().Recipes;
+        var appliedQueryable = queryableRecipes.ApplyQueryKitFilter(input, config);
+        var recipes = await appliedQueryable.ToListAsync();
+
+        // Assert
+        recipes.Count.Should().Be(1);
+        recipes[0].Id.Should().Be(recipe.Id);
     }
 }
