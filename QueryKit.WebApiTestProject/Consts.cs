@@ -7,4 +7,9 @@ public static class Consts
         public const string IntegrationTestingEnvName = "LocalIntegrationTesting";
         public const string FunctionalTestingEnvName = "LocalFunctionalTesting";
     }
+
+    public static class DatabaseSequences
+    {
+        public const string AuthorPrefix = "AUT";
+    }
 }

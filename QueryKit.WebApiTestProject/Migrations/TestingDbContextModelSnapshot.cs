@@ -24,12 +24,22 @@ namespace QueryKit.WebApiTestProject.Migrations
             NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "fuzzystrmatch");
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.HasSequence<int>("AUT")
+                .StartsAt(100045702L);
+
             modelBuilder.Entity("QueryKit.WebApiTestProject.Entities.Authors.Author", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("id");
+
+                    b.Property<string>("InternalIdentifier")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasColumnName("internal_identifier")
+                        .HasDefaultValueSql("concat('AUT', nextval('\"AUT\"'))");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -41,13 +51,13 @@ namespace QueryKit.WebApiTestProject.Migrations
                         .HasColumnName("recipe_id");
 
                     b.HasKey("Id")
-                        .HasName("pk_author");
+                        .HasName("pk_authors");
 
                     b.HasIndex("RecipeId")
                         .IsUnique()
-                        .HasDatabaseName("ix_author_recipe_id");
+                        .HasDatabaseName("ix_authors_recipe_id");
 
-                    b.ToTable("author", (string)null);
+                    b.ToTable("authors", (string)null);
                 });
 
             modelBuilder.Entity("QueryKit.WebApiTestProject.Entities.Ingredients.Ingredient", b =>
@@ -248,7 +258,7 @@ namespace QueryKit.WebApiTestProject.Migrations
                         .HasForeignKey("QueryKit.WebApiTestProject.Entities.Authors.Author", "RecipeId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
-                        .HasConstraintName("fk_author_recipes_recipe_id");
+                        .HasConstraintName("fk_authors_recipes_recipe_id");
 
                     b.Navigation("Recipe");
                 });

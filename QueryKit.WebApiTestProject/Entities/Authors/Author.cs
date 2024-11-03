@@ -14,6 +14,8 @@ public class Author : BaseEntity
     [ForeignKey("Recipe")]
     public Guid RecipeId { get; private set; }
     public Recipe Recipe { get; private set; }
+    
+    public string InternalIdentifier { get; }
 
 
     public static Author Create(AuthorForCreation authorForCreation)

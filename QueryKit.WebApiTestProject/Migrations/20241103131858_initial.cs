@@ -7,13 +7,17 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace QueryKit.WebApiTestProject.Migrations
 {
     /// <inheritdoc />
-    public partial class TestingSetup : Migration
+    public partial class initial : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.AlterDatabase()
                 .Annotation("Npgsql:PostgresExtension:fuzzystrmatch", ",,");
+
+            migrationBuilder.CreateSequence<int>(
+                name: "AUT",
+                startValue: 100045702L);
 
             migrationBuilder.CreateTable(
                 name: "people",
@@ -65,18 +69,19 @@ namespace QueryKit.WebApiTestProject.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "author",
+                name: "authors",
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
                     name = table.Column<string>(type: "text", nullable: false),
-                    recipe_id = table.Column<Guid>(type: "uuid", nullable: false)
+                    recipe_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    internal_identifier = table.Column<string>(type: "text", nullable: false, defaultValueSql: "concat('AUT', nextval('\"AUT\"'))")
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("pk_author", x => x.id);
+                    table.PrimaryKey("pk_authors", x => x.id);
                     table.ForeignKey(
-                        name: "fk_author_recipes_recipe_id",
+                        name: "fk_authors_recipes_recipe_id",
                         column: x => x.recipe_id,
                         principalTable: "recipes",
                         principalColumn: "id",
@@ -126,8 +131,8 @@ namespace QueryKit.WebApiTestProject.Migrations
                 });
 
             migrationBuilder.CreateIndex(
-                name: "ix_author_recipe_id",
-                table: "author",
+                name: "ix_authors_recipe_id",
+                table: "authors",
                 column: "recipe_id",
                 unique: true);
 
@@ -146,7 +151,7 @@ namespace QueryKit.WebApiTestProject.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "author");
+                name: "authors");
 
             migrationBuilder.DropTable(
                 name: "ingredient_preparations");
@@ -159,6 +164,9 @@ namespace QueryKit.WebApiTestProject.Migrations
 
             migrationBuilder.DropTable(
                 name: "recipes");
+
+            migrationBuilder.DropSequence(
+                name: "AUT");
         }
     }
 }

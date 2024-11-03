@@ -11,6 +11,7 @@ using SharedTestingHelper.Fakes.Ingredients;
 using SharedTestingHelper.Fakes.Recipes;
 using WebApiTestProject.Database;
 using WebApiTestProject.Entities;
+using WebApiTestProject.Entities.Authors;
 using WebApiTestProject.Entities.Ingredients;
 using WebApiTestProject.Entities.Ingredients.Models;
 using WebApiTestProject.Entities.Recipes;
@@ -1533,5 +1534,73 @@ public class DatabaseFilteringTests(ITestOutputHelper testOutputHelper) : TestBa
         // Assert
         recipes.Count.Should().Be(1);
         recipes[0].Id.Should().Be(recipe.Id);
+    }
+
+    [Fact]
+    public async Task can_filter_on_db_sequence()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var author = new FakeAuthorBuilder().Build();
+        var recipe = new FakeRecipeBuilder().Build();
+        recipe.SetAuthor(author);
+        await testingServiceScope.InsertAsync(recipe);
+        
+        var authorInsertWithId = await testingServiceScope.DbContext().Authors
+            .FirstOrDefaultAsync(x => x.Id == author.Id);
+        var lastFourCharsOfInternalId = authorInsertWithId!.InternalIdentifier[^4..];
+
+        var input = $"""internalId @=* "{lastFourCharsOfInternalId}" """;
+
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<Author>(x => x.InternalIdentifier).HasQueryName("internalId");
+        });
+        
+        // Act
+        var queryableRecipe = testingServiceScope.DbContext().Authors;
+        var appliedQueryable = queryableRecipe.ApplyQueryKitFilter(input, config);
+        var dbAuthor = await appliedQueryable.ToListAsync();
+        
+        // Assert
+        dbAuthor.Count.Should().Be(1);
+        dbAuthor.FirstOrDefault(x => x.Id == author.Id).Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task can_filter_on_db_sequence_as_child()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var fakeAuthorOne = new FakeAuthorBuilder().Build();
+        var fakeRecipeOne = new FakeRecipeBuilder().Build();
+        fakeRecipeOne.SetAuthor(fakeAuthorOne);
+        
+        var fakeAuthorTwo = new FakeAuthorBuilder().Build();
+        var fakeRecipeTwo = new FakeRecipeBuilder().Build();
+        fakeRecipeTwo.SetAuthor(fakeAuthorTwo);
+        await testingServiceScope.InsertAsync(fakeRecipeOne, fakeRecipeTwo);
+        
+        var authorInsertWithId = await testingServiceScope.DbContext().Authors
+            .FirstOrDefaultAsync(x => x.Id == fakeAuthorOne.Id);
+        var lastFourCharsOfInternalId = authorInsertWithId!.InternalIdentifier[^4..];
+
+        var input = $"""internalId @=* "{lastFourCharsOfInternalId}" """;
+        
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<Recipe>(x => x.Author.InternalIdentifier).HasQueryName("internalId");
+        });
+
+        // Act
+        var queryableRecipe = testingServiceScope.DbContext().Recipes
+            .Include(x => x.Author);
+        var appliedQueryable = queryableRecipe.ApplyQueryKitFilter(input, config);
+        var people = await appliedQueryable.ToListAsync();
+        
+        // Assert
+        people.Count.Should().Be(1);
+        people.FirstOrDefault(x => x.Id == fakeRecipeOne.Id).Should().NotBeNull();
+        people.FirstOrDefault(x => x.Id == fakeRecipeTwo.Id).Should().BeNull();
     }
 }
