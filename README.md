@@ -62,7 +62,7 @@ You can also pass a configuration like this. More on configuration options below
 var config = new QueryKitConfiguration(config =>
 {
     config.Property<SpecialPerson>(x => x.FirstName)
-     	 		.HasQueryName("first")
+            .HasQueryName("first")
       		.PreventSort();
 });
 var people = _dbContext.People
@@ -158,6 +158,29 @@ var input = """(Age ^^ [20, 30, 40]) && (BirthMonth ^^* ["January", "February", 
 var input = """(Title == "lamb" && ((Age >= 25 && Rating < 4.5) || (SpecificDate <= "2022-07-01T00:00:03Z" && Time == "00:00:03")) && (Favorite == true || Email.Value _= "hello@gmail.com"))""";
 ```
 
+#### Filtering Projections
+You can also filter on queryable projections like so:
+```csharp
+var input = $"""info @=* "{fakeAuthorOne.Name}" """;
+
+var config = new QueryKitConfiguration(config =>
+{
+    config.Property<RecipeDto>(x => x.AuthorInfo).HasQueryName("info");
+});
+
+var queryableRecipe = testingServiceScope.DbContext().Recipes
+    .Include(x => x.Author)
+    .Select(x => new RecipeDto
+    {
+        Id = x.Id,
+        Title = x.Title,
+        AuthorName = x.Author.Name,
+        AuthorInfo = x.Author.Name + " - " + x.Author.InternalIdentifier
+    });
+var appliedQueryable = queryableRecipe.ApplyQueryKitFilter(input, config);
+var recipes = await appliedQueryable.ToListAsync();
+```
+
 #### Filtering Collections
 
 You can also filter into collections with QueryKit by using most of the normal operators. For example, if I wanted to filter for recipes that only have an ingredient named `salt`, I could do something like this:
@@ -199,7 +222,7 @@ public enum BirthMonthEnum
 {
     January = 1,
     February = 2,
-	  //...
+    //...
 }
 ```
 
@@ -217,7 +240,7 @@ var input = $"""first == "Jane" || Age > 10""";
 var config = new QueryKitConfiguration(config =>
 {
     config.Property<SpecialPerson>(x => x.FirstName)
-     	 		.HasQueryName("first");
+            .HasQueryName("first");
     config.Property<SpecialPerson>(x => x.Age)
       		.PreventFilter();
 });
