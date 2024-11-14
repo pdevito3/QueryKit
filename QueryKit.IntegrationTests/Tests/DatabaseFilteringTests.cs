@@ -1238,6 +1238,131 @@ public class DatabaseFilteringTests(ITestOutputHelper testOutputHelper) : TestBa
         people.FirstOrDefault(x => x.Id == fakeRecipeTwo.Id).Should().BeNull();
     }
 
+    private class RecipeDto
+    {
+        public Guid Id { get; set; }
+        public string Title { get; set; }
+        public string AuthorName { get; set; }
+        public string AuthorInfo { get; set; }
+    }
+    [Fact]
+    public async Task can_filter_on_projection()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var fakeAuthorOne = new FakeAuthorBuilder().Build();
+        var fakeRecipeOne = new FakeRecipeBuilder().Build();
+        fakeRecipeOne.SetAuthor(fakeAuthorOne);
+        
+        var fakeAuthorTwo = new FakeAuthorBuilder().Build();
+        var fakeRecipeTwo = new FakeRecipeBuilder().Build();
+        fakeRecipeTwo.SetAuthor(fakeAuthorTwo);
+        await testingServiceScope.InsertAsync(fakeRecipeOne, fakeRecipeTwo);
+
+        var input = $"""title == "{fakeRecipeOne.Title}" """;
+
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<RecipeDto>(x => x.Title).HasQueryName("title");
+        });
+
+        // Act
+        var queryableRecipe = testingServiceScope.DbContext().Recipes
+            .Include(x => x.Author)
+            .Select(x => new RecipeDto
+            {
+                Id = x.Id,
+                Title = x.Title,
+                AuthorName = x.Author.Name
+            });
+        var appliedQueryable = queryableRecipe.ApplyQueryKitFilter(input, config);
+        var recipes = await appliedQueryable.ToListAsync();
+        
+        // Assert
+        recipes.Count.Should().Be(1);
+        recipes.FirstOrDefault(x => x.Id == fakeRecipeOne.Id).Should().NotBeNull();
+        recipes.FirstOrDefault(x => x.Id == fakeRecipeTwo.Id).Should().BeNull();
+    }
+    
+    [Fact]
+    public async Task can_filter_on_projections_nested()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var fakeAuthorOne = new FakeAuthorBuilder().Build();
+        var fakeRecipeOne = new FakeRecipeBuilder().Build();
+        fakeRecipeOne.SetAuthor(fakeAuthorOne);
+        
+        var fakeAuthorTwo = new FakeAuthorBuilder().Build();
+        var fakeRecipeTwo = new FakeRecipeBuilder().Build();
+        fakeRecipeTwo.SetAuthor(fakeAuthorTwo);
+        await testingServiceScope.InsertAsync(fakeRecipeOne, fakeRecipeTwo);
+
+        var input = $"""author == "{fakeAuthorOne.Name}" """;
+
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<RecipeDto>(x => x.AuthorName).HasQueryName("author");
+        });
+
+        // Act
+        var queryableRecipe = testingServiceScope.DbContext().Recipes
+            .Include(x => x.Author)
+            .Select(x => new RecipeDto
+            {
+                Id = x.Id,
+                Title = x.Title,
+                AuthorName = x.Author.Name
+            });
+        var appliedQueryable = queryableRecipe.ApplyQueryKitFilter(input, config);
+        var recipes = await appliedQueryable.ToListAsync();
+        
+        // Assert
+        recipes.Count.Should().Be(1);
+        recipes.FirstOrDefault(x => x.Id == fakeRecipeOne.Id).Should().NotBeNull();
+        recipes.FirstOrDefault(x => x.Id == fakeRecipeTwo.Id).Should().BeNull();
+    }
+    
+    [Fact]
+    public async Task can_filter_on_projections_nested_complex()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var fakeAuthorOne = new FakeAuthorBuilder().Build();
+        var fakeRecipeOne = new FakeRecipeBuilder().Build();
+        fakeRecipeOne.SetAuthor(fakeAuthorOne);
+        
+        var fakeAuthorTwo = new FakeAuthorBuilder().Build();
+        var fakeRecipeTwo = new FakeRecipeBuilder().Build();
+        fakeRecipeTwo.SetAuthor(fakeAuthorTwo);
+        await testingServiceScope.InsertAsync(fakeRecipeOne, fakeRecipeTwo);
+
+        var input = $"""info @=* "{fakeAuthorOne.Name}" """;
+
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<RecipeDto>(x => x.AuthorInfo).HasQueryName("info");
+        });
+
+        // Act
+        var queryableRecipe = testingServiceScope.DbContext().Recipes
+            .Include(x => x.Author)
+            .Select(x => new RecipeDto
+            {
+                Id = x.Id,
+                Title = x.Title,
+                AuthorName = x.Author.Name,
+                AuthorInfo = x.Author.Name + " - " + x.Author.InternalIdentifier
+            });
+        var appliedQueryable = queryableRecipe.ApplyQueryKitFilter(input, config);
+        var recipes = await appliedQueryable.ToListAsync();
+        
+        // Assert
+        recipes.Count.Should().Be(1);
+        recipes.FirstOrDefault(x => x.Id == fakeRecipeOne.Id).Should().NotBeNull();
+        recipes.FirstOrDefault(x => x.Id == fakeRecipeTwo.Id).Should().BeNull();
+    }
+
     [Fact]
     public async Task can_filter_on_child_entity_with_config()
     {
