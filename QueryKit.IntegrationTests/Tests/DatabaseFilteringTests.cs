@@ -353,14 +353,14 @@ public class DatabaseFilteringTests(ITestOutputHelper testOutputHelper) : TestBa
         
         await testingServiceScope.InsertAsync(fakeRecipeOne);
         
-        var input = $"Ingredients.QualityLevel == {qualityLevel}";
+        var input = $"ql == {qualityLevel}";
         var config = new QueryKitConfiguration(settings =>
         {
-            settings.Property<Recipe>(x => x.Ingredients.Select(y => y.QualityLevel)).PreventSort();
+            settings.Property<Recipe>(x => x.Ingredients.Select(y => y.QualityLevel)).HasQueryName("ql");
         });
         
         var queryableRecipes = testingServiceScope.DbContext().Recipes;
-        var appliedQueryable = queryableRecipes.ApplyQueryKitFilter(input);
+        var appliedQueryable = queryableRecipes.ApplyQueryKitFilter(input, config);
         var recipes = await appliedQueryable.ToListAsync();
         
         recipes.Count.Should().Be(1);

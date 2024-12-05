@@ -4,6 +4,7 @@ using Entities.Authors;
 using Entities.Ingredients;
 using Entities.Recipes;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using QueryKit.WebApiTestProject.Entities;
 
 public class TestingDbContext(DbContextOptions<TestingDbContext> options) : DbContext(options)
@@ -30,5 +31,12 @@ public class TestingDbContext(DbContextOptions<TestingDbContext> options) : DbCo
         modelBuilder.ApplyConfiguration(new PersonConfiguration());
         modelBuilder.ApplyConfiguration(new RecipeConfiguration());
         modelBuilder.ApplyConfiguration(new AuthorConfiguration());
+    }
+    
+    // due to dumb breaking change in .net 9... https://github.com/dotnet/efcore/issues/34431
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        base.OnConfiguring(optionsBuilder);
+        optionsBuilder.ConfigureWarnings(warnings => warnings.Log(RelationalEventId.PendingModelChangesWarning));
     }
 }
