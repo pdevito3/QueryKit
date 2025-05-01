@@ -56,15 +56,22 @@ public class QueryKitPropertyMappings
     public string ReplaceAliasesWithPropertyPaths(string input)
     {
         var operators = ComparisonOperator.List.Select(x => x.Operator()).ToList();
-        foreach (var alias in _propertyMappings.Values)
+        
+        foreach (QueryKitPropertyInfo queryKitPropertyInfo in _propertyMappings.Values)
         {
-            var propertyPath = GetPropertyPathByQueryName(alias.QueryName);
+            var propertyPath = GetPropertyPathByQueryName(queryKitPropertyInfo.QueryName);
             if (!string.IsNullOrEmpty(propertyPath))
             {
                 foreach (var op in operators)
                 {
                     // Use regular expression to isolate left side of the expression
-                    var regex = new Regex($@"\b{alias.QueryName}\b(?=\s*{op})", RegexOptions.IgnoreCase);
+                    var regex = new Regex($@"\b{queryKitPropertyInfo.QueryName}\b(?=\s*{op})", RegexOptions.IgnoreCase);
+
+                    if (queryKitPropertyInfo is { CanSort: false, CanFilter: false} && regex.IsMatch(input))
+                    {
+                        throw new InvalidOperationException($"'{queryKitPropertyInfo.Name}' is not allowed for filtering or sorting.");
+                    }
+                    
                     input = regex.Replace(input, propertyPath);
                 }
             }
