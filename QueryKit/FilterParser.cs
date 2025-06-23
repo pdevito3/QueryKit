@@ -434,6 +434,13 @@ public static class FilterParser
                 }
 
                 var rightExpr = CreateRightExpr(temp.leftExpr, temp.right, temp.op);
+                
+                // Handle nested collection filtering
+                if (temp.leftExpr is MethodCallExpression methodCall && IsNestedCollectionExpression(methodCall))
+                {
+                    return CreateNestedCollectionFilterExpression<T>(methodCall, rightExpr, temp.op);
+                }
+                
                 return temp.op.GetExpression<T>(temp.leftExpr, rightExpr, config?.DbContextType);
             });
     }
@@ -469,8 +476,17 @@ public static class FilterParser
                             var propertyInfoForMethod = GetPropertyInfo(genericArgType, propName);
                             Expression lambdaBody = Expression.PropertyOrField(innerParameter, propertyInfoForMethod.Name);
 
-                            var type = typeof(IEnumerable<>).MakeGenericType(propertyType);
-                            lambdaBody =  Expression.Lambda(Expression.Convert(lambdaBody, type), innerParameter);
+                            // Ensure the lambda body returns IEnumerable<T> for SelectMany
+                            var expectedType = typeof(IEnumerable<>).MakeGenericType(propertyType);
+                            if (lambdaBody.Type != expectedType && !expectedType.IsAssignableFrom(lambdaBody.Type))
+                            {
+                                // Convert to IEnumerable<T> if needed (e.g., List<T> to IEnumerable<T>)
+                                lambdaBody = Expression.Convert(lambdaBody, expectedType);
+                            }
+
+                            // Create lambda with the correct return type
+                            var lambdaType = typeof(Func<,>).MakeGenericType(genericArgType, expectedType);
+                            lambdaBody = Expression.Lambda(lambdaType, lambdaBody, innerParameter);
 
                             return Expression.Call(selectMethod, member, lambdaBody);
                         }
@@ -496,10 +512,13 @@ public static class FilterParser
                     var innerGenericType = GetInnerGenericType(call.Method.ReturnType);
                     var propertyInfoForMethod = GetPropertyInfo(innerGenericType, propName);
 
-                    var linqMethod = IsEnumerable(innerGenericType) ? "SelectMany" : "Select";
+                    var propertyType = propertyInfoForMethod.PropertyType;
+                    var linqMethod = IsEnumerable(propertyType) ? "SelectMany" : "Select";
+                    var resultType = IsEnumerable(propertyType) ? propertyType.GetGenericArguments()[0] : propertyType;
+                    
                     var selectMethod = typeof(Enumerable).GetMethods()
                         .First(m => m.Name == linqMethod && m.GetParameters().Length == 2)
-                        .MakeGenericMethod(innerGenericType, propertyInfoForMethod.PropertyType);
+                        .MakeGenericMethod(innerGenericType, resultType);
 
                     var innerParameter = Expression.Parameter(innerGenericType, "y");
                     var lambdaBody = Expression.PropertyOrField(innerParameter, propertyInfoForMethod.Name);
@@ -600,6 +619,101 @@ public static class FilterParser
         var toStringLambda = Expression.Lambda(GetGuidToStringExpression(param), param);
 
         return Expression.Call(selectMethod, expression, toStringLambda);
+    }
+
+    private static bool IsNestedCollectionExpression(MethodCallExpression methodCall)
+    {
+        // Check if this is a nested SelectMany expression indicating nested collection navigation
+        if (methodCall.Method.Name == "SelectMany" && methodCall.Arguments.Count == 2)
+        {
+            // Check if the source is also a SelectMany (indicating nesting)
+            if (methodCall.Arguments[0] is MethodCallExpression sourceCall && 
+                sourceCall.Method.Name == "SelectMany")
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static Expression CreateNestedCollectionFilterExpression<T>(MethodCallExpression methodCall, Expression rightExpr, ComparisonOperator op)
+    {
+        // For nested collection expressions like Ingredients.Preparations.Text
+        // We need to unwind the SelectMany chain and create nested Any expressions
+        // like: x.Ingredients.Any(i => i.Preparations.Any(p => p.Text == "value"))
+        
+        var expressions = UnwindSelectManyChain(methodCall);
+        if (expressions.Count < 2)
+        {
+            // Fallback to regular collection expression
+            return op.GetExpression<T>(methodCall, rightExpr, null);
+        }
+
+        // Build nested Any expressions from the inside out
+        var currentExpression = expressions.Last();
+        var currentParameter = Expression.Parameter(currentExpression.CollectionElementType, $"item{expressions.Count - 1}");
+        var finalPropertyAccess = Expression.PropertyOrField(currentParameter, currentExpression.PropertyName);
+        
+        // Create the innermost comparison
+        var comparison = op.GetExpression<T>(finalPropertyAccess, rightExpr, null);
+        var innerLambda = Expression.Lambda(comparison, currentParameter);
+        
+        // Build the Any chain from inside out
+        for (int i = expressions.Count - 2; i >= 0; i--)
+        {
+            var collectionInfo = expressions[i];
+            var param = Expression.Parameter(collectionInfo.CollectionElementType, $"item{i}");
+            var collectionAccess = Expression.PropertyOrField(param, collectionInfo.PropertyName);
+            
+            // Create Any method call
+            var anyMethod = typeof(Enumerable).GetMethods()
+                .First(m => m.Name == "Any" && m.GetParameters().Length == 2)
+                .MakeGenericMethod(collectionInfo.CollectionElementType);
+            
+            var anyCall = Expression.Call(anyMethod, collectionAccess, innerLambda);
+            innerLambda = Expression.Lambda(anyCall, param);
+        }
+
+        return innerLambda.Body;
+    }
+
+    private class CollectionInfo
+    {
+        public Type CollectionElementType { get; set; }
+        public string PropertyName { get; set; }
+    }
+
+    private static List<CollectionInfo> UnwindSelectManyChain(MethodCallExpression methodCall)
+    {
+        var result = new List<CollectionInfo>();
+        var current = methodCall;
+
+        while (current != null && current.Method.Name == "SelectMany")
+        {
+            // Extract the property access from the lambda
+            if (current.Arguments[1] is LambdaExpression lambda &&
+                lambda.Body is MemberExpression member)
+            {
+                var elementType = current.Method.GetGenericArguments()[0];
+                result.Insert(0, new CollectionInfo 
+                { 
+                    CollectionElementType = elementType, 
+                    PropertyName = member.Member.Name 
+                });
+            }
+
+            // Move to the next level
+            if (current.Arguments[0] is MethodCallExpression nextCall)
+            {
+                current = nextCall;
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        return result;
     }
 }
 
