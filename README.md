@@ -195,7 +195,23 @@ By default, QueryKit will use `Any` under the hood when building this filter, bu
 var input = """"Ingredients.Stock %>= 1"""";
 ```
 
-> 🚧 At the moment, nested collections like `Ingredients.Suppliers.Rating > 4` is still under active development
+Nested collections can also be filtered:
+
+```csharp	
+var input = $"""preparations == "{preparationOne.Text}" """;
+var config = new QueryKitConfiguration(settings =>
+{
+    settings.Property<Recipe>(x => x.Ingredients
+        .SelectMany(y => y.Preparations)
+        .Select(y => y.Text))
+        .HasQueryName("preparations");
+});
+
+// Act
+var queryableRecipes = testingServiceScope.DbContext().Recipes;
+var appliedQueryable = queryableRecipes.ApplyQueryKitFilter(input, config);
+var recipes = await appliedQueryable.ToListAsync();
+```
 
 If you want to filter a primitve collection like `List<string>` you can use the `Has` or `DoesNotHave` operator (can be case insensitive with the appended `*`):
 
