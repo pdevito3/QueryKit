@@ -643,26 +643,31 @@ public class DatabaseFilteringTests(ITestOutputHelper testOutputHelper) : TestBa
     {
         // Arrange
         var testingServiceScope = new TestingServiceScope();
-        var timeNow = TimeOnly.FromDateTime(DateTime.UtcNow);
+        var uniqueId = Guid.NewGuid().ToString()[..8];
+        var specificTime = new TimeOnly(14, 30, 45, 123, 456); // Fixed time for consistency
         var fakePersonOne = new FakeTestingPersonBuilder()
-            .WithTime(timeNow)
+            .WithTime(specificTime)
+            .WithTitle($"TimeMicrosTest1_{uniqueId}")
+            .WithFirstName($"TimeMicrosPerson_{uniqueId}")
             .Build();
         var fakePersonTwo = new FakeTestingPersonBuilder()
-            .WithTime(TimeOnly.FromDateTime(DateTime.UtcNow.AddHours(-1)))
+            .WithTime(new TimeOnly(12, 15, 30, 999, 888))
+            .WithTitle($"TimeMicrosTest2_{uniqueId}")
+            .WithFirstName($"TimeMicrosOther_{uniqueId}")
             .Build();
         await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
 
-        var input = $"""Time == "{fakePersonOne.Time:HH:mm:ss.ffffff}" """;
+        var input = $"Time == \"{specificTime:HH:mm:ss.ffffff}\" && FirstName == \"TimeMicrosPerson_{uniqueId}\"";
 
         // Act
         var queryablePeople = testingServiceScope.DbContext().People;
-
         var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
         var people = await appliedQueryable.ToListAsync();
 
         // Assert
         people.Count.Should().Be(1);
         people[0].Id.Should().Be(fakePersonOne.Id);
+        people[0].Time.Should().Be(specificTime);
     }
     
     [Fact]
@@ -670,26 +675,31 @@ public class DatabaseFilteringTests(ITestOutputHelper testOutputHelper) : TestBa
     {
         // Arrange
         var testingServiceScope = new TestingServiceScope();
-        var timeNow = TimeOnly.FromDateTime(DateTime.UtcNow);
+        var uniqueId = Guid.NewGuid().ToString()[..8];
+        var targetTime = new TimeOnly(16, 45, 30); // Fixed time for consistency
         var fakePersonOne = new FakeTestingPersonBuilder()
-            .WithTime(timeNow)
+            .WithTime(targetTime)
+            .WithTitle($"TimeNoMicrosTest1_{uniqueId}")
+            .WithFirstName($"TimeNoMicrosPerson_{uniqueId}")
             .Build();
         var fakePersonTwo = new FakeTestingPersonBuilder()
-            .WithTime(TimeOnly.FromDateTime(DateTime.UtcNow.AddHours(-1)))
+            .WithTime(new TimeOnly(10, 30, 15))
+            .WithTitle($"TimeNoMicrosTest2_{uniqueId}")
+            .WithFirstName($"TimeNoMicrosOther_{uniqueId}")
             .Build();
         await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
 
-        var input = $"""Time >= "{fakePersonOne.Time:HH:mm:ss}" """;
+        var input = $"Time >= \"{targetTime:HH:mm:ss}\" && FirstName == \"TimeNoMicrosPerson_{uniqueId}\"";
 
         // Act
         var queryablePeople = testingServiceScope.DbContext().People;
-
         var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
         var people = await appliedQueryable.ToListAsync();
 
         // Assert
-        people.Count.Should().BeGreaterOrEqualTo(1);
-        people.FirstOrDefault(x => x.Id == fakePersonOne.Id).Should().NotBeNull();
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakePersonOne.Id);
+        people[0].Time.Should().Be(targetTime);
     }
 
 
@@ -748,7 +758,7 @@ public class DatabaseFilteringTests(ITestOutputHelper testOutputHelper) : TestBa
         var fakeRecipeTwo = new FakeRecipeBuilder().Build();
         await testingServiceScope.InsertAsync(fakeRecipeOne, fakeRecipeTwo);
         
-        var input = $"""(secondaryId @=* "4ce0")""";
+        var input = $"""(secondaryId @=* "4ce0-b19b")""";
 
         // Act
         var queryableRecipe = testingServiceScope.DbContext().Recipes;
@@ -933,16 +943,20 @@ public class DatabaseFilteringTests(ITestOutputHelper testOutputHelper) : TestBa
     {
         // Arrange
         var testingServiceScope = new TestingServiceScope();
-        var faker = new Faker();
+        var uniqueId = Guid.NewGuid().ToString()[..8];
         var fakePersonOne = new FakeTestingPersonBuilder()
             .WithRating(4M)
+            .WithTitle($"DecimalTestHigh_{uniqueId}")
+            .WithFirstName($"DecimalPerson1_{uniqueId}")
             .Build();
         var fakePersonTwo = new FakeTestingPersonBuilder()
             .WithRating(2M)
+            .WithTitle($"DecimalTestLow_{uniqueId}")
+            .WithFirstName($"DecimalPerson2_{uniqueId}")
             .Build();
         await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
 
-        var input = $"""{nameof(TestingPerson.Rating)} > 3.5""";
+        var input = $"{nameof(TestingPerson.Rating)} > 3.5 && FirstName == \"DecimalPerson1_{uniqueId}\"";
 
         // Act
         var queryablePeople = testingServiceScope.DbContext().People;
@@ -950,7 +964,9 @@ public class DatabaseFilteringTests(ITestOutputHelper testOutputHelper) : TestBa
         var people = await appliedQueryable.ToListAsync();
 
         // Assert
-        people.Count(x => x.Id == fakePersonOne.Id).Should().Be(1);
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakePersonOne.Id);
+        people[0].Rating.Should().Be(4M);
     }
     
     [Fact]
@@ -1259,16 +1275,25 @@ public class DatabaseFilteringTests(ITestOutputHelper testOutputHelper) : TestBa
     {
         // Arrange
         var testingServiceScope = new TestingServiceScope();
-        var fakeAuthorOne = new FakeAuthorBuilder().Build();
-        var fakeRecipeOne = new FakeRecipeBuilder().Build();
+        var uniqueId = Guid.NewGuid().ToString()[..8];
+        var fakeAuthorOne = new FakeAuthorBuilder()
+            .WithName($"ChildEntityAuthor1_{uniqueId}")
+            .Build();
+        var fakeRecipeOne = new FakeRecipeBuilder()
+            .WithTitle($"ChildEntityRecipe1_{uniqueId}")
+            .Build();
         fakeRecipeOne.SetAuthor(fakeAuthorOne);
         
-        var fakeAuthorTwo = new FakeAuthorBuilder().Build();
-        var fakeRecipeTwo = new FakeRecipeBuilder().Build();
+        var fakeAuthorTwo = new FakeAuthorBuilder()
+            .WithName($"ChildEntityAuthor2_{uniqueId}")
+            .Build();
+        var fakeRecipeTwo = new FakeRecipeBuilder()
+            .WithTitle($"ChildEntityRecipe2_{uniqueId}")
+            .Build();
         fakeRecipeTwo.SetAuthor(fakeAuthorTwo);
         await testingServiceScope.InsertAsync(fakeRecipeOne, fakeRecipeTwo);
 
-        var input = $"""Author.Name == "{fakeAuthorOne.Name}" """;
+        var input = $"Author.Name == \"{fakeAuthorOne.Name}\" && Title == \"{fakeRecipeOne.Title}\"";
 
         // Act
         var queryableRecipe = testingServiceScope.DbContext().Recipes
@@ -1372,7 +1397,9 @@ public class DatabaseFilteringTests(ITestOutputHelper testOutputHelper) : TestBa
     {
         // Arrange
         var testingServiceScope = new TestingServiceScope();
-        var fakeAuthorOne = new FakeAuthorBuilder().Build();
+        var fakeAuthorOne = new FakeAuthorBuilder()
+            .WithName(Guid.NewGuid().ToString())
+            .Build();
         var fakeRecipeOne = new FakeRecipeBuilder().Build();
         fakeRecipeOne.SetAuthor(fakeAuthorOne);
         
@@ -2728,7 +2755,7 @@ public class DatabaseFilteringTests(ITestOutputHelper testOutputHelper) : TestBa
     {
         // Arrange
         var testingServiceScope = new TestingServiceScope();
-        var faker = new Faker();
+        var uniqueId = Guid.NewGuid().ToString()[..8];
         
         var targetDate = new DateTime(2023, 6, 15, 0, 0, 0, DateTimeKind.Utc);
         var beforeDate = targetDate.AddDays(-1);
@@ -2736,17 +2763,19 @@ public class DatabaseFilteringTests(ITestOutputHelper testOutputHelper) : TestBa
         
         var beforePerson = new FakeTestingPersonBuilder()
             .WithSpecificDateTime(beforeDate)
-            .WithTitle("BeforeUser")
+            .WithTitle($"BeforeUser_{uniqueId}")
+            .WithFirstName($"CustomOpBefore_{uniqueId}")
             .Build();
         
         var afterPerson = new FakeTestingPersonBuilder()
             .WithSpecificDateTime(afterDate)
-            .WithTitle("AfterUser")
+            .WithTitle($"AfterUser_{uniqueId}")
+            .WithFirstName($"CustomOpAfter_{uniqueId}")
             .Build();
         
         await testingServiceScope.InsertAsync(beforePerson, afterPerson);
         
-        var input = """isAfterDate == "2023-06-15T00:00:00Z" """;
+        var input = $"isAfterDate == \"2023-06-15T00:00:00Z\" && FirstName @= \"CustomOp\"";
         
         var config = new QueryKitConfiguration(config =>
         {
@@ -2765,5 +2794,739 @@ public class DatabaseFilteringTests(ITestOutputHelper testOutputHelper) : TestBa
         people.Should().Contain(p => p.Id == afterPerson.Id);
         people.Should().NotContain(p => p.Id == beforePerson.Id);
         people[0].SpecificDateTime.Should().BeAfter(targetDate);
+    }
+
+    // Additional Numeric Types Testing
+    [Fact]
+    public async Task can_filter_by_float()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var uniqueId = Guid.NewGuid().ToString()[..8];
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithRating(3.14m) // Testing decimal with float-like precision
+            .WithTitle($"FloatTestHigh_{uniqueId}")
+            .WithFirstName($"FloatPerson1_{uniqueId}")
+            .Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder()
+            .WithRating(2.5m)
+            .WithTitle($"FloatTestLow_{uniqueId}")
+            .WithFirstName($"FloatPerson2_{uniqueId}")
+            .Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+
+        var input = $"Rating > 3.0 && FirstName == \"FloatPerson1_{uniqueId}\"";
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakePersonOne.Id);
+        people[0].Rating.Should().Be(3.14m);
+    }
+
+    [Fact]
+    public async Task can_filter_by_double()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var uniqueId = Guid.NewGuid().ToString()[..8];
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithRating(99.999m) // Testing decimal with double-like precision
+            .WithTitle($"DoubleTestHigh_{uniqueId}")
+            .WithFirstName($"DoublePerson1_{uniqueId}")
+            .Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder()
+            .WithRating(50.5m)
+            .WithTitle($"DoubleTestLow_{uniqueId}")
+            .WithFirstName($"DoublePerson2_{uniqueId}")
+            .Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+
+        var input = $"Rating >= 99.9 && FirstName == \"DoublePerson1_{uniqueId}\"";
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakePersonOne.Id);
+        people[0].Rating.Should().Be(99.999m);
+    }
+
+    // Systematic Comparison Operator Testing
+    [Fact]
+    public async Task can_filter_with_not_equals_operator()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var uniqueId = Guid.NewGuid().ToString()[..8];
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithAge(25)
+            .WithTitle($"NotEqualsTest1_{uniqueId}")
+            .WithFirstName($"NotEqualsPerson1_{uniqueId}")
+            .Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder()
+            .WithAge(30)
+            .WithTitle($"NotEqualsTest2_{uniqueId}")
+            .WithFirstName($"NotEqualsPerson2_{uniqueId}")
+            .Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+
+        var input = $"Age != 25 && FirstName == \"NotEqualsPerson2_{uniqueId}\"";
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakePersonTwo.Id);
+        people[0].Age.Should().Be(30);
+    }
+
+    [Fact]
+    public async Task can_filter_with_greater_than_operator_across_types()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var uniqueId = Guid.NewGuid().ToString()[..8];
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithAge(30)
+            .WithRating(4.5m)
+            .WithTitle($"GreaterThanTest_{uniqueId}")
+            .WithFirstName($"GreaterThanPerson1_{uniqueId}")
+            .Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder()
+            .WithAge(20)
+            .WithRating(3.0m)
+            .WithTitle($"GreaterThanTest2_{uniqueId}")
+            .WithFirstName($"GreaterThanPerson2_{uniqueId}")
+            .Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+
+        var input = $"Age > 25 && Rating > 4.0 && FirstName == \"GreaterThanPerson1_{uniqueId}\"";
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakePersonOne.Id);
+    }
+
+    [Fact]
+    public async Task can_filter_with_less_than_operator_across_types()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var uniqueId = Guid.NewGuid().ToString()[..8];
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithAge(18)
+            .WithRating(2.5m)
+            .WithTitle($"LessThanTest_{uniqueId}")
+            .WithFirstName($"LessThanPerson1_{uniqueId}")
+            .Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder()
+            .WithAge(35)
+            .WithRating(4.0m)
+            .WithTitle($"LessThanTest2_{uniqueId}")
+            .WithFirstName($"LessThanPerson2_{uniqueId}")
+            .Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+
+        var input = $"Age < 21 && Rating < 3.0 && FirstName == \"LessThanPerson1_{uniqueId}\"";
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakePersonOne.Id);
+    }
+
+    [Fact]
+    public async Task can_filter_with_greater_than_or_equal_systematic()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var uniqueId = Guid.NewGuid().ToString()[..8];
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithAge(21)
+            .WithRating(3.0m)
+            .WithTitle($"GteTest_{uniqueId}")
+            .WithFirstName($"GteTestPerson1_{uniqueId}")
+            .Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder()
+            .WithAge(20)
+            .WithRating(2.9m)
+            .WithTitle($"GteTest2_{uniqueId}")
+            .WithFirstName($"GteTestPerson2_{uniqueId}")
+            .Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+
+        var input = $"Age >= 21 && Rating >= 3.0 && FirstName == \"GteTestPerson1_{uniqueId}\"";
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakePersonOne.Id);
+    }
+
+    [Fact]
+    public async Task can_filter_with_less_than_or_equal_systematic()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var uniqueId = Guid.NewGuid().ToString()[..8];
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithAge(18)
+            .WithRating(2.5m)
+            .WithTitle($"LteTest_{uniqueId}")
+            .WithFirstName($"LteTestPerson1_{uniqueId}")
+            .Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder()
+            .WithAge(19)
+            .WithRating(2.6m)
+            .WithTitle($"LteTest2_{uniqueId}")
+            .WithFirstName($"LteTestPerson2_{uniqueId}")
+            .Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+
+        var input = $"Age <= 18 && Rating <= 2.5 && FirstName == \"LteTestPerson1_{uniqueId}\"";
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakePersonOne.Id);
+    }
+
+    // Missing String Operators
+    [Fact]
+    public async Task can_filter_with_not_starts_with_operator()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var uniqueId = Guid.NewGuid().ToString()[..8];
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithTitle($"HelloWorld_{uniqueId}")
+            .WithFirstName($"NotStartsPerson1_{uniqueId}")
+            .Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder()
+            .WithTitle($"WorldHello_{uniqueId}")
+            .WithFirstName($"NotStartsPerson2_{uniqueId}")
+            .Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+
+        var input = $"Title !_= \"Hello\" && FirstName == \"NotStartsPerson2_{uniqueId}\"";
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakePersonTwo.Id);
+        people[0].Title.Should().Be($"WorldHello_{uniqueId}");
+    }
+
+    [Fact]
+    public async Task can_filter_with_not_starts_with_case_insensitive()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var uniqueId = Guid.NewGuid().ToString()[..8];
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithTitle($"helloworld_{uniqueId}")
+            .WithFirstName($"NotStartsInsensitive1_{uniqueId}")
+            .Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder()
+            .WithTitle($"worldhello_{uniqueId}")
+            .WithFirstName($"NotStartsInsensitive2_{uniqueId}")
+            .Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+
+        var input = $"Title !_=* \"HELLO\" && FirstName == \"NotStartsInsensitive2_{uniqueId}\"";
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakePersonTwo.Id);
+        people[0].Title.Should().Be($"worldhello_{uniqueId}");
+    }
+
+    [Fact]
+    public async Task can_filter_with_not_ends_with_operator()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var uniqueId = Guid.NewGuid().ToString()[..8];
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithTitle($"TestEnding_{uniqueId}")
+            .WithFirstName($"NotEndsPerson1_{uniqueId}")
+            .Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder()
+            .WithTitle($"EndingTest_{uniqueId}")
+            .WithFirstName($"NotEndsPerson2_{uniqueId}")
+            .Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+
+        var input = $"Title !_-= \"Ending\" && FirstName == \"NotEndsPerson2_{uniqueId}\"";
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakePersonTwo.Id);
+        people[0].Title.Should().Be($"EndingTest_{uniqueId}");
+    }
+
+    [Fact]
+    public async Task can_filter_with_not_ends_with_case_insensitive()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var uniqueId = Guid.NewGuid().ToString()[..8];
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithTitle($"testending_{uniqueId}")
+            .WithFirstName($"NotEndsInsensitive1_{uniqueId}")
+            .Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder()
+            .WithTitle($"endingtest_{uniqueId}")
+            .WithFirstName($"NotEndsInsensitive2_{uniqueId}")
+            .Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+
+        var input = $"Title !_-=* \"ENDING\" && FirstName == \"NotEndsInsensitive2_{uniqueId}\"";
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakePersonTwo.Id);
+        people[0].Title.Should().Be($"endingtest_{uniqueId}");
+    }
+
+    // Collection Count Operators Testing
+    [Fact]
+    public async Task can_filter_with_collection_count_greater_than()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var uniqueId = Guid.NewGuid().ToString()[..8];
+        
+        var ingredient1 = new FakeIngredientBuilder().Build();
+        var ingredient2 = new FakeIngredientBuilder().Build();
+        var ingredient3 = new FakeIngredientBuilder().Build();
+        var ingredient4 = new FakeIngredientBuilder().Build();
+        
+        var recipeWithManyIngredients = new FakeRecipeBuilder()
+            .WithTitle($"ManyIngredientsRecipe_{uniqueId}")
+            .Build();
+        recipeWithManyIngredients.AddIngredient(ingredient1);
+        recipeWithManyIngredients.AddIngredient(ingredient2);
+        recipeWithManyIngredients.AddIngredient(ingredient3);
+        
+        var recipeWithFewIngredients = new FakeRecipeBuilder()
+            .WithTitle($"FewIngredientsRecipe_{uniqueId}")
+            .Build();
+        recipeWithFewIngredients.AddIngredient(ingredient4);
+        
+        await testingServiceScope.InsertAsync(recipeWithManyIngredients, recipeWithFewIngredients);
+
+        var input = $"Ingredients #> 2 && Title == \"ManyIngredientsRecipe_{uniqueId}\"";
+
+        // Act
+        var queryableRecipes = testingServiceScope.DbContext().Recipes;
+        var appliedQueryable = queryableRecipes.ApplyQueryKitFilter(input);
+        var recipes = await appliedQueryable.ToListAsync();
+
+        // Assert
+        recipes.Count.Should().Be(1);
+        recipes[0].Id.Should().Be(recipeWithManyIngredients.Id);
+        recipes[0].Ingredients.Count.Should().BeGreaterThan(2);
+    }
+
+    [Fact]
+    public async Task can_filter_with_collection_count_less_than()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var uniqueId = Guid.NewGuid().ToString()[..8];
+        
+        var ingredient1 = new FakeIngredientBuilder().Build();
+        var ingredient2 = new FakeIngredientBuilder().Build();
+        var ingredient3 = new FakeIngredientBuilder().Build();
+        
+        var recipeWithFewIngredients = new FakeRecipeBuilder()
+            .WithTitle($"FewIngredientsRecipe_{uniqueId}")
+            .Build();
+        recipeWithFewIngredients.AddIngredient(ingredient1);
+        
+        var recipeWithManyIngredients = new FakeRecipeBuilder()
+            .WithTitle($"ManyIngredientsRecipe_{uniqueId}")
+            .Build();
+        recipeWithManyIngredients.AddIngredient(ingredient2);
+        recipeWithManyIngredients.AddIngredient(ingredient3);
+        
+        await testingServiceScope.InsertAsync(recipeWithFewIngredients, recipeWithManyIngredients);
+
+        var input = $"Ingredients #< 2 && Title == \"FewIngredientsRecipe_{uniqueId}\"";
+
+        // Act
+        var queryableRecipes = testingServiceScope.DbContext().Recipes;
+        var appliedQueryable = queryableRecipes.ApplyQueryKitFilter(input);
+        var recipes = await appliedQueryable.ToListAsync();
+
+        // Assert
+        recipes.Count.Should().Be(1);
+        recipes[0].Id.Should().Be(recipeWithFewIngredients.Id);
+        recipes[0].Ingredients.Count.Should().BeLessThan(2);
+    }
+
+    [Fact]
+    public async Task can_filter_with_collection_count_equals()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var uniqueId = Guid.NewGuid().ToString()[..8];
+        
+        var ingredient1 = new FakeIngredientBuilder().Build();
+        var ingredient2 = new FakeIngredientBuilder().Build();
+        
+        var recipeWithExactCount = new FakeRecipeBuilder()
+            .WithTitle($"ExactCountRecipe_{uniqueId}")
+            .Build();
+        ingredient1.Update(new IngredientForUpdate { Name = ingredient1.Name, Quantity = ingredient1.Quantity, RecipeId = recipeWithExactCount.Id, Measure = ingredient1.Measure });
+        ingredient2.Update(new IngredientForUpdate { Name = ingredient2.Name, Quantity = ingredient2.Quantity, RecipeId = recipeWithExactCount.Id, Measure = ingredient2.Measure });
+        recipeWithExactCount.AddIngredient(ingredient1);
+        recipeWithExactCount.AddIngredient(ingredient2);
+        
+        var ingredient3 = new FakeIngredientBuilder().Build();
+        var recipeWithDifferentCount = new FakeRecipeBuilder()
+            .WithTitle($"DifferentCountRecipe_{uniqueId}")
+            .Build();
+        ingredient3.Update(new IngredientForUpdate { Name = ingredient3.Name, Quantity = ingredient3.Quantity, RecipeId = recipeWithDifferentCount.Id, Measure = ingredient3.Measure });
+        recipeWithDifferentCount.AddIngredient(ingredient3);
+        
+        await testingServiceScope.InsertAsync(recipeWithExactCount, recipeWithDifferentCount);
+
+        var input = $"Ingredients #== 2 && Title == \"ExactCountRecipe_{uniqueId}\"";
+
+        // Act
+        var queryableRecipes = testingServiceScope.DbContext().Recipes;
+        var appliedQueryable = queryableRecipes.ApplyQueryKitFilter(input);
+        var recipes = await appliedQueryable.ToListAsync();
+
+        // Assert
+        recipes.Count.Should().Be(1);
+        recipes[0].Id.Should().Be(recipeWithExactCount.Id);
+        recipes[0].Ingredients.Count.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task can_filter_with_collection_count_not_equals()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var uniqueId = Guid.NewGuid().ToString()[..8];
+        
+        var ingredient1 = new FakeIngredientBuilder().Build();
+        var ingredient2 = new FakeIngredientBuilder().Build();
+        var ingredient3 = new FakeIngredientBuilder().Build();
+        
+        var recipeWithTargetCount = new FakeRecipeBuilder()
+            .WithTitle($"TargetCountRecipe_{uniqueId}")
+            .Build();
+        recipeWithTargetCount.AddIngredient(ingredient1);
+        recipeWithTargetCount.AddIngredient(ingredient2);
+        
+        var recipeWithDifferentCount = new FakeRecipeBuilder()
+            .WithTitle($"DifferentCountRecipe_{uniqueId}")
+            .Build();
+        recipeWithDifferentCount.AddIngredient(ingredient3);
+        
+        await testingServiceScope.InsertAsync(recipeWithTargetCount, recipeWithDifferentCount);
+
+        var input = $"Ingredients #!= 2 && Title == \"DifferentCountRecipe_{uniqueId}\"";
+
+        // Act
+        var queryableRecipes = testingServiceScope.DbContext().Recipes;
+        var appliedQueryable = queryableRecipes.ApplyQueryKitFilter(input);
+        var recipes = await appliedQueryable.ToListAsync();
+
+        // Assert
+        recipes.Count.Should().Be(1);
+        recipes[0].Id.Should().Be(recipeWithDifferentCount.Id);
+        recipes[0].Ingredients.Count.Should().NotBe(2);
+    }
+
+    // DateTime Edge Cases Testing
+    [Fact]
+    public async Task can_filter_datetime_leap_year_boundary()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var uniqueId = Guid.NewGuid().ToString()[..8];
+        var leapYearDate = new DateTime(2024, 2, 29, 0, 0, 0, DateTimeKind.Utc); // Leap year Feb 29
+        var regularDate = new DateTime(2023, 2, 28, 0, 0, 0, DateTimeKind.Utc);
+        
+        var leapYearPerson = new FakeTestingPersonBuilder()
+            .WithSpecificDateTime(leapYearDate)
+            .WithTitle($"LeapYearPerson_{uniqueId}")
+            .WithFirstName($"LeapYearTest_{uniqueId}")
+            .Build();
+        
+        var regularPerson = new FakeTestingPersonBuilder()
+            .WithSpecificDateTime(regularDate)
+            .WithTitle($"RegularPerson_{uniqueId}")
+            .WithFirstName($"RegularTest_{uniqueId}")
+            .Build();
+        
+        await testingServiceScope.InsertAsync(leapYearPerson, regularPerson);
+
+        var input = $"SpecificDateTime == \"2024-02-29T00:00:00Z\" && FirstName == \"LeapYearTest_{uniqueId}\"";
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(leapYearPerson.Id);
+        people[0].SpecificDateTime.Should().Be(leapYearDate);
+    }
+
+    [Fact]
+    public async Task can_filter_datetime_year_boundary()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var uniqueId = Guid.NewGuid().ToString()[..8];
+        var yearEndDate = new DateTime(2023, 12, 31, 23, 59, 59, DateTimeKind.Utc);
+        var yearStartDate = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        
+        var yearEndPerson = new FakeTestingPersonBuilder()
+            .WithSpecificDateTime(yearEndDate)
+            .WithTitle($"YearEndPerson_{uniqueId}")
+            .WithFirstName($"YearBoundaryEnd_{uniqueId}")
+            .Build();
+        
+        var yearStartPerson = new FakeTestingPersonBuilder()
+            .WithSpecificDateTime(yearStartDate)
+            .WithTitle($"YearStartPerson_{uniqueId}")
+            .WithFirstName($"YearBoundaryStart_{uniqueId}")
+            .Build();
+        
+        await testingServiceScope.InsertAsync(yearEndPerson, yearStartPerson);
+
+        var input = $"SpecificDateTime > \"2023-12-31T23:59:58Z\" && FirstName @= \"YearBoundary\"";
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert
+        people.Count.Should().Be(2);
+        people.Should().Contain(p => p.Id == yearEndPerson.Id);
+        people.Should().Contain(p => p.Id == yearStartPerson.Id);
+    }
+
+    // Nullable Type Testing
+    [Fact]
+    public async Task can_filter_nullable_int_with_comparison_operators()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var uniqueId = Guid.NewGuid().ToString()[..8];
+        var personWithAge = new FakeTestingPersonBuilder()
+            .WithAge(25)
+            .WithTitle($"HasAge_{uniqueId}")
+            .WithFirstName($"NullableIntPerson1_{uniqueId}")
+            .Build();
+        
+        var personWithoutAge = new FakeTestingPersonBuilder()
+            .WithTitle($"NoAge_{uniqueId}")
+            .WithFirstName($"NullableIntPerson2_{uniqueId}")
+            .Build();
+        personWithoutAge.Age = null;
+        
+        await testingServiceScope.InsertAsync(personWithAge, personWithoutAge);
+
+        var input = $"Age > 20 && FirstName == \"NullableIntPerson1_{uniqueId}\"";
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(personWithAge.Id);
+        people[0].Age.Should().Be(25);
+    }
+
+    [Fact]
+    public async Task can_filter_nullable_decimal_with_comparison_operators()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var uniqueId = Guid.NewGuid().ToString()[..8];
+        var personWithRating = new FakeTestingPersonBuilder()
+            .WithRating(4.5m)
+            .WithTitle($"HasRating_{uniqueId}")
+            .WithFirstName($"NullableDecimalPerson1_{uniqueId}")
+            .Build();
+        
+        var personWithoutRating = new FakeTestingPersonBuilder()
+            .WithTitle($"NoRating_{uniqueId}")
+            .WithFirstName($"NullableDecimalPerson2_{uniqueId}")
+            .Build();
+        personWithoutRating.Rating = null;
+        
+        await testingServiceScope.InsertAsync(personWithRating, personWithoutRating);
+
+        var input = $"Rating >= 4.0 && FirstName == \"NullableDecimalPerson1_{uniqueId}\"";
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(personWithRating.Id);
+        people[0].Rating.Should().Be(4.5m);
+    }
+
+    // String Edge Cases
+    [Fact]
+    public async Task can_filter_empty_string()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var uniqueId = Guid.NewGuid().ToString()[..8];
+        var personWithEmptyTitle = new FakeTestingPersonBuilder()
+            .WithTitle("")
+            .WithFirstName($"EmptyTitlePerson_{uniqueId}")
+            .Build();
+        
+        var personWithTitle = new FakeTestingPersonBuilder()
+            .WithTitle("SomeTitle")
+            .WithFirstName($"HasTitlePerson_{uniqueId}")
+            .Build();
+        
+        await testingServiceScope.InsertAsync(personWithEmptyTitle, personWithTitle);
+
+        var input = $"Title == \"\" && FirstName == \"EmptyTitlePerson_{uniqueId}\"";
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(personWithEmptyTitle.Id);
+        people[0].Title.Should().Be("");
+    }
+
+    [Fact]
+    public async Task can_filter_whitespace_string()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var uniqueId = Guid.NewGuid().ToString()[..8];
+        var personWithWhitespace = new FakeTestingPersonBuilder()
+            .WithTitle("   ")
+            .WithFirstName($"WhitespacePerson_{uniqueId}")
+            .Build();
+        
+        var personWithTitle = new FakeTestingPersonBuilder()
+            .WithTitle("SomeTitle")
+            .WithFirstName($"HasTitlePerson_{uniqueId}")
+            .Build();
+        
+        await testingServiceScope.InsertAsync(personWithWhitespace, personWithTitle);
+
+        var input = $"Title == \"   \" && FirstName == \"WhitespacePerson_{uniqueId}\"";
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(personWithWhitespace.Id);
+        people[0].Title.Should().Be("   ");
+    }
+
+    // Complex Nested Logical Expressions
+    [Fact]
+    public async Task can_filter_with_deeply_nested_logical_expressions()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var uniqueId = Guid.NewGuid().ToString()[..8];
+        var targetPerson = new FakeTestingPersonBuilder()
+            .WithAge(25)
+            .WithRating(4.5m)
+            .WithTitle($"TargetPerson_{uniqueId}")
+            .WithFirstName($"NestedTarget_{uniqueId}")
+            .WithFavorite(true)
+            .Build();
+        
+        var otherPerson = new FakeTestingPersonBuilder()
+            .WithAge(30)
+            .WithRating(3.0m)
+            .WithTitle($"OtherPerson_{uniqueId}")
+            .WithFirstName($"NestedOther_{uniqueId}")
+            .WithFavorite(false)
+            .Build();
+        
+        await testingServiceScope.InsertAsync(targetPerson, otherPerson);
+
+        var input = $"((Age > 20 && Age < 30) && (Rating > 4.0 || Favorite == true)) && FirstName == \"NestedTarget_{uniqueId}\"";
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(targetPerson.Id);
     }
 }
