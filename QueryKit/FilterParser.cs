@@ -133,12 +133,12 @@ public static class FilterParser
         from leadingSpaces in Parse.WhiteSpace.Many()
         from value in Parse.String("null").Text()
             .Or(GuidFormatParser)
-            .XOr(Identifier)
             .XOr(DateTimeFormatParser)
             .XOr(TimeFormatParser)
             .XOr(NumberParser)
             .XOr(RawStringLiteralParser.Or(DoubleQuoteParser))
-            .XOr(SquareBracketParser) 
+            .XOr(SquareBracketParser)
+            .XOr(Identifier) // Keep this last to try property paths only if nothing else matches
         from trailingSpaces in Parse.WhiteSpace.Many()
         select atSign.IsDefined ? "@" + value : value;
     
@@ -146,11 +146,11 @@ public static class FilterParser
         from openingBracket in Parse.Char('[')
         from content in Parse.String("null").Text()
             .Or(GuidFormatParser)
-            .Or(Identifier)
             .Or(DateTimeFormatParser)
             .Or(TimeFormatParser)
             .Or(NumberParser)
             .Or(RawStringLiteralParser.Or(DoubleQuoteParser))
+            .Or(Identifier)
             .DelimitedBy(Parse.Char(',').Token())
         from closingBracket in Parse.Char(']')
         select "[" + string.Join(",", content) + "]";
@@ -431,6 +431,29 @@ public static class FilterParser
                     var guidStringExpr = HandleGuidConversion(temp.leftExpr, temp.leftExpr.Type);
                     return temp.op.GetExpression<T>(guidStringExpr, CreateRightExpr(temp.leftExpr, temp.right, temp.op),
                         config?.DbContextType);
+                }
+
+                // Check if the right side is a property path for property-to-property comparison
+                if (IsPropertyPath(temp.right, parameter.Type))
+                {
+                    var rightPropertyExpr = CreateRightPropertyExpr<T>(parameter, temp.right, config);
+                    if (rightPropertyExpr != null)
+                    {
+                        // Handle GUID conversion for property-to-property comparisons
+                        var leftExpr = temp.leftExpr;
+                        if (leftExpr.Type == typeof(Guid) || leftExpr.Type == typeof(Guid?))
+                        {
+                            leftExpr = HandleGuidConversion(leftExpr, leftExpr.Type);
+                        }
+                        if (rightPropertyExpr.Type == typeof(Guid) || rightPropertyExpr.Type == typeof(Guid?))
+                        {
+                            rightPropertyExpr = HandleGuidConversion(rightPropertyExpr, rightPropertyExpr.Type);
+                        }
+                        
+                        // Ensure compatible types for property-to-property comparison
+                        var (leftCompatible, rightCompatible) = EnsureCompatibleTypes(leftExpr, rightPropertyExpr);
+                        return temp.op.GetExpression<T>(leftCompatible, rightCompatible, config?.DbContextType);
+                    }
                 }
 
                 var rightExpr = CreateRightExpr(temp.leftExpr, temp.right, temp.op);
@@ -714,6 +737,127 @@ public static class FilterParser
         }
 
         return result;
+    }
+
+    private static bool IsPropertyPath(string value, Type entityType)
+    {
+        // Skip obvious literal values
+        if (value == "null" || 
+            value.StartsWith("\"") || 
+            value.StartsWith("[") ||
+            value.Contains("-") && DateTime.TryParse(value, out _) ||
+            decimal.TryParse(value, out _) ||
+            bool.TryParse(value, out _) ||
+            Guid.TryParse(value, out _))
+        {
+            return false;
+        }
+
+        // Check if it's a valid property path
+        var propertyPath = value.Split('.');
+        var currentType = entityType;
+
+        foreach (var propName in propertyPath)
+        {
+            var property = GetPropertyInfo(currentType, propName);
+            if (property == null)
+            {
+                return false;
+            }
+            currentType = property.PropertyType;
+        }
+
+        return true;
+    }
+
+    private static Expression? CreateRightPropertyExpr<T>(ParameterExpression parameter, string propertyPath, IQueryKitConfiguration? config)
+    {
+        try
+        {
+            var propertyNames = propertyPath.Split('.');
+            return propertyNames.Aggregate((Expression)parameter, (expr, propName) =>
+            {
+                var propertyInfo = GetPropertyInfo(expr.Type, propName);
+                if (propertyInfo == null)
+                {
+                    throw new ArgumentException($"Property '{propName}' not found on type '{expr.Type.Name}'");
+                }
+                return Expression.PropertyOrField(expr, propertyInfo.Name);
+            });
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static (Expression left, Expression right) EnsureCompatibleTypes(Expression left, Expression right)
+    {
+        if (left.Type == right.Type)
+        {
+            return (left, right);
+        }
+
+        // Handle nullable types
+        var leftNonNullable = Nullable.GetUnderlyingType(left.Type) ?? left.Type;
+        var rightNonNullable = Nullable.GetUnderlyingType(right.Type) ?? right.Type;
+        var leftIsNullable = left.Type != leftNonNullable;
+        var rightIsNullable = right.Type != rightNonNullable;
+
+        if (leftNonNullable == rightNonNullable)
+        {
+            return (left, right);
+        }
+
+        // Handle numeric type conversions
+        if (IsNumericType(leftNonNullable) && IsNumericType(rightNonNullable))
+        {
+            var widerType = GetWiderNumericType(leftNonNullable, rightNonNullable);
+            
+            // Determine if the final type should be nullable
+            var shouldBeNullable = leftIsNullable || rightIsNullable;
+            var targetType = shouldBeNullable ? typeof(Nullable<>).MakeGenericType(widerType) : widerType;
+            
+            if (left.Type != targetType)
+            {
+                left = Expression.Convert(left, targetType);
+            }
+            if (right.Type != targetType)
+            {
+                right = Expression.Convert(right, targetType);
+            }
+        }
+
+        return (left, right);
+    }
+
+    private static bool IsNumericType(Type type)
+    {
+        return type == typeof(byte) || type == typeof(sbyte) ||
+               type == typeof(short) || type == typeof(ushort) ||
+               type == typeof(int) || type == typeof(uint) ||
+               type == typeof(long) || type == typeof(ulong) ||
+               type == typeof(float) || type == typeof(double) ||
+               type == typeof(decimal);
+    }
+
+    private static Type GetWiderNumericType(Type type1, Type type2)
+    {
+        var typeRanks = new Dictionary<Type, int>
+        {
+            { typeof(byte), 1 }, { typeof(sbyte), 1 },
+            { typeof(short), 2 }, { typeof(ushort), 2 },
+            { typeof(int), 3 }, { typeof(uint), 3 },
+            { typeof(long), 4 }, { typeof(ulong), 4 },
+            { typeof(float), 5 },
+            { typeof(double), 6 },
+            { typeof(decimal), 7 }
+        };
+
+        var rank1 = typeRanks.GetValueOrDefault(type1, 0);
+        var rank2 = typeRanks.GetValueOrDefault(type2, 0);
+
+        return rank1 >= rank2 ? type1 : type2;
     }
 }
 

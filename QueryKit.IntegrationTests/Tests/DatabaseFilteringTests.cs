@@ -162,14 +162,17 @@ public class DatabaseFilteringTests(ITestOutputHelper testOutputHelper) : TestBa
     {
         // Arrange
         var testingServiceScope = new TestingServiceScope();
+        var faker = new Faker();
+        var uniqueTitle = faker.Lorem.Sentence();
         var fakePersonOne = new FakeTestingPersonBuilder()
             .WithFirstName("John")
             .WithAge(18)
+            .WithTitle(uniqueTitle)
             .Build();
         var fakePersonTwo = new FakeTestingPersonBuilder().Build();
         await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
         
-        var input = $"""adult_johns == true""";
+        var input = $"""adult_johns == true && Title == "{uniqueTitle}" """;
         var config = new QueryKitConfiguration(config =>
         {
             config.DerivedProperty<TestingPerson>(tp => tp.Age >= 18 && tp.FirstName == "John").HasQueryName("adult_johns");
@@ -1768,5 +1771,260 @@ public class DatabaseFilteringTests(ITestOutputHelper testOutputHelper) : TestBa
         people.Count.Should().Be(1);
         people.FirstOrDefault(x => x.Id == fakeRecipeOne.Id).Should().NotBeNull();
         people.FirstOrDefault(x => x.Id == fakeRecipeTwo.Id).Should().BeNull();
+    }
+
+    [Fact]
+    public async Task can_filter_with_property_to_property_string_comparison()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var faker = new Faker();
+        
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithFirstName("John")
+            .WithLastName("John")
+            .WithTitle(faker.Lorem.Sentence())
+            .Build();
+        
+        var fakePersonTwo = new FakeTestingPersonBuilder()
+            .WithFirstName("Jane")
+            .WithLastName("Doe")
+            .WithTitle(faker.Lorem.Sentence())
+            .Build();
+        
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+        
+        var input = $"""FirstName == LastName && Title == "{fakePersonOne.Title}" """;
+        
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakePersonOne.Id);
+        people[0].FirstName.Should().Be(people[0].LastName);
+    }
+
+    [Fact]
+    public async Task can_filter_with_property_to_property_numeric_comparison()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var faker = new Faker();
+        
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithAge(25)
+            .WithRating(20.5m)
+            .WithTitle(faker.Lorem.Sentence())
+            .Build();
+        
+        var fakePersonTwo = new FakeTestingPersonBuilder() 
+            .WithAge(30)
+            .WithRating(35.0m)
+            .WithTitle(faker.Lorem.Sentence())
+            .Build();
+        
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+        
+        var input = $"""Age > Rating && Title == "{fakePersonOne.Title}" """;
+        
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakePersonOne.Id);
+        people[0].Age.Should().BeGreaterThan((int)people[0].Rating!.Value);
+    }
+
+    [Fact]
+    public async Task can_filter_with_property_to_property_different_operators()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var faker = new Faker();
+        
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithFirstName("Alice")
+            .WithLastName("Bob") 
+            .WithAge(25)
+            .WithRating(20.5m)
+            .WithTitle(faker.Lorem.Sentence())
+            .Build();
+        
+        await testingServiceScope.InsertAsync(fakePersonOne);
+        
+        var input = $"""FirstName != LastName && Age > Rating && Title == "{fakePersonOne.Title}" """;
+        
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakePersonOne.Id);
+        people[0].FirstName.Should().NotBe(people[0].LastName);
+        people[0].Age.Should().BeGreaterThan((int)people[0].Rating!.Value);
+    }
+
+    [Fact]
+    public async Task can_filter_with_property_to_property_combined_with_literal_values()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var faker = new Faker();
+        
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithFirstName("John")
+            .WithLastName("John")
+            .WithAge(25)
+            .WithTitle(faker.Lorem.Sentence())
+            .Build();
+        
+        var fakePersonTwo = new FakeTestingPersonBuilder()
+            .WithFirstName("Jane")
+            .WithLastName("Doe")
+            .WithAge(18)
+            .WithTitle(faker.Lorem.Sentence())
+            .Build();
+        
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+        
+        var input = $"""FirstName == LastName && Age > 21 && Title == "{fakePersonOne.Title}" """;
+        
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert - Only fakePersonOne matches both conditions
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakePersonOne.Id);
+        people[0].FirstName.Should().Be(people[0].LastName);
+        people[0].Age.Should().BeGreaterThan(21);
+    }
+
+    [Fact]
+    public async Task can_filter_with_property_to_property_child_properties()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var faker = new Faker();
+        
+        var matchingName = "TestAuthor123";
+        var fakeAuthor = new FakeAuthorBuilder()
+            .WithName(matchingName)
+            .Build();
+        
+        var fakeRecipe = new FakeRecipeBuilder()
+            .WithTitle(matchingName) // Same as author name
+            .Build();
+        fakeRecipe.SetAuthor(fakeAuthor);
+        
+        var differentAuthor = new FakeAuthorBuilder()
+            .WithName("DifferentAuthor")
+            .Build();
+        
+        var differentRecipe = new FakeRecipeBuilder()
+            .WithTitle("DifferentTitle")
+            .Build();
+        differentRecipe.SetAuthor(differentAuthor);
+        
+        await testingServiceScope.InsertAsync(fakeRecipe, differentRecipe);
+        
+        var input = """Author.Name == Title""";
+        
+        // Act
+        var queryableRecipes = testingServiceScope.DbContext().Recipes
+            .Include(x => x.Author);
+        var appliedQueryable = queryableRecipes.ApplyQueryKitFilter(input);
+        var recipes = await appliedQueryable.ToListAsync();
+
+        // Assert
+        recipes.Count.Should().Be(1);
+        recipes[0].Id.Should().Be(fakeRecipe.Id);
+        recipes[0].Author.Name.Should().Be(recipes[0].Title);
+    }
+
+    [Fact]
+    public async Task can_filter_with_property_to_property_child_property_with_nested_access()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var faker = new Faker();
+        
+        var matchingValue = "matching@test.com";
+        var fakeRecipe = new FakeRecipeBuilder()
+            .WithTitle(matchingValue)
+            .WithCollectionEmail(matchingValue) // Recipe.CollectionEmail.Value should equal Recipe.Title
+            .Build();
+        
+        var differentRecipe = new FakeRecipeBuilder()
+            .WithTitle("different-title")
+            .WithCollectionEmail("different@email.com")
+            .Build();
+        
+        await testingServiceScope.InsertAsync(fakeRecipe, differentRecipe);
+        
+        var input = """CollectionEmail.Value == Title""";
+        
+        // Act
+        var queryableRecipes = testingServiceScope.DbContext().Recipes;
+        var appliedQueryable = queryableRecipes.ApplyQueryKitFilter(input);
+        var recipes = await appliedQueryable.ToListAsync();
+
+        // Assert
+        recipes.Count.Should().Be(1);
+        recipes[0].Id.Should().Be(fakeRecipe.Id);
+        recipes[0].CollectionEmail.Value.Should().Be(recipes[0].Title);
+    }
+
+    [Fact]
+    public async Task can_filter_with_property_to_property_mixed_child_and_root_properties()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var faker = new Faker();
+        
+        var authorName = "TestAuthor";
+        var rating = 5;
+        
+        var fakeAuthor = new FakeAuthorBuilder()
+            .WithName(authorName)
+            .Build();
+        
+        var fakeRecipe = new FakeRecipeBuilder()
+            .WithTitle("SomeTitle")
+            .WithRating(rating)
+            .Build();
+        fakeRecipe.SetAuthor(fakeAuthor);
+        
+        // Add a test person with matching values
+        var fakePerson = new FakeTestingPersonBuilder()
+            .WithFirstName(authorName) // Person.FirstName == Recipe.Author.Name
+            .WithAge(rating) // Person.Age == Recipe.Rating  
+            .WithTitle(faker.Lorem.Sentence())
+            .Build();
+        
+        await testingServiceScope.InsertAsync(fakeRecipe);
+        await testingServiceScope.InsertAsync(fakePerson);
+        
+        var input = $"""FirstName == "{authorName}" && Age == {rating} && Title == "{fakePerson.Title}" """;
+        
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakePerson.Id);
+        people[0].FirstName.Should().Be(authorName);
+        people[0].Age.Should().Be(rating);
     }
 }

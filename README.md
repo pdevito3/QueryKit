@@ -158,6 +158,47 @@ var input = """(Age ^^ [20, 30, 40]) && (BirthMonth ^^* ["January", "February", 
 var input = """(Title == "lamb" && ((Age >= 25 && Rating < 4.5) || (SpecificDate <= "2022-07-01T00:00:03Z" && Time == "00:00:03")) && (Favorite == true || Email.Value _= "hello@gmail.com"))""";
 ```
 
+### Property-to-Property Comparisons
+
+QueryKit supports comparing one property directly to another property on the same entity. This allows for dynamic filtering where the comparison value is another field rather than a literal value:
+
+```c#
+// Compare two string properties
+var input = """FirstName == LastName""";
+
+// Compare numeric properties  
+var input = """Age > Rating""";
+
+// Use in complex expressions
+var input = """(FirstName != LastName && Age > Rating) || (Score1 <= Score2)""";
+
+// Combine with regular filters
+var input = """FirstName == LastName && Age > 21""";
+```
+
+Property-to-property comparisons work with all comparison operators and automatically handle type conversions between compatible numeric types (e.g., comparing `int` with `decimal`).
+
+#### Child Property Comparisons
+
+You can also compare child properties to root properties or other child properties:
+
+```c#
+// Compare child property to root property
+var input = """Author.Name == Title""";
+
+// Compare nested child properties
+var input = """Email.Value == CollectionEmail.Value""";
+
+// Mix child and root properties in complex expressions
+var input = """Author.Name != Title && Rating > Author.Score""";
+```
+
+Child property comparisons work with:
+- **Nested Objects**: `Author.Name`, `Email.Value`
+- **All Operators**: `==`, `!=`, `>`, `<`, `>=`, `<=`
+- **Type Conversion**: Automatic conversion between compatible types
+- **Complex Expressions**: Can be combined with logical operators and parentheses
+
 #### Filtering Projections
 You can also filter on queryable projections like so:
 ```csharp
