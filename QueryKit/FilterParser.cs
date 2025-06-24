@@ -6,6 +6,7 @@ using System.Reflection;
 using Configuration;
 using Exceptions;
 using Operators;
+using Expressions;
 using Sprache;
 
 public static class FilterParser
@@ -90,6 +91,48 @@ public static class FilterParser
 
     private static PropertyInfo? GetPropertyInfo(Type type, string propertyName)
         => type.GetProperty(propertyName, BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance);
+
+    // Arithmetic expression parsers
+    private static Parser<ArithmeticOperator> ArithmeticOperatorParser =>
+        Parse.Char('+').Return(ArithmeticOperator.Add)
+            .Or(Parse.Char('-').Return(ArithmeticOperator.Subtract))
+            .Or(Parse.Char('*').Return(ArithmeticOperator.Multiply))
+            .Or(Parse.Char('/').Return(ArithmeticOperator.Divide))
+            .Or(Parse.Char('%').Return(ArithmeticOperator.Modulo));
+
+    private static Parser<ArithmeticExpression> ArithmeticTermParser =>
+        PropertyArithmeticParser
+            .Or(LiteralArithmeticParser)
+            .Or(Parse.Ref(() => ArithmeticExpressionParser).Contained(Parse.Char('('), Parse.Char(')')).Select(expr => new GroupedArithmeticExpression(expr)));
+
+    private static Parser<ArithmeticExpression> PropertyArithmeticParser =>
+        Identifier.DelimitedBy(Parse.Char('.'))
+            .Select(props => new PropertyArithmeticExpression(string.Join(".", props)));
+
+    private static Parser<ArithmeticExpression> LiteralArithmeticParser =>
+        NumberParser.Select(numStr =>
+        {
+            if (int.TryParse(numStr, NumberStyles.Integer, CultureInfo.InvariantCulture, out var intVal))
+                return new LiteralArithmeticExpression(intVal, typeof(int));
+            if (decimal.TryParse(numStr, NumberStyles.Number, CultureInfo.InvariantCulture, out var decVal))
+                return new LiteralArithmeticExpression(decVal, typeof(decimal));
+            if (double.TryParse(numStr, NumberStyles.Float, CultureInfo.InvariantCulture, out var doubleVal))
+                return new LiteralArithmeticExpression(doubleVal, typeof(double));
+            
+            throw new InvalidOperationException($"Cannot parse number: {numStr}");
+        });
+
+    private static Parser<ArithmeticExpression> ArithmeticFactorParser =>
+        Parse.ChainOperator(
+            ArithmeticOperatorParser.Where(op => op.Precedence == 2).Token(), // *, /, %
+            ArithmeticTermParser.Token(),
+            (op, left, right) => new BinaryArithmeticExpression(left, op, right));
+
+    private static Parser<ArithmeticExpression> ArithmeticExpressionParser =>
+        Parse.ChainOperator(
+            ArithmeticOperatorParser.Where(op => op.Precedence == 1).Token(), // +, -
+            ArithmeticFactorParser.Token(),
+            (op, left, right) => new BinaryArithmeticExpression(left, op, right));
 
     public static Parser<LogicalOperator> LogicalOperatorParser =>
         from leadingSpaces in Parse.WhiteSpace.Many()
@@ -411,12 +454,79 @@ public static class FilterParser
                    .Any(x => x.IsGenericType && x.GetGenericTypeDefinition() == typeof(IEnumerable<>));
     }
 
+    // New arithmetic-aware comparison parser - only matches expressions in parentheses with arithmetic operators
+    private static Parser<Expression> ArithmeticComparisonExprParser<T>(ParameterExpression parameter, IQueryKitConfiguration? config)
+    {
+        var comparisonOperatorParser = ComparisonOperatorParser.Token();
+        var rightSideValueParser = RightSideValueParser.Token();
+        
+        // Only parse arithmetic expressions that are in parentheses and contain arithmetic operators
+        var parenthesizedArithmetic = ArithmeticExpressionParser.Contained(Parse.Char('('), Parse.Char(')')).Token();
+        
+        // Ensure the arithmetic expression contains actual arithmetic operators
+        var validArithmeticExpr = parenthesizedArithmetic.Where(expr => ContainsArithmeticOperator(expr));
+        
+        return validArithmeticExpr
+            .SelectMany(leftArithmetic => comparisonOperatorParser, (leftArithmetic, op) => new { leftArithmetic, op })
+            .SelectMany(temp => parenthesizedArithmetic.Or(rightSideValueParser.Select(value => CreateArithmeticFromValue(value))), (temp, rightSide) => new { temp.leftArithmetic, temp.op, rightSide })
+            .Select(temp =>
+            {
+                var leftExpr = temp.leftArithmetic.ToLinqExpression(parameter, typeof(T));
+                var rightExpr = temp.rightSide.ToLinqExpression(parameter, typeof(T));
+                
+                var (leftCompatible, rightCompatible) = EnsureCompatibleTypes(leftExpr, rightExpr);
+                return temp.op.GetExpression<T>(leftCompatible, rightCompatible, config?.DbContextType);
+            });
+    }
+    
+    private static bool ContainsArithmeticOperator(ArithmeticExpression expr)
+    {
+        return expr switch
+        {
+            BinaryArithmeticExpression => true,
+            PropertyArithmeticExpression => false,
+            LiteralArithmeticExpression => false,
+            _ => false
+        };
+    }
+    
+    private static ArithmeticExpression CreateArithmeticFromValue(string value)
+    {
+        // Handle null case
+        if (value == "null")
+            throw new InvalidOperationException("Cannot use 'null' in arithmetic expressions");
+            
+        // Try to parse as number
+        if (int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var intVal))
+            return new LiteralArithmeticExpression(intVal, typeof(int));
+        if (decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out var decVal))
+            return new LiteralArithmeticExpression(decVal, typeof(decimal));
+        if (double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var doubleVal))
+            return new LiteralArithmeticExpression(doubleVal, typeof(double));
+        
+        // Assume it's a property path (but only for valid property names)
+        if (IsValidPropertyName(value))
+            return new PropertyArithmeticExpression(value);
+            
+        throw new InvalidOperationException($"Cannot parse '{value}' as property or literal in arithmetic expression");
+    }
+    
+    private static bool IsValidPropertyName(string value)
+    {
+        return !string.IsNullOrWhiteSpace(value) && 
+               char.IsLetter(value[0]) && 
+               value.All(c => char.IsLetterOrDigit(c) || c == '_' || c == '.');
+    }
+
     private static Parser<Expression> ComparisonExprParser<T>(ParameterExpression parameter, IQueryKitConfiguration? config)
     {
         var comparisonOperatorParser = ComparisonOperatorParser.Token();
         var rightSideValueParser = RightSideValueParser.Token();
 
-        return CreateLeftExprParser(parameter, config)
+        // Try arithmetic comparison first, but only if parentheses are present
+        var arithmeticComparison = ArithmeticComparisonExprParser<T>(parameter, config);
+        
+        var regularComparison = CreateLeftExprParser(parameter, config)
             .SelectMany(leftExpr => comparisonOperatorParser, (leftExpr, op) => new { leftExpr, op })
             .SelectMany(temp => rightSideValueParser, (temp, right) => new { temp.leftExpr, temp.op, right })
             .Select(temp =>
@@ -466,6 +576,8 @@ public static class FilterParser
                 
                 return temp.op.GetExpression<T>(temp.leftExpr, rightExpr, config?.DbContextType);
             });
+
+        return arithmeticComparison.Or(regularComparison);
     }
 
     private static Parser<Expression?>? CreateLeftExprParser(ParameterExpression parameter, IQueryKitConfiguration? config)

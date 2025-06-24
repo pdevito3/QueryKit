@@ -2027,4 +2027,405 @@ public class DatabaseFilteringTests(ITestOutputHelper testOutputHelper) : TestBa
         people[0].FirstName.Should().Be(authorName);
         people[0].Age.Should().Be(rating);
     }
+
+    [Fact]
+    public async Task can_filter_with_arithmetic_addition_expression()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var faker = new Faker();
+        
+        var age = 25;
+        var rating = 5;
+        var uniqueTitle = $"ArithmeticTest{Guid.NewGuid()}"; // Ensure unique data
+        
+        var fakePerson = new FakeTestingPersonBuilder()
+            .WithAge(age)
+            .WithRating(rating)
+            .WithTitle(uniqueTitle)
+            .Build();
+        
+        await testingServiceScope.InsertAsync(fakePerson);
+        
+        var input = $"""(Age + Rating) > 29 && Title == "{uniqueTitle}" """;
+        
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakePerson.Id);
+        people[0].Age.Should().Be(age);
+        people[0].Rating.Should().Be(rating);
+    }
+
+    [Fact]
+    public async Task can_filter_with_arithmetic_subtraction_expression()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var faker = new Faker();
+        
+        var age = 30;
+        var rating = 7;
+        var uniqueTitle = $"SubtractionTest{Guid.NewGuid()}";
+        
+        var fakePerson = new FakeTestingPersonBuilder()
+            .WithAge(age)
+            .WithRating(rating)
+            .WithTitle(uniqueTitle)
+            .Build();
+        
+        await testingServiceScope.InsertAsync(fakePerson);
+        
+        var input = $"""(Age - Rating) > 20 && Title == "{uniqueTitle}" """;
+        
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakePerson.Id);
+        people[0].Age.Should().Be(age);
+        people[0].Rating.Should().Be(rating);
+    }
+
+    [Fact]
+    public async Task can_filter_with_arithmetic_multiplication_expression()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var faker = new Faker();
+        
+        var age = 5;
+        var rating = 8;
+        var uniqueTitle = $"MultiplicationTest{Guid.NewGuid()}";
+        
+        var fakePerson = new FakeTestingPersonBuilder()
+            .WithAge(age)
+            .WithRating(rating)
+            .WithTitle(uniqueTitle)
+            .Build();
+        
+        await testingServiceScope.InsertAsync(fakePerson);
+        
+        var input = $"""(Age * Rating) >= 40 && Title == "{uniqueTitle}" """;
+        
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakePerson.Id);
+        people[0].Age.Should().Be(age);
+        people[0].Rating.Should().Be(rating);
+    }
+
+    [Fact]
+    public async Task can_filter_with_arithmetic_division_expression()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var faker = new Faker();
+        
+        var age = 40;
+        var rating = 5;
+        var uniqueTitle = $"DivisionTest{Guid.NewGuid()}";
+        
+        var fakePerson = new FakeTestingPersonBuilder()
+            .WithAge(age)
+            .WithRating(rating)
+            .WithTitle(uniqueTitle)
+            .Build();
+        
+        await testingServiceScope.InsertAsync(fakePerson);
+        
+        var input = $"""(Age / Rating) == 8 && Title == "{uniqueTitle}" """;
+        
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakePerson.Id);
+        people[0].Age.Should().Be(age);
+        people[0].Rating.Should().Be(rating);
+    }
+
+    [Fact]
+    public async Task can_filter_with_arithmetic_modulo_expression()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var faker = new Faker();
+        
+        var age = 22; // Even number
+        var rating = 3;
+        var uniqueTitle = $"ModuloTest{Guid.NewGuid()}";
+        
+        var fakePerson = new FakeTestingPersonBuilder()
+            .WithAge(age)
+            .WithRating(rating)
+            .WithTitle(uniqueTitle)
+            .Build();
+        
+        await testingServiceScope.InsertAsync(fakePerson);
+        
+        var input = $"""(Age % 2) == 0 && Title == "{uniqueTitle}" """; // Test even number
+        
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakePerson.Id);
+        people[0].Age.Should().Be(age);
+    }
+
+    [Fact]
+    public async Task can_filter_with_complex_arithmetic_expression_with_precedence()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var faker = new Faker();
+        
+        var age = 10;
+        var rating = 5;
+        var uniqueTitle = $"ComplexArithmeticTest{Guid.NewGuid()}";
+        
+        var fakePerson = new FakeTestingPersonBuilder()
+            .WithAge(age)
+            .WithRating(rating)
+            .WithTitle(uniqueTitle)
+            .Build();
+        
+        await testingServiceScope.InsertAsync(fakePerson);
+        
+        // Test: (Age + Rating * 2) > 15 should be: 10 + (5 * 2) = 20 > 15 = true
+        var input = $"""(Age + Rating * 2) > 15 && Title == "{uniqueTitle}" """;
+        
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakePerson.Id);
+        people[0].Age.Should().Be(age);
+        people[0].Rating.Should().Be(rating);
+    }
+
+    [Fact]
+    public async Task can_filter_with_arithmetic_expression_using_parentheses_to_override_precedence()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var faker = new Faker();
+        
+        var age = 5;
+        var rating = 3;
+        var uniqueTitle = $"ParenthesesArithmeticTest{Guid.NewGuid()}";
+        
+        var fakePerson = new FakeTestingPersonBuilder()
+            .WithAge(age)
+            .WithRating(rating)
+            .WithTitle(uniqueTitle)
+            .Build();
+        
+        await testingServiceScope.InsertAsync(fakePerson);
+        
+        // Test: ((Age + Rating) * 2) > 15 should be: (5 + 3) * 2 = 16 > 15 = true
+        var input = $"""((Age + Rating) * 2) > 15 && Title == "{uniqueTitle}" """;
+        
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakePerson.Id);
+        people[0].Age.Should().Be(age);
+        people[0].Rating.Should().Be(rating);
+    }
+
+    [Fact]
+    public async Task can_filter_with_arithmetic_expression_mixing_literals_and_properties()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var faker = new Faker();
+        
+        var age = 25;
+        var rating = 7;
+        var uniqueTitle = $"LiteralMixTest{Guid.NewGuid()}";
+        
+        var fakePerson = new FakeTestingPersonBuilder()
+            .WithAge(age)
+            .WithRating(rating)
+            .WithTitle(uniqueTitle)
+            .Build();
+        
+        await testingServiceScope.InsertAsync(fakePerson);
+        
+        // Test: (Age + 5) * Rating > 200 should be: (25 + 5) * 7 = 210 > 200 = true
+        var input = $"""((Age + 5) * Rating) > 200 && Title == "{uniqueTitle}" """;
+        
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakePerson.Id);
+        people[0].Age.Should().Be(age);
+        people[0].Rating.Should().Be(rating);
+    }
+
+    [Fact]
+    public async Task can_filter_with_arithmetic_expression_using_decimal_properties()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var faker = new Faker();
+        
+        var age = 30;
+        var rating = 4.5m; // Use decimal for precise calculation
+        var uniqueTitle = $"DecimalArithmeticTest{Guid.NewGuid()}";
+        
+        var fakePerson = new FakeTestingPersonBuilder()
+            .WithAge(age)
+            .WithRating(rating)
+            .WithTitle(uniqueTitle)
+            .Build();
+        
+        await testingServiceScope.InsertAsync(fakePerson);
+        
+        // Test: (Age * Rating) > 130 should be: 30 * 4.5 = 135 > 130 = true
+        var input = $"""(Age * Rating) > 130 && Title == "{uniqueTitle}" """;
+        
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakePerson.Id);
+        people[0].Age.Should().Be(age);
+        people[0].Rating.Should().Be(rating);
+    }
+
+    [Fact]
+    public async Task can_filter_with_arithmetic_expression_that_results_in_no_matches()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var faker = new Faker();
+        
+        var age = 20;
+        var rating = 3;
+        var uniqueTitle = $"NoMatchTest{Guid.NewGuid()}";
+        
+        var fakePerson = new FakeTestingPersonBuilder()
+            .WithAge(age)
+            .WithRating(rating)
+            .WithTitle(uniqueTitle)
+            .Build();
+        
+        await testingServiceScope.InsertAsync(fakePerson);
+        
+        // Test: (Age + Rating) > 50 should be: 20 + 3 = 23 > 50 = false
+        var input = $"""(Age + Rating) > 50 && Title == "{uniqueTitle}" """;
+        
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert
+        people.Count.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task can_filter_with_multiple_arithmetic_expressions_in_logical_combination()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var faker = new Faker();
+        
+        var age = 24;
+        var rating = 6;
+        var uniqueTitle = $"MultipleArithmeticTest{Guid.NewGuid()}";
+        
+        var fakePerson = new FakeTestingPersonBuilder()
+            .WithAge(age)
+            .WithRating(rating)
+            .WithTitle(uniqueTitle)
+            .Build();
+        
+        await testingServiceScope.InsertAsync(fakePerson);
+        
+        // Test: (Age + Rating) > 25 AND (Age * Rating) < 150
+        // Should be: 24 + 6 = 30 > 25 = true AND 24 * 6 = 144 < 150 = true
+        var input = $"""(Age + Rating) > 25 && (Age * Rating) < 150 && Title == "{uniqueTitle}" """;
+        
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakePerson.Id);
+        people[0].Age.Should().Be(age);
+        people[0].Rating.Should().Be(rating);
+    }
+
+    [Fact]
+    public async Task can_filter_with_nested_arithmetic_expressions()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var faker = new Faker();
+        
+        var age = 12;
+        var rating = 4;
+        var uniqueTitle = $"NestedArithmeticTest{Guid.NewGuid()}";
+        
+        var fakePerson = new FakeTestingPersonBuilder()
+            .WithAge(age)
+            .WithRating(rating)
+            .WithTitle(uniqueTitle)
+            .Build();
+        
+        await testingServiceScope.InsertAsync(fakePerson);
+        
+        // Test: ((Age + Rating) * (Age - Rating)) > 120
+        // Should be: (12 + 4) * (12 - 4) = 16 * 8 = 128 > 120 = true
+        var input = $"""((Age + Rating) * (Age - Rating)) > 120 && Title == "{uniqueTitle}" """;
+        
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakePerson.Id);
+        people[0].Age.Should().Be(age);
+        people[0].Rating.Should().Be(rating);
+    }
 }

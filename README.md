@@ -199,6 +199,98 @@ Child property comparisons work with:
 - **Type Conversion**: Automatic conversion between compatible types
 - **Complex Expressions**: Can be combined with logical operators and parentheses
 
+### Arithmetic Expressions
+
+QueryKit supports arithmetic expressions in filters, allowing you to perform calculations directly within your queries. This enables powerful filtering capabilities based on computed values.
+
+#### Basic Arithmetic Operations
+
+```c#
+// Addition: Find records where Age + Rating is greater than 50
+var input = "(Age + Rating) > 50";
+
+// Subtraction: Find records where Age - Rating is positive
+var input = "(Age - Rating) > 0";
+
+// Multiplication: Find records where Price * Quantity exceeds 1000
+var input = "(Price * Quantity) > 1000";
+
+// Division: Find records where Total / Count is less than 100
+var input = "(Total / Count) < 100";
+
+// Modulo: Find records where ID is even
+var input = "(Id % 2) == 0";
+```
+
+#### Operator Precedence
+
+Arithmetic expressions follow standard mathematical operator precedence:
+
+```c#
+// Multiplication and division before addition and subtraction
+var input = "(Price + Tax * Rate) > 100";  // Tax * Rate is calculated first
+
+// Use parentheses to override precedence
+var input = "((Price + Tax) * Rate) > 100"; // Addition happens first
+```
+
+#### Mixing Properties and Literals
+
+You can combine entity properties with literal numeric values:
+
+```c#
+// Property with literal
+var input = "(Age - 18) >= 0";   // Age minus 18
+
+// Multiple properties with literals
+var input = "(Price * 1.1 + ShippingCost) <= Budget";
+```
+
+#### Complex Arithmetic Expressions
+
+Arithmetic expressions can be combined with logical operators and used in complex scenarios:
+
+```c#
+// Arithmetic with logical operators
+var input = """(Price - Cost) > 300 && Category == "Electronics" """;
+
+// Multiple arithmetic comparisons
+var input = "(Score1 + Score2) > 150 && (Score1 - Score2) < 20";
+
+// Nested arithmetic expressions
+var input = "((Revenue - Expenses) / Revenue) > 0.1";
+```
+
+#### Supported Features
+
+- **All Numeric Types**: `int`, `decimal`, `double`, `float`, `long`, `short`, `byte` and their nullable variants
+- **Automatic Type Conversion**: Compatible numeric types are automatically converted for calculations
+- **Parentheses**: Use parentheses to control calculation order and group expressions
+- **Entity Framework Translation**: All arithmetic expressions are translated to efficient SQL queries
+- **Property-to-Property**: Can mix property references with literal values in the same expression
+
+#### Examples
+
+```c#
+// Calculate profit margin and filter
+var profitableItems = _dbContext.Products
+    .ApplyQueryKitFilter("((Price - Cost) / Price) > 0.2")
+    .ToList();
+
+// Find orders with high shipping ratio
+var expensiveShipping = _dbContext.Orders
+    .ApplyQueryKitFilter("(ShippingCost / TotalAmount) > 0.15")
+    .ToList();
+
+// Complex business logic in one filter
+var qualifiedCustomers = _dbContext.Customers
+    .ApplyQueryKitFilter("""
+        (TotalPurchases / NumberOfOrders) > 500 && 
+        ((LastOrderDate - FirstOrderDate) / 365) >= 2
+    """)
+    .ToList();
+```
+
 #### Filtering Projections
 You can also filter on queryable projections like so:
 ```csharp

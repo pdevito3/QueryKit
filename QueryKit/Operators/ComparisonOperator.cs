@@ -213,7 +213,9 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
                 left = Expression.Convert(left, typeof(bool));
             }
 
-            return Expression.Equal(left, right);
+            // Ensure type compatibility for comparisons
+            var (leftCompatible, rightCompatible) = EnsureCompatibleExpressionTypes(left, right);
+            return Expression.Equal(leftCompatible, rightCompatible);
         }
     }
 
@@ -246,7 +248,9 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
                 left = Expression.Convert(left, typeof(bool));
             }
 
-            return Expression.NotEqual(left, right);
+            // Ensure type compatibility for comparisons
+            var (leftCompatible, rightCompatible) = EnsureCompatibleExpressionTypes(left, right);
+            return Expression.NotEqual(leftCompatible, rightCompatible);
         }
     }
 
@@ -264,7 +268,10 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
             {
                 return GetCollectionExpression(left, right, Expression.GreaterThan, UsesAll);
             }
-            return Expression.GreaterThan(left, right);
+            
+            // Ensure type compatibility for comparisons
+            var (leftCompatible, rightCompatible) = EnsureCompatibleExpressionTypes(left, right);
+            return Expression.GreaterThan(leftCompatible, rightCompatible);
         }
     }
 
@@ -282,7 +289,10 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
             {
                 return GetCollectionExpression(left, right, Expression.LessThan, UsesAll);
             }
-            return Expression.LessThan(left, right);
+            
+            // Ensure type compatibility for comparisons
+            var (leftCompatible, rightCompatible) = EnsureCompatibleExpressionTypes(left, right);
+            return Expression.LessThan(leftCompatible, rightCompatible);
         }
     }
 
@@ -299,7 +309,10 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
             {
                 return GetCollectionExpression(left, right, Expression.GreaterThanOrEqual, UsesAll);
             }
-            return Expression.GreaterThanOrEqual(left, right);
+            
+            // Ensure type compatibility for comparisons
+            var (leftCompatible, rightCompatible) = EnsureCompatibleExpressionTypes(left, right);
+            return Expression.GreaterThanOrEqual(leftCompatible, rightCompatible);
         }
     }
 
@@ -316,7 +329,10 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
             {
                 return GetCollectionExpression(left, right, Expression.LessThanOrEqual, UsesAll);
             }
-            return Expression.LessThanOrEqual(left, right);
+            
+            // Ensure type compatibility for comparisons
+            var (leftCompatible, rightCompatible) = EnsureCompatibleExpressionTypes(left, right);
+            return Expression.LessThanOrEqual(leftCompatible, rightCompatible);
         }
     }
 
@@ -987,5 +1003,84 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         }
 
         return (Expression)comparisonMethod.Invoke(null, new object[] { countExpression, right });
+    }
+    
+    private static (Expression left, Expression right) EnsureCompatibleExpressionTypes(Expression left, Expression right)
+    {
+        if (left.Type == right.Type)
+        {
+            return (left, right);
+        }
+
+        // Handle nullable types
+        var leftNonNullable = Nullable.GetUnderlyingType(left.Type) ?? left.Type;
+        var rightNonNullable = Nullable.GetUnderlyingType(right.Type) ?? right.Type;
+        var leftIsNullable = left.Type != leftNonNullable;
+        var rightIsNullable = right.Type != rightNonNullable;
+
+        if (leftNonNullable == rightNonNullable)
+        {
+            // Even if the underlying types are the same, we need to ensure both expressions
+            // have the same type (both nullable or both non-nullable)
+            var shouldBeNullable = leftIsNullable || rightIsNullable;
+            var targetType = shouldBeNullable ? typeof(Nullable<>).MakeGenericType(leftNonNullable) : leftNonNullable;
+            
+            if (left.Type != targetType)
+            {
+                left = Expression.Convert(left, targetType);
+            }
+            if (right.Type != targetType)
+            {
+                right = Expression.Convert(right, targetType);
+            }
+            
+            return (left, right);
+        }
+
+        // Handle numeric type conversions
+        if (IsNumericType(leftNonNullable) && IsNumericType(rightNonNullable))
+        {
+            var widerType = GetWiderNumericType(leftNonNullable, rightNonNullable);
+            
+            // Determine if the final type should be nullable
+            var shouldBeNullable = leftIsNullable || rightIsNullable;
+            var targetType = shouldBeNullable ? typeof(Nullable<>).MakeGenericType(widerType) : widerType;
+            
+            if (left.Type != targetType)
+            {
+                left = Expression.Convert(left, targetType);
+            }
+            if (right.Type != targetType)
+            {
+                right = Expression.Convert(right, targetType);
+            }
+        }
+
+        return (left, right);
+    }
+    
+    private static bool IsNumericType(Type type)
+    {
+        return type == typeof(byte) || type == typeof(sbyte) ||
+               type == typeof(short) || type == typeof(ushort) ||
+               type == typeof(int) || type == typeof(uint) ||
+               type == typeof(long) || type == typeof(ulong) ||
+               type == typeof(float) || type == typeof(double) ||
+               type == typeof(decimal);
+    }
+    
+    private static Type GetWiderNumericType(Type left, Type right)
+    {
+        var typeOrder = new[] { typeof(byte), typeof(sbyte), typeof(short), typeof(ushort), 
+                               typeof(int), typeof(uint), typeof(long), typeof(ulong), 
+                               typeof(float), typeof(double), typeof(decimal) };
+        
+        var leftIndex = Array.IndexOf(typeOrder, left);
+        var rightIndex = Array.IndexOf(typeOrder, right);
+        
+        if (leftIndex == -1 || rightIndex == -1)
+            return left; // fallback to left type if not found
+            
+        return typeOrder[Math.Max(leftIndex, rightIndex)];
     }
 }
