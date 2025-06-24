@@ -2428,4 +2428,342 @@ public class DatabaseFilteringTests(ITestOutputHelper testOutputHelper) : TestBa
         people[0].Age.Should().Be(age);
         people[0].Rating.Should().Be(rating);
     }
+
+    [Fact]
+    public async Task can_filter_with_custom_operation_simple_calculation()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var faker = new Faker();
+        
+        var age = 25;
+        var rating = 4;
+        var uniqueTitle = $"CustomOpTest{Guid.NewGuid()}";
+        
+        var fakePerson = new FakeTestingPersonBuilder()
+            .WithAge(age)
+            .WithRating(rating)
+            .WithTitle(uniqueTitle)
+            .Build();
+        
+        await testingServiceScope.InsertAsync(fakePerson);
+        
+        var input = $"""ageTimeRating > 99 && Title == "{uniqueTitle}" """;
+        
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.CustomOperation<TestingPerson>((x, op, value) => (x.Age * x.Rating) > (decimal)value)
+                .HasQueryName("ageTimeRating");
+        });
+        
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input, config);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert - Age (25) * Rating (4) = 100 > 99 = true
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakePerson.Id);
+        people[0].Age.Should().Be(age);
+        people[0].Rating.Should().Be(rating);
+    }
+
+    [Fact]
+    public async Task can_filter_with_custom_operation_different_operators()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var faker = new Faker();
+        
+        var age = 30;
+        var rating = 5;
+        var uniqueTitle = $"CustomOpDiffOpsTest{Guid.NewGuid()}";
+        
+        var fakePerson = new FakeTestingPersonBuilder()
+            .WithAge(age)
+            .WithRating(rating)
+            .WithTitle(uniqueTitle)
+            .Build();
+        
+        await testingServiceScope.InsertAsync(fakePerson);
+        
+        var input = $"""agePlusRating == 35 && Title == "{uniqueTitle}" """;
+        
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.CustomOperation<TestingPerson>((x, op, value) => (x.Age + x.Rating) == (decimal)value)
+                .HasQueryName("agePlusRating");
+        });
+        
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input, config);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert - Age (30) + Rating (5) = 35 == 35 = true
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakePerson.Id);
+        people[0].Age.Should().Be(age);
+        people[0].Rating.Should().Be(rating);
+    }
+
+    [Fact]
+    public async Task can_filter_with_custom_operation_recipe_ingredient_quality()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var faker = new Faker();
+        
+        var highQualityIngredient = new FakeIngredientBuilder()
+            .WithQualityLevel(8)
+            .Build();
+        var lowQualityIngredient = new FakeIngredientBuilder()
+            .WithQualityLevel(3)
+            .Build();
+        
+        var recipe = new FakeRecipeBuilder().Build();
+        recipe.AddIngredient(highQualityIngredient);
+        recipe.AddIngredient(lowQualityIngredient);
+        
+        await testingServiceScope.InsertAsync(recipe);
+        
+        var input = $"""avgQuality > 5 && Title == "{recipe.Title}" """;
+        
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.CustomOperation<Recipe>((x, op, value) => 
+                x.Ingredients.Average(i => i.QualityLevel ?? 0) > (double)value)
+                .HasQueryName("avgQuality");
+        });
+        
+        // Act
+        var queryableRecipes = testingServiceScope.DbContext().Recipes;
+        var appliedQueryable = queryableRecipes.ApplyQueryKitFilter(input, config);
+        var recipes = await appliedQueryable.ToListAsync();
+
+        // Assert - Average quality (8+3)/2 = 5.5 > 5 = true
+        recipes.Count.Should().Be(1);
+        recipes[0].Id.Should().Be(recipe.Id);
+    }
+
+    [Fact]
+    public async Task can_filter_with_custom_operation_complex_business_logic()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var faker = new Faker();
+        
+        var age = 35;
+        var rating = 8;
+        var firstName = "VIP";
+        var uniqueTitle = $"ComplexBusinessTest{Guid.NewGuid()}";
+        
+        var fakePerson = new FakeTestingPersonBuilder()
+            .WithAge(age)
+            .WithRating(rating)
+            .WithFirstName(firstName)
+            .WithTitle(uniqueTitle)
+            .Build();
+        
+        await testingServiceScope.InsertAsync(fakePerson);
+        
+        var input = $"""isVipCustomer == true && Title == "{uniqueTitle}" """;
+        
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.CustomOperation<TestingPerson>((x, op, value) => 
+                (bool)value ? 
+                    (x.Age > 30 && x.Rating > 7 && x.FirstName.Contains("VIP")) :
+                    !(x.Age > 30 && x.Rating > 7 && x.FirstName.Contains("VIP")))
+                .HasQueryName("isVipCustomer");
+        });
+        
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input, config);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert - Age > 30 (35) AND Rating > 7 (8) AND FirstName contains "VIP" = true
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakePerson.Id);
+        people[0].Age.Should().Be(age);
+        people[0].Rating.Should().Be(rating);
+        people[0].FirstName.Should().Be(firstName);
+    }
+
+    [Fact]
+    public async Task can_filter_with_custom_operation_combined_with_regular_filters()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var faker = new Faker();
+        
+        var age = 40;
+        var rating = 6;
+        var lastName = "Smith";
+        var uniqueTitle = $"CombinedFiltersTest{Guid.NewGuid()}";
+        
+        var fakePerson = new FakeTestingPersonBuilder()
+            .WithAge(age)
+            .WithRating(rating)
+            .WithLastName(lastName)
+            .WithTitle(uniqueTitle)
+            .Build();
+        
+        await testingServiceScope.InsertAsync(fakePerson);
+        
+        var input = $"""ageRatingProduct > 200 && LastName == "{lastName}" && Title == "{uniqueTitle}" """;
+        
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.CustomOperation<TestingPerson>((x, op, value) => (x.Age * x.Rating) > (decimal)value)
+                .HasQueryName("ageRatingProduct");
+        });
+        
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input, config);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert - Custom: Age (40) * Rating (6) = 240 > 200 AND Regular: LastName == "Smith"
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakePerson.Id);
+        people[0].Age.Should().Be(age);
+        people[0].Rating.Should().Be(rating);
+        people[0].LastName.Should().Be(lastName);
+    }
+
+    [Fact]
+    public async Task can_filter_with_custom_operation_using_logical_operators()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var faker = new Faker();
+        
+        var uniqueTitle1 = "LogicalTest1";
+        var uniqueTitle2 = "LogicalTest2";
+        
+        var personOne = new FakeTestingPersonBuilder()
+            .WithAge(25)
+            .WithRating(8)
+            .WithTitle(uniqueTitle1)
+            .Build();
+        
+        var personTwo = new FakeTestingPersonBuilder()
+            .WithAge(45)
+            .WithRating(3)
+            .WithTitle(uniqueTitle2)
+            .Build();
+        
+        await testingServiceScope.InsertAsync(personOne, personTwo);
+        
+        var input = $"""highScore == true && Title == "{uniqueTitle1}" """;
+        
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.CustomOperation<TestingPerson>((x, op, value) => 
+                (bool)value ? (x.Age * x.Rating) > 150 : (x.Age * x.Rating) <= 150)
+                .HasQueryName("highScore");
+        });
+        
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input, config);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert - Person1: 25*8=200>150 (highScore=true) AND Title matches = true
+        people.Count.Should().Be(1);
+        people.Should().Contain(p => p.Id == personOne.Id);
+    }
+
+    [Fact]
+    public async Task can_filter_with_custom_operation_date_handling()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var faker = new Faker();
+        
+        var baseDate = new DateTime(2023, 6, 15, 0, 0, 0, DateTimeKind.Utc);
+        var recentDate = baseDate.AddDays(-5); // 5 days before base date
+        var oldDate = baseDate.AddDays(-15); // 15 days before base date
+        var cutoffDate = baseDate.AddDays(-10); // 10 days before base date
+        
+        var recentPerson = new FakeTestingPersonBuilder()
+            .WithSpecificDateTime(recentDate)
+            .WithTitle("RecentUser")
+            .Build();
+        
+        var oldPerson = new FakeTestingPersonBuilder()
+            .WithSpecificDateTime(oldDate)
+            .WithTitle("OldUser")
+            .Build();
+        
+        await testingServiceScope.InsertAsync(recentPerson, oldPerson);
+        
+        var input = $"""isRecentUser == true && Title == "RecentUser" """;
+        
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.CustomOperation<TestingPerson>((x, op, value) => 
+                (bool)value ? 
+                    x.SpecificDateTime > baseDate.AddDays(-10) : 
+                    x.SpecificDateTime <= baseDate.AddDays(-10))
+                .HasQueryName("isRecentUser");
+        });
+        
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input, config);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert - Only the recent user should match (SpecificDateTime > 10 days ago)
+        people.Count.Should().Be(1);
+        people.Should().Contain(p => p.Id == recentPerson.Id);
+        people.Should().NotContain(p => p.Id == oldPerson.Id);
+        people[0].SpecificDateTime.Should().BeAfter(cutoffDate);
+    }
+
+    [Fact]
+    public async Task can_filter_with_custom_operation_date_parameter()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var faker = new Faker();
+        
+        var targetDate = new DateTime(2023, 6, 15, 0, 0, 0, DateTimeKind.Utc);
+        var beforeDate = targetDate.AddDays(-1);
+        var afterDate = targetDate.AddDays(1);
+        
+        var beforePerson = new FakeTestingPersonBuilder()
+            .WithSpecificDateTime(beforeDate)
+            .WithTitle("BeforeUser")
+            .Build();
+        
+        var afterPerson = new FakeTestingPersonBuilder()
+            .WithSpecificDateTime(afterDate)
+            .WithTitle("AfterUser")
+            .Build();
+        
+        await testingServiceScope.InsertAsync(beforePerson, afterPerson);
+        
+        var input = """isAfterDate == "2023-06-15T00:00:00Z" """;
+        
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.CustomOperation<TestingPerson>((x, op, value) => 
+                x.SpecificDateTime > (DateTime)value)
+                .HasQueryName("isAfterDate");
+        });
+        
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input, config);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert - Only the person after the target date should match
+        people.Count.Should().Be(1);
+        people.Should().Contain(p => p.Id == afterPerson.Id);
+        people.Should().NotContain(p => p.Id == beforePerson.Id);
+        people[0].SpecificDateTime.Should().BeAfter(targetDate);
+    }
 }

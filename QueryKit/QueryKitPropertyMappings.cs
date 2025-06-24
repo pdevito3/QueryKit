@@ -9,8 +9,10 @@ public class QueryKitPropertyMappings
 {
     private readonly Dictionary<string, QueryKitPropertyInfo> _propertyMappings = new();
     private readonly Dictionary<string, QueryKitPropertyInfo> _derivedPropertyMappings = new();
+    private readonly Dictionary<string, QueryKitPropertyInfo> _customOperationMappings = new();
     internal IReadOnlyDictionary<string, QueryKitPropertyInfo> PropertyMappings => _propertyMappings;
     internal IReadOnlyDictionary<string, QueryKitPropertyInfo> DerivedPropertyMappings => _derivedPropertyMappings;
+    internal IReadOnlyDictionary<string, QueryKitPropertyInfo> CustomOperationMappings => _customOperationMappings;
 
     public QueryKitPropertyMapping<TModel> Property<TModel>(Expression<Func<TModel, object>>? propertySelector)
     {
@@ -51,6 +53,74 @@ public class QueryKitPropertyMappings
         _derivedPropertyMappings[fullPath] = propertyInfo;
 
         return new QueryKitPropertyMapping<TModel>(propertyInfo);
+    }
+
+    public QueryKitCustomOperationMapping<TModel> CustomOperation<TModel>(Expression<Func<TModel, ComparisonOperator, object, bool>> operationExpression)
+    {
+        if (operationExpression == null)
+            throw new ArgumentNullException(nameof(operationExpression));
+        if (operationExpression.NodeType != ExpressionType.Lambda)
+            throw new ArgumentException("Operation expression must be a lambda expression", nameof(operationExpression));
+
+        // Create a unique name for this custom operation (will be replaced by HasQueryName)
+        var operationName = $"CustomOperation_{Guid.NewGuid():N}";
+        
+        var propertyInfo = new QueryKitPropertyInfo
+        {
+            Name = operationName,
+            CanFilter = true,
+            CanSort = false, // Custom operations are typically not sortable
+            QueryName = operationName,
+            CustomOperation = ConvertToObjectExpression(operationExpression),
+            CustomOperationEntityType = typeof(TModel)
+        };
+
+        _customOperationMappings[operationName] = propertyInfo;
+
+        return new QueryKitCustomOperationMapping<TModel>(propertyInfo);
+    }
+
+    private static Expression<Func<object, ComparisonOperator, object, bool>> ConvertToObjectExpression<TModel>(
+        Expression<Func<TModel, ComparisonOperator, object, bool>> typedExpression)
+    {
+        // Convert the typed expression to use object parameters for storage
+        var entityParam = Expression.Parameter(typeof(object), "entity");
+        var operatorParam = Expression.Parameter(typeof(ComparisonOperator), "op");
+        var valueParam = Expression.Parameter(typeof(object), "value");
+
+        // Cast the entity parameter to the correct type
+        var castEntity = Expression.Convert(entityParam, typeof(TModel));
+
+        // Replace parameters in the original expression body
+        var visitor = new ParameterReplacerVisitor(typedExpression.Parameters[0], castEntity);
+        var newBody = visitor.Visit(typedExpression.Body);
+
+        // Replace the operator and value parameters
+        visitor = new ParameterReplacerVisitor(typedExpression.Parameters[1], operatorParam);
+        newBody = visitor.Visit(newBody);
+
+        visitor = new ParameterReplacerVisitor(typedExpression.Parameters[2], valueParam);
+        newBody = visitor.Visit(newBody);
+
+        return Expression.Lambda<Func<object, ComparisonOperator, object, bool>>(
+            newBody, entityParam, operatorParam, valueParam);
+    }
+
+    private class ParameterReplacerVisitor : ExpressionVisitor
+    {
+        private readonly ParameterExpression _oldParameter;
+        private readonly Expression _newExpression;
+
+        public ParameterReplacerVisitor(ParameterExpression oldParameter, Expression newExpression)
+        {
+            _oldParameter = oldParameter;
+            _newExpression = newExpression;
+        }
+
+        protected override Expression VisitParameter(ParameterExpression node)
+        {
+            return node == _oldParameter ? _newExpression : base.VisitParameter(node);
+        }
     }
 
     public string ReplaceAliasesWithPropertyPaths(string input)
@@ -302,6 +372,9 @@ public class QueryKitPropertyMappings
     public QueryKitPropertyInfo? GetDerivedPropertyInfoByQueryName(string? queryName)
         => _derivedPropertyMappings.Values.FirstOrDefault(info => info.QueryName != null && info.QueryName.Equals(queryName, StringComparison.InvariantCultureIgnoreCase));
 
+    public QueryKitPropertyInfo? GetCustomOperationInfoByQueryName(string? queryName)
+        => _customOperationMappings.Values.FirstOrDefault(info => info.QueryName != null && info.QueryName.Equals(queryName, StringComparison.InvariantCultureIgnoreCase));
+
     public string? GetPropertyPathByQueryName(string? queryName)
         => GetPropertyInfoByQueryName(queryName)?.Name ?? null;
 }
@@ -335,6 +408,28 @@ public class QueryKitPropertyMapping<TModel>
     }
 }
 
+public class QueryKitCustomOperationMapping<TModel>
+{
+    private readonly QueryKitPropertyInfo _propertyInfo;
+
+    internal QueryKitCustomOperationMapping(QueryKitPropertyInfo propertyInfo)
+    {
+        _propertyInfo = propertyInfo;
+    }
+
+    public QueryKitCustomOperationMapping<TModel> HasQueryName(string queryName)
+    {
+        _propertyInfo.QueryName = queryName;
+        return this;
+    }
+
+    public QueryKitCustomOperationMapping<TModel> PreventFilter()
+    {
+        _propertyInfo.CanFilter = false;
+        return this;
+    }
+}
+
 public class QueryKitPropertyInfo
 {
     public string? Name { get; set; }
@@ -342,4 +437,6 @@ public class QueryKitPropertyInfo
     public bool CanSort { get; set; }
     public string? QueryName { get; set; }
     internal Expression DerivedExpression { get; set; }
+    internal Expression<Func<object, ComparisonOperator, object, bool>>? CustomOperation { get; set; }
+    internal Type? CustomOperationEntityType { get; set; }
 }

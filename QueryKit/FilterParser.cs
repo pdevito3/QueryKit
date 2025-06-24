@@ -535,6 +535,19 @@ public static class FilterParser
                 {
                     return Expression.Equal(Expression.Constant(true), Expression.Constant(true));
                 }
+
+                // Check if this is a custom operation placeholder
+                if (temp.leftExpr.NodeType == ExpressionType.Constant && 
+                    ((ConstantExpression)temp.leftExpr).Value is string constantValue && 
+                    constantValue.StartsWith("CustomOperation:"))
+                {
+                    var operationName = constantValue.Substring("CustomOperation:".Length);
+                    var customOperationInfo = config?.PropertyMappings?.GetCustomOperationInfoByQueryName(operationName);
+                    if (customOperationInfo?.CustomOperation != null)
+                    {
+                        return CreateCustomOperationExpression<T>(parameter, customOperationInfo, temp.op, temp.right);
+                    }
+                }
                 
                 if (temp.leftExpr.Type == typeof(Guid) || temp.leftExpr.Type == typeof(Guid?))
                 {
@@ -670,6 +683,14 @@ public static class FilterParser
                 }
                 catch(ArgumentException)
                 {
+                    // Check for custom operations first
+                    var customOperationInfo = config?.PropertyMappings?.GetCustomOperationInfoByQueryName(fullPropPath);
+                    if (customOperationInfo?.CustomOperation != null)
+                    {
+                        // Custom operations will be handled in the comparison parsing, so return a placeholder
+                        return Expression.Constant($"CustomOperation:{fullPropPath}", typeof(string));
+                    }
+
                     var derivedPropertyInfo = config?.PropertyMappings?.GetDerivedPropertyInfoByQueryName(fullPropPath);
                     if (derivedPropertyInfo?.DerivedExpression != null)
                     {
@@ -970,6 +991,61 @@ public static class FilterParser
         var rank2 = typeRanks.GetValueOrDefault(type2, 0);
 
         return rank1 >= rank2 ? type1 : type2;
+    }
+
+    private static Expression CreateCustomOperationExpression<T>(ParameterExpression parameter, QueryKitPropertyInfo customOperationInfo, ComparisonOperator op, string rightValue)
+    {
+        if (customOperationInfo.CustomOperation == null)
+            throw new ArgumentException("Custom operation expression is null");
+
+        // For custom operations, we need to convert the string value to the appropriate basic type
+        // instead of trying to match it to the entity type
+        object convertedValue = ConvertStringToBasicType(rightValue);
+        
+        // Create the parameter expressions for the custom operation
+        var entityParameter = Expression.Convert(parameter, typeof(object));
+        var operatorParameter = Expression.Constant(op, typeof(ComparisonOperator));
+        var valueParameter = Expression.Constant(convertedValue, typeof(object));
+
+        // Invoke the custom operation
+        var customOperationLambda = customOperationInfo.CustomOperation;
+        var invocationExpression = Expression.Invoke(customOperationLambda, entityParameter, operatorParameter, valueParameter);
+
+        return invocationExpression;
+    }
+
+    private static object ConvertStringToBasicType(string value)
+    {
+        // Handle null
+        if (string.IsNullOrEmpty(value) || value.Equals("null", StringComparison.InvariantCultureIgnoreCase))
+            return null;
+
+        // Try boolean
+        if (bool.TryParse(value, out var boolValue))
+            return boolValue;
+
+        // Try int
+        if (int.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var intValue))
+            return intValue;
+
+        // Try decimal
+        if (decimal.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var decimalValue))
+            return decimalValue;
+
+        // Try double
+        if (double.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var doubleValue))
+            return doubleValue;
+
+        // Try DateTime
+        if (DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal, out var dateTimeValue))
+            return dateTimeValue;
+
+        // Try Guid
+        if (Guid.TryParse(value, out var guidValue))
+            return guidValue;
+
+        // Default to string
+        return value;
     }
 }
 

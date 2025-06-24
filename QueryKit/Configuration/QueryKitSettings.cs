@@ -45,4 +45,9 @@ public class QueryKitSettings
     {
         return PropertyMappings.DerivedProperty(propertySelector);
     }
+
+    public QueryKitCustomOperationMapping<TModel> CustomOperation<TModel>(Expression<Func<TModel, ComparisonOperator, object, bool>> operationExpression)
+    {
+        return PropertyMappings.CustomOperation(operationExpression);
+    }
 }

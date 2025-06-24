@@ -411,6 +411,75 @@ var input = $"""(fullname @=* "John Doe") && age >= 18""";
 var input = $"""adult_johns == true""";
 ```
 
+#### Custom Operations
+
+For more complex business logic that can't be expressed as simple derived properties, you can define custom operations. These allow you to encapsulate sophisticated filtering logic that can access related data, perform calculations, or implement domain-specific rules.
+
+```csharp
+var config = new QueryKitConfiguration(config =>
+{
+    // Define a custom operation that checks if a book has sold more than X units in the last 10 days
+    config.CustomOperation<Book>((x, op, value) => 
+        x.Orders.Where(y => y.OrderDate > DateTime.UtcNow.AddDays(-10))
+               .Sum(o => o.Quantity) > (int)value)
+        .HasQueryName("SoldUnitsMoreThan10Days");
+    
+    // Custom operation for VIP customer detection
+    config.CustomOperation<Customer>((x, op, value) => 
+        (bool)value ? 
+            (x.TotalPurchases > 10000 && x.AccountAge > 365 && x.FirstName.Contains("VIP")) :
+            !(x.TotalPurchases > 10000 && x.AccountAge > 365 && x.FirstName.Contains("VIP")))
+        .HasQueryName("isVipCustomer");
+    
+    // Custom operation with date parameter handling
+    config.CustomOperation<Order>((x, op, value) => 
+        x.OrderDate > (DateTime)value)
+        .HasQueryName("isAfterDate");
+});
+
+// Usage examples:
+var input = """SoldUnitsMoreThan10Days > 100""";        // Books that sold more than 100 units
+var input = """isVipCustomer == true""";                // VIP customers only
+var input = """isAfterDate == "2023-06-15T00:00:00Z" """; // Orders after specific date
+```
+
+**Custom Operation Features:**
+
+- **Business Logic Encapsulation**: Complex domain logic can be centralized and reused
+- **Related Data Access**: Can navigate to related entities and collections (e.g., `x.Orders`, `x.Items`)
+- **Operator Access**: The operation receives the comparison operator being used
+- **Type-Safe Parameters**: Automatic conversion of string values to appropriate types (bool, int, decimal, DateTime, etc.)
+- **Entity Framework Compatible**: Generated expressions translate to efficient SQL queries
+
+**Common Use Cases:**
+
+- **Performance Metrics**: Calculate efficiency ratios, averages, or complex aggregations
+- **Business Intelligence**: Revenue calculations, customer scoring, inventory analysis
+- **Time-Based Logic**: Recent activity checks, age calculations, expiration rules
+- **Customer Segmentation**: VIP status, loyalty tiers, purchase behavior patterns
+- **Quality Control**: Average ratings, compliance checks, threshold validations
+
+**Parameter Type Conversion:**
+
+Custom operations automatically handle common data types:
+
+```csharp
+// Boolean parameters
+var input = """isEligible == true""";      // Converts "true" to bool
+
+// Numeric parameters  
+var input = """totalScore > 85.5""";       // Converts "85.5" to decimal/double
+var input = """itemCount >= 10""";         // Converts "10" to int
+
+// Date parameters
+var input = """lastLoginAfter == "2023-12-01T00:00:00Z" """; // Converts to DateTime
+
+// String parameters (with quotes)
+var input = """categoryMatches == "electronics" """; // Keeps as string
+```
+
+Custom operations provide a powerful way to extend QueryKit's filtering capabilities while maintaining type safety and Entity Framework compatibility.
+
 #### Custom Operators
 
 You can also add custom comparison operators to your config if you'd like:
