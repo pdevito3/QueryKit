@@ -590,17 +590,17 @@ public sealed class PersonConfiguration : IEntityTypeConfiguration<SpecialPerson
     {
         builder.HasKey(x => x.Id);
       
-      	// Option 1 (as of .NET 8)
+      	// Option 1 (as of .NET 8) - ComplexProperty
       	builder.ComplexProperty(x => x.Email,
             x => x.Property(y => y.Value)
                 .HasColumnName("email")); 
       
-      	// Option 2
+      	// Option 2 - HasConversion (see HasConversion support below)
         builder.Property(x => x.Email)
             .HasConversion(x => x.Value, x => new EmailAddress(x))
             .HasColumnName("email");      
       
-        // Option 3   
+        // Option 3 - OwnsOne
         builder.OwnsOne(x => x.Email, opts =>
         {
             opts.Property(x => x.Value).HasColumnName("email");
@@ -610,8 +610,32 @@ public sealed class PersonConfiguration : IEntityTypeConfiguration<SpecialPerson
 }
 ```
 
-> **Warning**
-> EF properties configured with `HasConversion` are not supported at this time
+### HasConversion Support
+
+For properties configured with EF Core's `HasConversion`, QueryKit provides special support that allows you to filter against the property directly without needing to access nested values. Use the `HasConversion<TTarget>()` configuration method:
+
+```c#
+// EF configuration with HasConversion
+builder.Property(x => x.Email)
+    .HasConversion(x => x.Value, x => new EmailAddress(x))
+    .HasColumnName("email");
+
+// QueryKit configuration for HasConversion properties
+var config = new QueryKitConfiguration(config =>
+{
+    config.Property<SpecialPerson>(x => x.Email)
+        .HasQueryName("email")
+        .HasConversion<string>(); // Specify the target type used in HasConversion
+});
+
+// Now you can filter directly against the property:
+var input = """email == "hello@gmail.com" """;
+var people = _dbContext.People
+    .ApplyQueryKitFilter(input, config)
+    .ToList();
+```
+
+This allows you to use `Email == "value"` syntax instead of `Email.Value == "value"` when the property is configured with HasConversion in EF Core. The `HasConversion<TTarget>()` method tells QueryKit what the conversion target type is so it can handle the type conversion properly.
 
 ## Sorting
 

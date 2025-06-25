@@ -762,4 +762,38 @@ public class FilterParserTests
         act.Should().Throw<ParsingException>()
         .WithMessage("There was a parsing failure, likely due to an invalid comparison or logical operator. You may also be missing double quotes surrounding a string or guid.*");
     }
+
+    [Fact]
+    public void can_filter_with_has_conversion_configuration()
+    {
+        // Test that HasConversion<string>() configuration allows targeting the property directly
+        // The Email property is configured with HasConversion to indicate it should be treated as a string
+        // instead of accessing Email.Value. This test verifies the parsing works, 
+        // but the actual EF Core translation should be tested in integration tests.
+        var input = """Email == "test@example.com" """;
+        
+        var config = new QueryKitConfiguration(config =>
+        {
+            // Configure Email property to use HasConversion<string>()
+            // This tells QueryKit that Email should be compared directly as a string
+            // rather than requiring Email.Value access
+            config.Property<TestingPerson>(x => x.Email).HasConversion<string>();
+        });
+        
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+        
+        // The expression should be created successfully (not throw an exception)
+        filterExpression.Should().NotBeNull();
+        
+        // Let's see what the actual expression looks like
+        var expressionString = filterExpression.ToString();
+        
+        // Debug output - this should show us the actual expression
+        Console.WriteLine($"Generated expression: {expressionString}");
+        
+        // The expression should be created and contain the key elements
+        expressionString.Should().NotBeNullOrEmpty();
+        expressionString.Should().Contain("x.Email");
+        expressionString.Should().Contain("test@example.com");
+    }
 }

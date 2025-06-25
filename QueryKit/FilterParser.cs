@@ -222,9 +222,21 @@ public static class FilterParser
         { typeof(sbyte), value => sbyte.Parse(value, CultureInfo.InvariantCulture) },
     };
 
-    private static Expression CreateRightExpr(Expression leftExpr, string right, ComparisonOperator op)
+    private static Expression CreateRightExpr(Expression leftExpr, string right, ComparisonOperator op, 
+        IQueryKitConfiguration? config = null, string? propertyPath = null)
     {
         var targetType = leftExpr.Type;
+        
+        // Check if this property uses HasConversion and should use the conversion target type
+        if (config?.PropertyMappings != null && !string.IsNullOrEmpty(propertyPath))
+        {
+            var propertyConfig = config.PropertyMappings.GetPropertyInfoByQueryName(propertyPath);
+            if (propertyConfig?.UsesConversion == true && propertyConfig.ConversionTargetType != null)
+            {
+                targetType = propertyConfig.ConversionTargetType;
+            }
+        }
+        
         return CreateRightExprFromType(targetType, right, op);
     }
 
@@ -551,8 +563,15 @@ public static class FilterParser
                 
                 if (temp.leftExpr.Type == typeof(Guid) || temp.leftExpr.Type == typeof(Guid?))
                 {
+                    // Try to determine the property path for HasConversion support
+                    string? guidPropertyPath = null;
+                    if (temp.leftExpr is MemberExpression guidMemberExpr)
+                    {
+                        guidPropertyPath = GetPropertyPath(guidMemberExpr, parameter);
+                    }
+                    
                     var guidStringExpr = HandleGuidConversion(temp.leftExpr, temp.leftExpr.Type);
-                    return temp.op.GetExpression<T>(guidStringExpr, CreateRightExpr(temp.leftExpr, temp.right, temp.op),
+                    return temp.op.GetExpression<T>(guidStringExpr, CreateRightExpr(temp.leftExpr, temp.right, temp.op, config, guidPropertyPath),
                         config?.DbContextType);
                 }
 
@@ -579,12 +598,37 @@ public static class FilterParser
                     }
                 }
 
-                var rightExpr = CreateRightExpr(temp.leftExpr, temp.right, temp.op);
+                // Try to determine the property path for HasConversion support
+                string? propertyPath = null;
+                if (temp.leftExpr is MemberExpression memberExpr)
+                {
+                    propertyPath = GetPropertyPath(memberExpr, parameter);
+                }
+                
+                var rightExpr = CreateRightExpr(temp.leftExpr, temp.right, temp.op, config, propertyPath);
                 
                 // Handle nested collection filtering
                 if (temp.leftExpr is MethodCallExpression methodCall && IsNestedCollectionExpression(methodCall))
                 {
                     return CreateNestedCollectionFilterExpression<T>(methodCall, rightExpr, temp.op);
+                }
+                
+                // Special handling for HasConversion properties
+                if (config?.PropertyMappings != null && !string.IsNullOrEmpty(propertyPath))
+                {
+                    var propertyConfig = config.PropertyMappings.GetPropertyInfoByQueryName(propertyPath);
+                    if (propertyConfig?.UsesConversion == true && temp.op.Operator() == "==")
+                    {
+                        // For HasConversion properties, use Object.Equals instead of Expression.Equal
+                        // This avoids the type compatibility check and lets EF Core handle the conversion
+                        var equalsMethod = typeof(object).GetMethod("Equals", new[] { typeof(object), typeof(object) });
+                        if (equalsMethod != null)
+                        {
+                            var leftAsObject = Expression.Convert(temp.leftExpr, typeof(object));
+                            var rightAsObject = Expression.Convert(rightExpr, typeof(object));
+                            return Expression.Call(equalsMethod, leftAsObject, rightAsObject);
+                        }
+                    }
                 }
                 
                 return temp.op.GetExpression<T>(temp.leftExpr, rightExpr, config?.DbContextType);
@@ -712,8 +756,50 @@ public static class FilterParser
                 return Expression.Constant(true, typeof(bool));
             }
 
+            // Check if this property uses HasConversion
+            var currentPropertyConfig = config?.PropertyMappings?.GetPropertyInfoByQueryName(fullPropPath);
+            if (currentPropertyConfig?.UsesConversion == true)
+            {
+                // For HasConversion properties, return the property expression as-is
+                // EF Core will handle the type conversion automatically when it translates the expression to SQL
+                // The key is that the right-side value will be converted to match the property's conversion target type
+                return propertyExpression;
+            }
+            
+            // Also check if this is a nested property where the parent has HasConversion configured
+            if (propertyExpression is MemberExpression nestedMemberExpression &&
+                nestedMemberExpression.Expression is MemberExpression parentExpression)
+            {
+                var parentPropertyPath = GetPropertyPath(parentExpression, parameter);
+                var parentPropertyConfig = config?.PropertyMappings?.GetPropertyInfoByQueryName(parentPropertyPath);
+                
+                if (parentPropertyConfig?.UsesConversion == true)
+                {
+                    // Use the parent expression instead of the nested property
+                    return parentExpression;
+                }
+            }
+
             return propertyExpression;
         });
+    }
+    
+    private static string GetPropertyPath(MemberExpression memberExpression, ParameterExpression parameter)
+    {
+        var parts = new List<string>();
+        var current = memberExpression;
+        
+        while (current != null)
+        {
+            parts.Insert(0, current.Member.Name);
+            
+            if (current.Expression == parameter)
+                break;
+                
+            current = current.Expression as MemberExpression;
+        }
+        
+        return string.Join(".", parts);
     }
     
     private static Type? GetInnerGenericType(Type type)

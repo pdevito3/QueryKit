@@ -406,6 +406,13 @@ public class QueryKitPropertyMapping<TModel>
         _propertyInfo.QueryName = queryName;
         return this;
     }
+
+    public QueryKitPropertyMapping<TModel> HasConversion<TTarget>()
+    {
+        _propertyInfo.UsesConversion = true;
+        _propertyInfo.ConversionTargetType = typeof(TTarget);
+        return this;
+    }
 }
 
 public class QueryKitCustomOperationMapping<TModel>
@@ -439,4 +446,6 @@ public class QueryKitPropertyInfo
     internal Expression DerivedExpression { get; set; }
     internal Expression<Func<object, ComparisonOperator, object, bool>>? CustomOperation { get; set; }
     internal Type? CustomOperationEntityType { get; set; }
+    internal bool UsesConversion { get; set; }
+    internal Type? ConversionTargetType { get; set; }
 }
