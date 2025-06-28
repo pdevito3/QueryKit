@@ -17,7 +17,7 @@ using WebApiTestProject.Entities.Ingredients.Models;
 using WebApiTestProject.Entities.Recipes;
 using Xunit.Abstractions;
 
-public class DatabaseFilteringTests(ITestOutputHelper testOutputHelper) : TestBase
+public class DatabaseFilteringTests() : TestBase
 {
     [Fact]
     public async Task can_filter_by_string()

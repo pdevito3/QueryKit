@@ -227,12 +227,24 @@ public static class FilterParser
     {
         var targetType = leftExpr.Type;
         
-        // Check if this property uses HasConversion and should use the conversion target type
+        // Check if this property uses HasConversion
         if (config?.PropertyMappings != null && !string.IsNullOrEmpty(propertyPath))
         {
             var propertyConfig = config.PropertyMappings.GetPropertyInfoByQueryName(propertyPath);
             if (propertyConfig?.UsesConversion == true && propertyConfig.ConversionTargetType != null)
             {
+                // For HasConversion properties, try to create a constant of the original type
+                // by constructing it from the string value using a constructor that takes the target type
+                if (propertyConfig.ConversionTargetType == typeof(string))
+                {
+                    var stringCtor = leftExpr.Type.GetConstructor(new[] { typeof(string) });
+                    if (stringCtor != null)
+                    {
+                        return Expression.New(stringCtor, Expression.Constant(right, typeof(string)));
+                    }
+                }
+                
+                // For other conversion types, fall back to using the conversion target type
                 targetType = propertyConfig.ConversionTargetType;
             }
         }
@@ -613,23 +625,6 @@ public static class FilterParser
                     return CreateNestedCollectionFilterExpression<T>(methodCall, rightExpr, temp.op);
                 }
                 
-                // Special handling for HasConversion properties
-                if (config?.PropertyMappings != null && !string.IsNullOrEmpty(propertyPath))
-                {
-                    var propertyConfig = config.PropertyMappings.GetPropertyInfoByQueryName(propertyPath);
-                    if (propertyConfig?.UsesConversion == true && temp.op.Operator() == "==")
-                    {
-                        // For HasConversion properties, use Object.Equals instead of Expression.Equal
-                        // This avoids the type compatibility check and lets EF Core handle the conversion
-                        var equalsMethod = typeof(object).GetMethod("Equals", new[] { typeof(object), typeof(object) });
-                        if (equalsMethod != null)
-                        {
-                            var leftAsObject = Expression.Convert(temp.leftExpr, typeof(object));
-                            var rightAsObject = Expression.Convert(rightExpr, typeof(object));
-                            return Expression.Call(equalsMethod, leftAsObject, rightAsObject);
-                        }
-                    }
-                }
                 
                 return temp.op.GetExpression<T>(temp.leftExpr, rightExpr, config?.DbContextType);
             });
