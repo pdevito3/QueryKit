@@ -17,7 +17,7 @@ public class HasConversionTests(ITestOutputHelper testOutputHelper) : TestBase
         var testingServiceScope = new TestingServiceScope();
         var faker = new Bogus.Faker();
         
-        var testEmail = faker.Internet.Email();
+        var testEmail = $"{Guid.NewGuid()}{faker.Internet.Email()}";
         var person = new FakeTestingPersonBuilder()
             .WithEmail(testEmail)
             .Build();
