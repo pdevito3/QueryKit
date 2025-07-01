@@ -38,9 +38,7 @@ public static class QueryKitExtensions
         var sortLambdas = SortParser.ParseSort<T>(sortExpression, config);
 
         if (sortLambdas.Count == 0)
-        {
-            return queryable.OrderBy(x => x);
-        }
+            return queryable.OrderBy(_ => 0);
 
         var firstSortInfo = sortLambdas[0];
         if (firstSortInfo.Expression != null)
@@ -103,7 +101,7 @@ public static class QueryKitExtensions
         var sortInfos = SortParser.ParseSort<T>(sortExpression, config);
 
         if (sortInfos.Count == 0 || sortInfos[0].Expression is null)
-            return source.OrderBy(x => x);
+            return source.OrderBy(_ => 0);
 
         var first = sortInfos[0];
         var ordered = first.IsAscending
