@@ -2,7 +2,7 @@ namespace QueryKit;
 
 using Configuration;
 
-public static class QueryableExtensions
+public static class QueryKitExtensions
 {
     public static IQueryable<TEntity> ApplyQueryKit<TEntity>(this IQueryable<TEntity> source, QueryKitData queryKitData)
         where TEntity : class
@@ -60,5 +60,66 @@ public static class QueryableExtensions
         }
         
         return queryable.OrderBy(x => x);
+    }
+    
+    public static IEnumerable<TEntity> ApplyQueryKit<TEntity>(
+        this IEnumerable<TEntity> source,
+        QueryKitData queryKitData)
+        where TEntity : class
+    {
+        var applied = source;
+        if (!string.IsNullOrWhiteSpace(queryKitData.Filters))
+        {
+            applied = applied.ApplyQueryKitFilter(queryKitData.Filters, queryKitData.Configuration);
+        }
+
+        if (!string.IsNullOrWhiteSpace(queryKitData.SortOrder))
+        {
+            applied = applied.ApplyQueryKitSort(queryKitData.SortOrder, queryKitData.Configuration);
+        }
+
+        return applied;
+    }
+
+    public static IEnumerable<TEntity> ApplyQueryKitFilter<TEntity>(
+        this IEnumerable<TEntity> source,
+        string filter,
+        IQueryKitConfiguration? config = null)
+        where TEntity : class
+    {
+        if (string.IsNullOrWhiteSpace(filter))
+            return source;
+
+        var expression = FilterParser.ParseFilter<TEntity>(filter, config);
+        var predicate  = expression.Compile();
+        return source.Where(predicate);
+    }
+
+    public static IOrderedEnumerable<T> ApplyQueryKitSort<T>(
+        this IEnumerable<T> source,
+        string sortExpression,
+        IQueryKitConfiguration? config = null)
+    {
+        var sortInfos = SortParser.ParseSort<T>(sortExpression, config);
+
+        if (sortInfos.Count == 0 || sortInfos[0].Expression is null)
+            return source.OrderBy(x => x);
+
+        var first = sortInfos[0];
+        var ordered = first.IsAscending
+            ? source.OrderBy(first.Expression!.Compile())
+            : source.OrderByDescending(first.Expression!.Compile());
+        
+        for (var i = 1; i < sortInfos.Count; i++)
+        {
+            var info = sortInfos[i];
+            if (info.Expression is null) continue;
+
+            ordered = info.IsAscending
+                ? ordered.ThenBy(info.Expression.Compile())
+                : ordered.ThenByDescending(info.Expression.Compile());
+        }
+
+        return ordered;
     }
 }

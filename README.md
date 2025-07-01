@@ -694,6 +694,19 @@ var people = _dbContext.People
   	.ToList();
 ```
 
+## Using QueryKit on Enumerables
+Since QueryKit is really just a parser for expressions, you can use it on any `IEnumerable<T>` as well. Just be sure to use the `ApplyQueryKitFilter` and `ApplyQueryKitSort` methods off of the enumerable.
+
+For example
+```csharp
+var recipeOne = new FakeRecipeBuilder().Build();
+var recipeTwo = new FakeRecipeBuilder().Build();
+var listOfRecipes = new List<Recipe> { recipeOne, recipeTwo };
+
+var input = $"""{nameof(Recipe.Title)} == "{recipeOne.Title}" """;
+
+var filteredRecipes = listOfRecipes.ApplyQueryKitFilter(input).ToList();
+````
 
 
 ## Error Handling
