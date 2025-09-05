@@ -3529,4 +3529,94 @@ public class DatabaseFilteringTests() : TestBase
         people.Count.Should().Be(1);
         people[0].Id.Should().Be(targetPerson.Id);
     }
+    
+    [Fact]
+    public async Task can_filter_with_derived_property_containing_not_equal_operator()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var uniqueId = Guid.NewGuid().ToString()[..8];
+        
+        // Create a person with FirstName and LastName (both not null)
+        var personWithFullName = new FakeTestingPersonBuilder()
+            .WithFirstName($"John_{uniqueId}")
+            .WithLastName($"Doe_{uniqueId}")
+            .WithTitle($"Person1_{uniqueId}")
+            .Build();
+            
+        // Create a person with only FirstName (LastName is null)
+        var personWithPartialName = new FakeTestingPersonBuilder()
+            .WithFirstName($"Jane_{uniqueId}")
+            .WithLastName(null) // Explicitly null
+            .WithTitle($"Person2_{uniqueId}")
+            .Build();
+            
+        await testingServiceScope.InsertAsync(personWithFullName, personWithPartialName);
+
+        // Test derived property that uses != operator like the original user issue:
+        // x.Patient != null ? x.Patient.FirstName + " " + x.Patient.LastName : null
+        var input = $"""patient_name == "John_{uniqueId} Doe_{uniqueId}" """;
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.DerivedProperty<TestingPerson>(x => 
+                x.LastName != null 
+                    ? x.FirstName + " " + x.LastName 
+                    : x.FirstName ?? "")
+                .HasQueryName("patient_name");
+        });
+        
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input, config);
+        var people = await appliedQueryable.ToListAsync();
+        
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(personWithFullName.Id);
+    }
+
+    [Fact]
+    public async Task can_filter_with_derived_property_containing_multiple_not_equal_operators()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var uniqueId = Guid.NewGuid().ToString()[..8];
+        
+        // Create test data
+        var validPerson = new FakeTestingPersonBuilder()
+            .WithFirstName($"Valid_{uniqueId}")
+            .WithLastName($"Person_{uniqueId}")
+            .WithTitle($"Mr_{uniqueId}") // Not null and not empty and unique
+            .WithAge(25) // Not null
+            .Build();
+            
+        var invalidPerson = new FakeTestingPersonBuilder()
+            .WithFirstName($"Invalid_{uniqueId}")
+            .WithLastName(null) // null LastName
+            .WithTitle("") // empty Title
+            // Age left as default (null)
+            .Build();
+            
+        await testingServiceScope.InsertAsync(validPerson, invalidPerson);
+
+        // Test derived property with multiple != checks and additional filter to isolate our test data
+        var input = $"""is_complete == true && Title == "Mr_{uniqueId}" """;
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.DerivedProperty<TestingPerson>(x => 
+                x.FirstName != null && x.LastName != null && 
+                x.Title != null && x.Title != "" &&
+                x.Age != null)
+                .HasQueryName("is_complete");
+        });
+        
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input, config);
+        var people = await appliedQueryable.ToListAsync();
+        
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(validPerson.Id);
+    }
 }

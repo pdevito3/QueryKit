@@ -357,6 +357,7 @@ public class QueryKitPropertyMappings
             ExpressionType.GreaterThanOrEqual => ">=",
             ExpressionType.LessThanOrEqual => "<=",
             ExpressionType.Equal => "==",
+            ExpressionType.NotEqual => "!=",
             _ => throw new NotSupportedException($"Operator for expression type '{nodeType}' is not supported.")
         };
     }
