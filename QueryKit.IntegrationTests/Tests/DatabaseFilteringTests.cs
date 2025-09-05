@@ -3619,4 +3619,105 @@ public class DatabaseFilteringTests() : TestBase
         people.Count.Should().Be(1);
         people[0].Id.Should().Be(validPerson.Id);
     }
+
+    [Fact]
+    public async Task can_filter_with_derived_property_using_not_equal_on_child_navigation_property()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var uniqueId = Guid.NewGuid().ToString()[..8];
+        
+        // Create author
+        var author = new FakeAuthorBuilder()
+            .WithName($"John_{uniqueId}")
+            .Build();
+            
+        // Create recipe with author (like Accession with Patient)
+        var recipeWithAuthor = new FakeRecipeBuilder()
+            .WithTitle($"RecipeWithAuthor_{uniqueId}")
+            .Build();
+        recipeWithAuthor.SetAuthor(author);
+        
+        // Create recipe without author (like Accession without Patient)
+        var recipeWithoutAuthor = new FakeRecipeBuilder()
+            .WithTitle($"RecipeWithoutAuthor_{uniqueId}")
+            .Build();
+        // Author is null by default
+        
+        await testingServiceScope.InsertAsync(recipeWithAuthor, recipeWithoutAuthor);
+
+        // Test derived property that uses != null on child property, exactly like your Patient example:
+        // x.Patient != null ? x.Patient.FirstName + " " + x.Patient.LastName : null
+        var input = $"""authorInfo == "John_{uniqueId}" && Title == "RecipeWithAuthor_{uniqueId}" """;
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.DerivedProperty<Recipe>(x => 
+                x.Author != null 
+                    ? x.Author.Name 
+                    : null)
+                .HasQueryName("authorInfo");
+        });
+        
+        // Act
+        var queryableRecipes = testingServiceScope.DbContext().Recipes
+            .Include(x => x.Author);
+        var appliedQueryable = queryableRecipes.ApplyQueryKitFilter(input, config);
+        var recipes = await appliedQueryable.ToListAsync();
+        
+        // Assert
+        recipes.Count.Should().Be(1);
+        recipes[0].Id.Should().Be(recipeWithAuthor.Id);
+        recipes[0].Author.Should().NotBeNull();
+        recipes[0].Author!.Name.Should().Be($"John_{uniqueId}");
+    }
+
+    [Fact]
+    public async Task can_filter_with_derived_property_using_not_equal_on_child_navigation_property_complex()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var uniqueId = Guid.NewGuid().ToString()[..8];
+        
+        // Create author with complex name structure
+        var author = new FakeAuthorBuilder()
+            .WithName($"Dr. John Smith_{uniqueId}")
+            .Build();
+            
+        // Create recipe with author
+        var recipeWithAuthor = new FakeRecipeBuilder()
+            .WithTitle($"ComplexRecipe_{uniqueId}")
+            .Build();
+        recipeWithAuthor.SetAuthor(author);
+        
+        // Create recipe without author
+        var recipeWithoutAuthor = new FakeRecipeBuilder()
+            .WithTitle($"OrphanRecipe_{uniqueId}")
+            .Build();
+        
+        await testingServiceScope.InsertAsync(recipeWithAuthor, recipeWithoutAuthor);
+
+        // Test complex derived property like your Patient example with FirstName + LastName concatenation
+        var input = $"""patientName == "Dr. John Smith_{uniqueId} (Author)" && Title == "ComplexRecipe_{uniqueId}" """;
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.DerivedProperty<Recipe>(x => 
+                x.Author != null 
+                    ? x.Author.Name + " (Author)"
+                    : "No Author")
+                .HasQueryName("patientName");
+        });
+        
+        // Act
+        var queryableRecipes = testingServiceScope.DbContext().Recipes
+            .Include(x => x.Author);
+        var appliedQueryable = queryableRecipes.ApplyQueryKitFilter(input, config);
+        var recipes = await appliedQueryable.ToListAsync();
+        
+        // Assert
+        recipes.Count.Should().Be(1);
+        recipes[0].Id.Should().Be(recipeWithAuthor.Id);
+        recipes[0].Author.Should().NotBeNull();
+        recipes[0].Author!.Name.Should().Be($"Dr. John Smith_{uniqueId}");
+    }
+
 }

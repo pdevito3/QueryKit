@@ -3,6 +3,7 @@ namespace QueryKit.IntegrationTests.Tests;
 using Bogus;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using QueryKit.Configuration;
 using QueryKit.Exceptions;
 using SharedTestingHelper.Fakes;
 using WebApiTestProject.Entities;
@@ -242,5 +243,122 @@ public class DatabaseSortingTests : TestBase
         people[1].Id.Should().Be(fakePersonOne.Id); // null BirthMonth
         people[2].Id.Should().Be(fakePersonFour.Id);
         people[3].Id.Should().Be(fakePersonThree.Id);
+    }
+
+    [Fact]
+    public async Task can_sort_by_derived_property_with_navigation_property_like_scenario()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var uniqueId = Guid.NewGuid().ToString()[..8];
+        
+        // Create people with different name patterns to test sorting
+        var personA = new FakeTestingPersonBuilder()
+            .WithFirstName($"Alice_{uniqueId}")
+            .WithLastName($"Anderson_{uniqueId}")
+            .WithTitle($"SortTest_{uniqueId}")
+            .Build();
+            
+        var personZ = new FakeTestingPersonBuilder()
+            .WithFirstName($"Zoe_{uniqueId}")
+            .WithLastName($"Wilson_{uniqueId}")
+            .WithTitle($"SortTest_{uniqueId}")
+            .Build();
+            
+        // Create person without last name (should sort last with null handling)
+        var personPartial = new FakeTestingPersonBuilder()
+            .WithFirstName($"Bob_{uniqueId}")
+            .WithLastName(null)
+            .WithTitle($"SortTest_{uniqueId}")
+            .Build();
+        
+        await testingServiceScope.InsertAsync(personZ, personA, personPartial);
+
+        // Test sorting by derived property that mimics navigation property patterns
+        // This mimics: x.Patient != null ? x.Patient.FirstName + " " + x.Patient.LastName : null
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.DerivedProperty<TestingPerson>(x => 
+                x.LastName != null 
+                    ? x.FirstName + " " + x.LastName 
+                    : "ZZZ_" + (x.FirstName ?? "Unknown")) // Sort nulls last
+                .HasQueryName("fullName");
+        });
+        
+        // Act - This should not cause Entity Framework translation errors
+        var queryablePeople = testingServiceScope.DbContext().People
+            .Where(p => p.Title == $"SortTest_{uniqueId}");
+            
+        var appliedQueryable = queryablePeople.ApplyQueryKitSort("fullName asc", config);
+        var people = await appliedQueryable.ToListAsync();
+        
+        // Assert - Should be sorted by derived full name
+        people.Count.Should().Be(3);
+        people[0].FirstName.Should().Be($"Alice_{uniqueId}"); // "Alice Anderson" - first alphabetically
+        people[1].FirstName.Should().Be($"Zoe_{uniqueId}"); // "Zoe Wilson" - second alphabetically  
+        people[2].FirstName.Should().Be($"Bob_{uniqueId}"); // "ZZZ_Bob" - should be last
+    }
+
+    [Fact]
+    public async Task can_sort_by_derived_property_using_complex_patient_like_scenario()
+    {
+        // Arrange - This test mimics the exact scenario from the user's error
+        var testingServiceScope = new TestingServiceScope();
+        var uniqueId = Guid.NewGuid().ToString()[..8];
+        
+        // Create people that represent "patients" with null safety checks
+        var personWithFullName = new FakeTestingPersonBuilder()
+            .WithFirstName($"John_{uniqueId}")
+            .WithLastName($"Doe_{uniqueId}")
+            .WithTitle($"Patient1_{uniqueId}")
+            .Build();
+            
+        var personWithPartialName = new FakeTestingPersonBuilder()
+            .WithFirstName($"Jane_{uniqueId}")
+            .WithLastName(null) // This represents cases where Patient.LastName might be null
+            .WithTitle($"Patient2_{uniqueId}")
+            .Build();
+            
+        var personWithoutName = new FakeTestingPersonBuilder()
+            .WithFirstName(null)
+            .WithLastName(null)
+            .WithTitle($"Patient3_{uniqueId}")
+            .Build();
+            
+        await testingServiceScope.InsertAsync(personWithoutName, personWithPartialName, personWithFullName);
+
+        // Test the EXACT pattern from user's error - derived property with != null checks for sorting
+        // This exactly matches: x.Patient != null ? x.Patient.FirstName + " " + x.Patient.LastName : null
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.DerivedProperty<TestingPerson>(x => 
+                x.FirstName != null && x.LastName != null
+                    ? x.FirstName + " " + x.LastName 
+                    : x.FirstName ?? "ZZZ_Unknown")
+                .HasQueryName("patient");
+        });
+        
+        // Act - Sort by the derived property (this previously caused Entity Framework translation errors)
+        var queryablePeople = testingServiceScope.DbContext().People
+            .Where(p => p.Title.Contains($"Patient") && p.Title.Contains(uniqueId));
+            
+        // This should NOT generate LeftJoin with `.OrderBy(a => (object)a.Inner)' error
+        var appliedQueryable = queryablePeople.ApplyQueryKitSort("patient asc", config);
+        var people = await appliedQueryable.ToListAsync();
+        
+        // Assert - Should be sorted by computed patient name
+        people.Count.Should().Be(3);
+        
+        // First: Jane (partial name = "Jane_uniqueId")
+        people[0].FirstName.Should().Be($"Jane_{uniqueId}");
+        people[0].LastName.Should().BeNull();
+        
+        // Second: John (full name = "John_uniqueId Doe_uniqueId") 
+        people[1].FirstName.Should().Be($"John_{uniqueId}");
+        people[1].LastName.Should().Be($"Doe_{uniqueId}");
+        
+        // Third: null person (unknown name = "ZZZ_Unknown")
+        people[2].FirstName.Should().BeNull();
+        people[2].LastName.Should().BeNull();
     }
 }

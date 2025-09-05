@@ -87,6 +87,16 @@ public static class SortParser
 
     private static Expression? CreateSortExpressionBody(Expression parameter, string propertyName, IQueryKitConfiguration? config)
     {
+        // First check if this is a derived property
+        var derivedPropertyInfo = config?.PropertyMappings?.GetDerivedPropertyInfoByQueryName(propertyName);
+        if (derivedPropertyInfo?.DerivedExpression != null)
+        {
+            // Replace the parameter in the derived expression with our current parameter
+            var parameterReplacer = new ParameterReplacer((ParameterExpression)parameter);
+            return parameterReplacer.Visit(derivedPropertyInfo.DerivedExpression);
+        }
+
+        // Handle regular properties
         var propertyPath = config?.GetPropertyPathByQueryName(propertyName) ?? propertyName;
         var propertyNames = propertyPath.Split('.');
 
