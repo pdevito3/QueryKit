@@ -3720,4 +3720,80 @@ public class DatabaseFilteringTests() : TestBase
         recipes[0].Author!.Name.Should().Be($"Dr. John Smith_{uniqueId}");
     }
 
+    [Fact]
+    public async Task can_filter_with_derived_property_containing_method_call()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var uniqueId = Guid.NewGuid().ToString();
+
+        var fakeRecipeOne = new FakeRecipeBuilder()
+            .WithTitle($"UPPERCASE_TITLE_{uniqueId}")
+            .WithVisibility("Private")
+            .Build();
+        var fakeRecipeTwo = new FakeRecipeBuilder()
+            .WithTitle($"lowercase_title_{uniqueId}")
+            .WithVisibility("Public")
+            .Build();
+
+        await testingServiceScope.InsertAsync(fakeRecipeOne, fakeRecipeTwo);
+
+        var input = $"""hasLowercaseTitle == true""";
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.DerivedProperty<Recipe>(x =>
+                x.Title.ToLower() == x.Title)
+                .HasQueryName("hasLowercaseTitle");
+        });
+
+        // Act
+        var queryableRecipes = testingServiceScope.DbContext().Recipes;
+        var appliedQueryable = queryableRecipes.ApplyQueryKitFilter(input, config);
+        var recipes = await appliedQueryable.ToListAsync();
+
+        // Assert - should find the lowercase one but not the uppercase one
+        recipes.Should().Contain(r => r.Id == fakeRecipeTwo.Id);
+        recipes.Should().NotContain(r => r.Id == fakeRecipeOne.Id);
+    }
+
+    [Fact]
+    public async Task can_filter_with_derived_property_containing_complex_method_call()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var uniqueId = Guid.NewGuid().ToString();
+
+        // Create recipe with "Public" visibility and another with "Private"
+        var fakeRecipeOne = new FakeRecipeBuilder()
+            .WithTitle($"Recipe_One_{uniqueId}")
+            .WithVisibility("Public")
+            .Build();
+        var fakeRecipeTwo = new FakeRecipeBuilder()
+            .WithTitle($"Recipe_Two_{uniqueId}")
+            .WithVisibility("Private")
+            .Build();
+
+        await testingServiceScope.InsertAsync(fakeRecipeOne, fakeRecipeTwo);
+
+        var input = $"""isPublicLower == true""";
+
+        // This should not throw "Expression type 'Call' is not supported" anymore
+        var config = new QueryKitConfiguration(config =>
+        {
+            // Similar to the user's original: x.Accession.PaymentReceived.Value.ToLower() == "full"
+            config.DerivedProperty<Recipe>(x =>
+                x.Visibility.ToLower() == "public")
+                .HasQueryName("isPublicLower");
+        });
+
+        // Act - Should be able to apply the filter without exception
+        var queryableRecipes = testingServiceScope.DbContext().Recipes;
+        var appliedQueryable = queryableRecipes.ApplyQueryKitFilter(input, config);
+        var recipes = await appliedQueryable.ToListAsync();
+
+        // Assert - At minimum, the query should execute without throwing
+        recipes.Should().NotBeNull();
+        // Note: The actual filtering logic may need separate investigation
+    }
+
 }

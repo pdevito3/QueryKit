@@ -168,7 +168,28 @@ public class QueryKitPropertyMappings
                     var prevPath = GetFullPropertyPath(call.Arguments[0]);
                     return $"{prevPath}.{propertyPath}";
                 }
-                break;
+                else
+                {
+                    // Handle general method calls
+                    var argumentsList = new List<string>();
+                    foreach (var arg in call.Arguments)
+                    {
+                        argumentsList.Add(GetFullPropertyPath(arg));
+                    }
+                    var argumentsString = string.Join(", ", argumentsList);
+
+                    if (call.Object != null)
+                    {
+                        // Instance method call
+                        var callObjectPath = GetFullPropertyPath(call.Object);
+                        return $"{callObjectPath}.{call.Method.Name}({argumentsString})";
+                    }
+                    else
+                    {
+                        // Static method call
+                        return $"{call.Method.DeclaringType?.Name}.{call.Method.Name}({argumentsString})";
+                    }
+                }
             case ExpressionType.Lambda:
                 var lambda = (LambdaExpression)expression;
                 return GetFullPropertyPath(lambda.Body);
