@@ -3796,4 +3796,47 @@ public class DatabaseFilteringTests() : TestBase
         // Note: The actual filtering logic may need separate investigation
     }
 
+    [Fact]
+    public async Task can_filter_with_derived_property_containing_complex_conditional_expression()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var uniqueId = Guid.NewGuid().ToString();
+
+        var futureDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(10));
+        var pastDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-5));
+
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithFirstName($"Future_{uniqueId}")
+            .WithDate(futureDate)
+            .Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder()
+            .WithFirstName($"Past_{uniqueId}")
+            .WithDate(pastDate)
+            .Build();
+        var fakePersonThree = new FakeTestingPersonBuilder()
+            .WithFirstName($"NoDate_{uniqueId}")
+            .WithDate(null)
+            .Build();
+
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo, fakePersonThree);
+
+        // This should not throw "Value cannot be null" anymore
+        Action act = () =>
+        {
+            var config = new QueryKitConfiguration(config =>
+            {
+                config.DerivedProperty<TestingPerson>(x =>
+                    x.Date.HasValue
+                        ? (DateOnly.FromDateTime(DateTime.UtcNow).ToDateTime(TimeOnly.MinValue) -
+                           x.Date.Value.ToDateTime(TimeOnly.MinValue)).Days
+                        : (int?)null
+                ).HasQueryName("daysUntilDue");
+            });
+        };
+
+        // Assert - Should not throw ArgumentNullException
+        act.Should().NotThrow<ArgumentNullException>("null values in expressions should be handled properly");
+    }
+
 }
