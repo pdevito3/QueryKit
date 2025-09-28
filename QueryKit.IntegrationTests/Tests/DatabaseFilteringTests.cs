@@ -3821,22 +3821,32 @@ public class DatabaseFilteringTests() : TestBase
 
         await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo, fakePersonThree);
 
-        // This should not throw "Value cannot be null" anymore
-        Action act = () =>
+        // Create config with conditional derived property
+        var config = new QueryKitConfiguration(config =>
         {
-            var config = new QueryKitConfiguration(config =>
-            {
-                config.DerivedProperty<TestingPerson>(x =>
-                    x.Date.HasValue
-                        ? (DateOnly.FromDateTime(DateTime.UtcNow).ToDateTime(TimeOnly.MinValue) -
-                           x.Date.Value.ToDateTime(TimeOnly.MinValue)).Days
-                        : (int?)null
-                ).HasQueryName("daysUntilDue");
-            });
-        };
+            config.DerivedProperty<TestingPerson>(x =>
+                x.Date.HasValue
+                    ? (x.Date.Value.ToDateTime(TimeOnly.MinValue) -
+                       DateOnly.FromDateTime(DateTime.UtcNow).ToDateTime(TimeOnly.MinValue)).Days
+                    : (int?)null
+            ).HasQueryName("daysFromNow");
+        });
 
-        // Assert - Should not throw ArgumentNullException
-        act.Should().NotThrow<ArgumentNullException>("null values in expressions should be handled properly");
+        // Act & Assert - Should not throw "Unsupported value '0' for type 'Object'"
+        var futureQuery = $"""daysFromNow > 0""";
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var futurePeople = await queryablePeople.ApplyQueryKitFilter(futureQuery, config).ToListAsync();
+
+        // Filter for past dates (negative days)
+        var pastQuery = $"""daysFromNow < 0""";
+        var pastPeople = await queryablePeople.ApplyQueryKitFilter(pastQuery, config).ToListAsync();
+
+        // Verify results - The main fix is that these queries should work without throwing exceptions
+        futurePeople.Should().NotBeNull();
+        futurePeople.Should().Contain(p => p.Id == fakePersonOne.Id, "future date should match > 0");
+
+        pastPeople.Should().NotBeNull();
+        pastPeople.Should().Contain(p => p.Id == fakePersonTwo.Id, "past date should match < 0");
     }
 
 }
