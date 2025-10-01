@@ -14,12 +14,12 @@
         <PackageReference Include="Ductus.FluentDocker" Version="2.10.59" />
         <PackageReference Include="FluentAssertions" Version="7.0.0" />
         <PackageReference Include="MediatR" Version="12.4.1" />
-        <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.0" />
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.0" />
+        <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.9" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.9" />
         <PackageReference Include="CleanMoq" Version="1.0.0" />
         <PackageReference Include="Testcontainers" Version="4.6.0" />
         <PackageReference Include="Testcontainers.PostgreSql" Version="4.6.0" />
-        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
         <PackageReference Include="xunit" Version="2.9.2" />
         <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2">
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -32,6 +32,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.9" />
       <ProjectReference Include="..\QueryKit.WebApiTestProject\QueryKit.WebApiTestProject.csproj" />
       <ProjectReference Include="..\SharedTestingHelper\SharedTestingHelper.csproj" />
     </ItemGroup>
