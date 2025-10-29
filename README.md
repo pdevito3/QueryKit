@@ -581,7 +581,7 @@ var config = new QueryKitConfiguration(config =>
 });
 ```
 
-Note, with EF core, your config might look like this:
+Note, with EF core, your QueryKit configuration depends on how you've configured the property:
 
 ```c#
 public sealed class PersonConfiguration : IEntityTypeConfiguration<SpecialPerson>
@@ -589,18 +589,21 @@ public sealed class PersonConfiguration : IEntityTypeConfiguration<SpecialPerson
     public void Configure(EntityTypeBuilder<SpecialPerson> builder)
     {
         builder.HasKey(x => x.Id);
-      
+
       	// Option 1 (as of .NET 8) - ComplexProperty
+      	// QueryKit: config.Property<SpecialPerson>(x => x.Email.Value).HasQueryName("email");
       	builder.ComplexProperty(x => x.Email,
             x => x.Property(y => y.Value)
-                .HasColumnName("email")); 
-      
+                .HasColumnName("email"));
+
       	// Option 2 - HasConversion (see HasConversion support below)
+      	// QueryKit: config.Property<SpecialPerson>(x => x.Email).HasQueryName("email").HasConversion<string>();
         builder.Property(x => x.Email)
             .HasConversion(x => x.Value, x => new EmailAddress(x))
-            .HasColumnName("email");      
-      
+            .HasColumnName("email");
+
         // Option 3 - OwnsOne
+        // QueryKit: config.Property<SpecialPerson>(x => x.Email.Value).HasQueryName("email");
         builder.OwnsOne(x => x.Email, opts =>
         {
             opts.Property(x => x.Value).HasColumnName("email");
@@ -609,6 +612,10 @@ public sealed class PersonConfiguration : IEntityTypeConfiguration<SpecialPerson
     }
 }
 ```
+
+**Key Distinction:**
+- **HasConversion**: Use `x => x.Email` in QueryKit (point to parent property)
+- **ComplexProperty/OwnsOne**: Use `x => x.Email.Value` in QueryKit (point to nested property)
 
 ### HasConversion Support
 
@@ -623,7 +630,7 @@ builder.Property(x => x.Email)
 // QueryKit configuration for HasConversion properties
 var config = new QueryKitConfiguration(config =>
 {
-    config.Property<SpecialPerson>(x => x.Email)
+    config.Property<SpecialPerson>(x => x.Email)  // Point to Email property, NOT Email.Value
         .HasQueryName("email")
         .HasConversion<string>(); // Specify the target type used in HasConversion
 });
@@ -636,6 +643,8 @@ var people = _dbContext.People
 ```
 
 This allows you to use `Email == "value"` syntax instead of `Email.Value == "value"` when the property is configured with HasConversion in EF Core. The `HasConversion<TTarget>()` method tells QueryKit what the conversion target type is so it can handle the type conversion properly.
+
+> **Important:** When using `HasConversion` in EF Core, you MUST configure the property in QueryKit using `x => x.Email`, not `x => x.Email.Value`. The conversion is on the parent property, so pointing to the nested `.Value` property will cause EF Core translation errors. Use `x => x.Email.Value` only when using `ComplexProperty` or `OwnsOne` without HasConversion.
 
 ## Sorting
 
