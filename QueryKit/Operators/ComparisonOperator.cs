@@ -178,6 +178,17 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
     public bool CaseInsensitive { get; protected set; }
     public bool UsesAll { get; protected set; }
     public abstract Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType);
+
+    /// <summary>
+    /// Returns true if this operator requires string comparison (e.g., Contains, StartsWith, EndsWith).
+    /// This is used to determine whether GUIDs should be converted to strings for comparison.
+    /// </summary>
+    public bool IsStringComparisonOperator()
+    {
+        return this is ContainsType or NotContainsType or StartsWithType or NotStartsWithType
+            or EndsWithType or NotEndsWithType or SoundsLikeType or DoesNotSoundLikeType;
+    }
+
     protected ComparisonOperator(string name, int value, bool caseInsensitive = false, bool usesAll = false) : base(name, value)
     {
         CaseInsensitive = caseInsensitive;
@@ -515,10 +526,8 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         public override bool IsCountOperator() => false; 
         public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
         {
-            var leftType = left.Type == typeof(Guid) || left.Type == typeof(Guid?) 
-                ? typeof(string) 
-                : left.Type;
-        
+            var leftType = left.Type;
+
             if (right is NewArrayExpression newArrayExpression)
             {
                 var listType = typeof(List<>).MakeGenericType(leftType);

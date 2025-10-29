@@ -119,9 +119,9 @@ public class CustomFilterPropertyTests
             config.Property<TestingPerson>(x => x.Id).HasQueryName("identifier");
         });
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
-        filterExpression.ToString().Should().Be($"""x => ((x.Title == "{stringValue}") OrElse (x.Id.ToString() == "{guidValue}"))""");
+        filterExpression.ToString().Should().Be($"""x => ((x.Title == "{stringValue}") OrElse (x.Id == {guidValue}))""");
     }
-    
+
     [Fact]
     public void can_have_custom_prop_name_for_some_props()
     {
@@ -135,7 +135,7 @@ public class CustomFilterPropertyTests
             config.Property<TestingPerson>(x => x.Title).HasQueryName("special_title");
         });
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
-        filterExpression.ToString().Should().Be($"""x => ((x.Title == "{stringValue}") OrElse (x.Id.ToString() == "{guidValue}"))""");
+        filterExpression.ToString().Should().Be($"""x => ((x.Title == "{stringValue}") OrElse (x.Id == {guidValue}))""");
     }
     
     [Fact]

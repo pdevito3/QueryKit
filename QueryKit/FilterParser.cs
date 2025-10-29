@@ -328,7 +328,12 @@ public static class FilterParser
             
             if (right.StartsWith("[") && right.EndsWith("]"))
             {
-                targetType = targetType == typeof(Guid) || targetType == typeof(Guid?) ? typeof(string) : targetType;
+                // Only convert GUID arrays to string arrays for string operators (Contains, etc.)
+                // For other operators like 'in', keep as GUID array for proper type matching
+                if ((targetType == typeof(Guid) || targetType == typeof(Guid?)) && op.IsStringComparisonOperator())
+                {
+                    targetType = typeof(string);
+                }
                 var values = right.Trim('[', ']').Split(',').Select(x => x.Trim()).ToList();
                 var elementType = targetType.IsArray ? targetType.GetElementType() : targetType;
             
@@ -433,7 +438,16 @@ public static class FilterParser
 
             if (targetType == typeof(Guid))
             {
-                return Expression.Constant(right, typeof(string)); 
+                // For string operators (Contains, StartsWith, EndsWith), we need to compare as strings
+                // For equality/comparison operators, we can compare GUIDs directly (more efficient and EF-friendly)
+                if (op.IsStringComparisonOperator())
+                {
+                    return Expression.Constant(right, typeof(string));
+                }
+
+                // Parse the GUID for direct comparison
+                var guidValue = Guid.Parse(right);
+                return Expression.Constant(guidValue, typeof(Guid));
             }
 
             var convertedValue = conversionFunction(right);
@@ -625,9 +639,18 @@ public static class FilterParser
                     {
                         guidPropertyPath = GetPropertyPath(guidMemberExpr, parameter);
                     }
-                    
-                    var guidStringExpr = HandleGuidConversion(temp.leftExpr, temp.leftExpr.Type);
-                    return temp.op.GetExpression<T>(guidStringExpr, CreateRightExpr(temp.leftExpr, temp.right, temp.op, config, guidPropertyPath),
+
+                    // Only convert to string for operators that require string comparison (Contains, StartsWith, etc.)
+                    // For equality/comparison operators, keep as GUID for better EF Core translation
+                    if (temp.op.IsStringComparisonOperator())
+                    {
+                        var guidStringExpr = HandleGuidConversion(temp.leftExpr, temp.leftExpr.Type);
+                        return temp.op.GetExpression<T>(guidStringExpr, CreateRightExpr(temp.leftExpr, temp.right, temp.op, config, guidPropertyPath),
+                            config?.DbContextType);
+                    }
+
+                    // For non-string operators, use direct GUID comparison
+                    return temp.op.GetExpression<T>(temp.leftExpr, CreateRightExpr(temp.leftExpr, temp.right, temp.op, config, guidPropertyPath),
                         config?.DbContextType);
                 }
 
@@ -638,16 +661,20 @@ public static class FilterParser
                     if (rightPropertyExpr != null)
                     {
                         // Handle GUID conversion for property-to-property comparisons
+                        // Only convert to string for string operators
                         var leftExpr = temp.leftExpr;
-                        if (leftExpr.Type == typeof(Guid) || leftExpr.Type == typeof(Guid?))
+                        if (temp.op.IsStringComparisonOperator())
                         {
-                            leftExpr = HandleGuidConversion(leftExpr, leftExpr.Type);
+                            if (leftExpr.Type == typeof(Guid) || leftExpr.Type == typeof(Guid?))
+                            {
+                                leftExpr = HandleGuidConversion(leftExpr, leftExpr.Type);
+                            }
+                            if (rightPropertyExpr.Type == typeof(Guid) || rightPropertyExpr.Type == typeof(Guid?))
+                            {
+                                rightPropertyExpr = HandleGuidConversion(rightPropertyExpr, rightPropertyExpr.Type);
+                            }
                         }
-                        if (rightPropertyExpr.Type == typeof(Guid) || rightPropertyExpr.Type == typeof(Guid?))
-                        {
-                            rightPropertyExpr = HandleGuidConversion(rightPropertyExpr, rightPropertyExpr.Type);
-                        }
-                        
+
                         // Ensure compatible types for property-to-property comparison
                         var (leftCompatible, rightCompatible) = EnsureCompatibleTypes(leftExpr, rightPropertyExpr);
                         return temp.op.GetExpression<T>(leftCompatible, rightCompatible, config?.DbContextType);
