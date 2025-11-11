@@ -314,6 +314,77 @@ var appliedQueryable = queryableRecipe.ApplyQueryKitFilter(input, config);
 var recipes = await appliedQueryable.ToListAsync();
 ```
 
+#### Filtering Raw SQL Projections
+
+QueryKit can also be used with raw SQL queries via EF Core's `SqlQueryRaw`. This is particularly useful when you need to work with complex SQL queries that include joins, aggregations, or database-specific functions. 
+
+> 💡 You can use projections without using raw sql
+
+Here's an example using a school domain:
+
+```csharp
+public class StudentEnrollmentDto
+{
+    public Guid Id { get; set; }
+    public string StudentFirstName { get; set; }
+    public string StudentLastName { get; set; }
+    public string StudentFullName { get; set; }
+    public int StudentAge { get; set; }
+    public Guid CourseId { get; set; }
+    public string CourseName { get; set; }
+    public DateTime EnrolledOn { get; set; }
+    public DateTime? CourseStartDate { get; set; }
+}
+
+var sql =
+$"""
+SELECT
+    e.id as "Id",
+    COALESCE(s.first_name, '') as "StudentFirstName",
+    COALESCE(s.last_name, '') as "StudentLastName",
+    COALESCE(s.first_name, '') || ' ' || COALESCE(s.last_name, '') as "StudentFullName",
+    s.age as "StudentAge",
+    e.course_id as "CourseId",
+    c.name as "CourseName",
+    e.enrolled_on as "EnrolledOn",
+    c.start_date as "CourseStartDate"
+FROM enrollments e
+LEFT JOIN students s ON e.student_id = s.id
+LEFT JOIN courses c ON e.course_id = c.id
+WHERE e.is_deleted = false
+""";
+
+var projection = dbContext.Database.SqlQueryRaw<StudentEnrollmentDto>(sql);
+
+var queryKitConfig = new QueryKitConfiguration(config =>
+{
+    config.Property<StudentEnrollmentDto>(x => x.StudentFirstName).HasQueryName("studentFirstName");
+    config.Property<StudentEnrollmentDto>(x => x.StudentLastName).HasQueryName("studentLastName");
+    config.Property<StudentEnrollmentDto>(x => x.StudentFullName).HasQueryName("studentName");
+    config.Property<StudentEnrollmentDto>(x => x.StudentAge).HasQueryName("studentAge");
+    config.Property<StudentEnrollmentDto>(x => x.CourseId).HasQueryName("courseId");
+    config.Property<StudentEnrollmentDto>(x => x.CourseName).HasQueryName("courseName");
+    config.Property<StudentEnrollmentDto>(x => x.EnrolledOn).HasQueryName("enrolledOn");
+    config.Property<StudentEnrollmentDto>(x => x.CourseStartDate).HasQueryName("courseStartDate");
+});
+
+var queryKitData = new QueryKitData
+{
+    Filters = request.QueryParameters.Filters,
+    SortOrder = request.QueryParameters.SortOrder,
+    Configuration = queryKitConfig
+};
+
+var appliedCollection = projection.ApplyQueryKit(queryKitData);
+var results = await appliedCollection.ToListAsync();
+```
+
+**Key Points:**
+- Raw SQL projections work seamlessly with QueryKit's filtering and sorting
+- You can include computed fields (like `StudentFullName`) and nested fields from joins (like `CourseStartDate`)
+- Property mappings allow you to use friendly query names that differ from the DTO property names
+- The resulting queryable can be further filtered and sorted by QueryKit before materializing to a list
+
 #### Filtering Collections
 
 You can also filter into collections with QueryKit by using most of the normal operators. For example, if I wanted to filter for recipes that only have an ingredient named `salt`, I could do something like this:
