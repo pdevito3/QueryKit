@@ -17,13 +17,13 @@ public class FakeTestingPersonBuilder
         return this;
     }
 
-    public FakeTestingPersonBuilder WithAge(int age)
+    public FakeTestingPersonBuilder WithAge(int? age)
     {
         _baseTestingPerson.Age = age;
         return this;
     }
 
-    public FakeTestingPersonBuilder WithFavorite(bool favorite)
+    public FakeTestingPersonBuilder WithFavorite(bool? favorite)
     {
         _baseTestingPerson.Favorite = favorite;
         return this;
@@ -53,7 +53,7 @@ public class FakeTestingPersonBuilder
         return this;
     }
 
-    public FakeTestingPersonBuilder WithRating(decimal rating)
+    public FakeTestingPersonBuilder WithRating(decimal? rating)
     {
         _baseTestingPerson.Rating = rating;
         return this;
