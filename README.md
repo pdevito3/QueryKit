@@ -120,6 +120,118 @@ Here's an example for the `in` operator:
 var input = """(Age ^^ [20, 30, 40]) && (BirthMonth ^^* ["January", "February", "March"]) || (Id ^^ ["6d623e92-d2cf-4496-a2df-f49fa77328ee"])""";
 ```
 
+### Property List Grouping
+
+Property list grouping allows you to apply a single comparison operation across multiple properties, making it easy to search for a value in any of several fields without writing repetitive conditions.
+
+#### Basic Syntax
+
+Use parentheses with comma-separated property names followed by an operator and value:
+
+```c#
+// Search for "paul" in either FirstName OR LastName
+var input = """(FirstName, LastName) @=* "paul" """;
+
+// Equivalent to:
+// FirstName @=* "paul" || LastName @=* "paul"
+```
+
+#### How It Works
+
+Property list grouping uses different logical operators depending on whether you're using positive or negative comparison operators:
+
+**Positive Operators** (uses **OR** logic - match if found in ANY field):
+- `==`, `@=`, `@=*`, `_=`, `_=*`, `_-=`, `_-=*`, `^$`, `^^`
+- Match if the condition is true for **at least one** property
+
+**Negative Operators** (uses **AND** logic - match if NOT found in ALL fields):
+- `!=`, `!@=`, `!@=*`, `!_=`, `!_=*`, `!_-=`, `!_-=*`, `!^$`, `!^^`
+- Match only if the condition is true for **every** property
+
+#### Examples
+
+**Case-insensitive search across multiple text fields:**
+```c#
+var input = """(FirstName, LastName, Email) @=* "john" """;
+// Finds records where "john" appears in FirstName OR LastName OR Email
+```
+
+**Exact match on any of several properties:**
+```c#
+var input = """(Status, Type, Category) == "Active" """;
+// Finds records where Status, Type, OR Category equals "Active"
+```
+
+**Numeric comparison across multiple fields:**
+```c#
+var input = """(Age, Rating, Score) > 25""";
+// Finds records where Age, Rating, OR Score is greater than 25
+```
+
+**Negative operators (NOT contains):**
+```c#
+var input = """(FirstName, LastName) !@=* "test" """;
+// Finds records where "test" is NOT in FirstName AND NOT in LastName
+// Both fields must not contain "test"
+```
+
+**Not equals:**
+```c#
+var input = """(Status, Type) != "Inactive" """;
+// Finds records where Status != "Inactive" AND Type != "Inactive"
+// Both fields must not equal "Inactive"
+```
+
+#### Advanced Usage
+
+**Combined with other conditions:**
+```c#
+var input = """(FirstName, LastName) @=* "smith" && Age > 25 && Status == "Active" """;
+// Search for "smith" in name fields AND apply additional filters
+```
+
+**Multiple property lists in one query:**
+```c#
+var input = """(FirstName, LastName) @=* "john" && (Email, Phone) @=* "555" """;
+// Search across different property groups
+```
+
+**Complex logical expressions:**
+```c#
+var input = """((FirstName, LastName) @=* "smith" || Age == 30) && Status == "Active" """;
+// Combine property list grouping with parentheses and other operators
+```
+
+**Nested properties:**
+```c#
+var input = """(Author.Name, Author.Email, Title) @=* "john" """;
+// Search across nested object properties
+```
+
+**With numeric comparisons:**
+```c#
+var input = """(Age, YearsOfExperience, Rating) >= 5""";
+// Find records where any numeric field meets the criteria
+```
+
+#### Use Cases
+
+Property list grouping is particularly useful for:
+
+1. **Search functionality** - Search across multiple text fields (name, email, title, etc.)
+2. **Multi-field validation** - Ensure a value doesn't appear in any of several fields
+3. **Status checks** - Check if any status field has a particular value
+4. **Flexible filtering** - Allow users to search without knowing which specific field contains the data
+
+#### Notes
+
+- Works with **all comparison operators** listed in the comparison operators table
+- Can include the **same property multiple times** if needed: `(FirstName, FirstName, LastName)`
+- Supports **any number of properties** in the list
+- Handles **whitespace** around commas gracefully: `( FirstName , LastName )`
+- **Type safety** - All properties in the list should be compatible with the comparison value type
+- **Nullable properties** are handled automatically
+
 ### Filtering Notes
 
 * `string` and `guid` properties should be wrapped in double quotes

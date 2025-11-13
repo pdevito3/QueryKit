@@ -58,6 +58,13 @@ public static class FilterParser
         from first in Parse.Letter.Once()
         from rest in Parse.LetterOrDigit.XOr(Parse.Char('_')).Many()
         select new string(first.Concat(rest).ToArray());
+
+    private static Parser<IEnumerable<IEnumerable<string>>> PropertyListParser =>
+        from openParen in Parse.Char('(')
+        from properties in Identifier.DelimitedBy(Parse.Char('.')).Token()
+                                    .DelimitedBy(Parse.Char(',').Token())
+        from closeParen in Parse.Char(')')
+        select properties;
     
     private static Parser<ComparisonOperator> ComparisonOperatorParser =>
         Parse.Char(ComparisonOperator.AllPrefix).Optional().Select(opt => opt.IsDefined)
@@ -605,9 +612,12 @@ public static class FilterParser
         var comparisonOperatorParser = ComparisonOperatorParser.Token();
         var rightSideValueParser = RightSideValueParser.Token();
 
-        // Try arithmetic comparison first, but only if parentheses are present
+        // Try property list comparison first (e.g., (firstName, lastName) @=* "paul")
+        var propertyListComparison = PropertyListComparisonExprParser<T>(parameter, config);
+
+        // Try arithmetic comparison (e.g., (price + tax) > 100)
         var arithmeticComparison = ArithmeticComparisonExprParser<T>(parameter, config);
-        
+
         var regularComparison = CreateLeftExprParser(parameter, config)
             .SelectMany(leftExpr => comparisonOperatorParser, (leftExpr, op) => new { leftExpr, op })
             .SelectMany(temp => rightSideValueParser, (temp, right) => new { temp.leftExpr, temp.op, right })
@@ -770,7 +780,7 @@ public static class FilterParser
                 return temp.op.GetExpression<T>(leftExprForComparison, rightExpr, config?.DbContextType);
             });
 
-        return arithmeticComparison.Or(regularComparison);
+        return propertyListComparison.Or(arithmeticComparison).Or(regularComparison);
     }
 
     private static Parser<Expression?>? CreateLeftExprParser(ParameterExpression parameter, IQueryKitConfiguration? config)
@@ -924,18 +934,209 @@ public static class FilterParser
     {
         var parts = new List<string>();
         var current = memberExpression;
-        
+
         while (current != null)
         {
             parts.Insert(0, current.Member.Name);
-            
+
             if (current.Expression == parameter)
                 break;
-                
+
             current = current.Expression as MemberExpression;
         }
-        
+
         return string.Join(".", parts);
+    }
+
+    private static Expression CreatePropertyExpressionFromPath<T>(
+        ParameterExpression parameter,
+        List<string> propertyPath,
+        IQueryKitConfiguration? config)
+    {
+        var fullPropPath = string.Join(".", propertyPath);
+
+        return propertyPath.Aggregate((Expression)parameter, (expr, propName) =>
+        {
+            if (expr is MemberExpression member)
+            {
+                if (IsEnumerable(member.Type))
+                {
+                    var genericArgType = member.Type.GetGenericArguments()[0];
+                    var propertyType = genericArgType.GetProperty(propName).PropertyType;
+
+                    if (IsEnumerable(propertyType))
+                    {
+                        propertyType = propertyType.GetGenericArguments()[0];
+
+                        var linqMethod = "SelectMany";
+                        var selectMethod = typeof(Enumerable).GetMethods()
+                            .First(m => m.Name ==  linqMethod && m.GetParameters().Length == 2)
+                            .MakeGenericMethod(genericArgType, propertyType);
+
+                        var innerParameter = Expression.Parameter(genericArgType, "y");
+                        var propertyInfoForMethod = GetPropertyInfo(genericArgType, propName);
+                        Expression lambdaBody = Expression.PropertyOrField(innerParameter, propertyInfoForMethod.Name);
+
+                        var expectedType = typeof(IEnumerable<>).MakeGenericType(propertyType);
+                        if (lambdaBody.Type != expectedType && !expectedType.IsAssignableFrom(lambdaBody.Type))
+                        {
+                            lambdaBody = Expression.Convert(lambdaBody, expectedType);
+                        }
+
+                        var lambdaType = typeof(Func<,>).MakeGenericType(genericArgType, expectedType);
+                        lambdaBody = Expression.Lambda(lambdaType, lambdaBody, innerParameter);
+
+                        return Expression.Call(selectMethod, member, lambdaBody);
+                    }
+                    else
+                    {
+                        var selectMethod = typeof(Enumerable).GetMethods()
+                            .First(m => m.Name == "Select" && m.GetParameters().Length == 2)
+                            .MakeGenericMethod(genericArgType, genericArgType.GetProperty(propName).PropertyType);
+
+                        var innerParameter = Expression.Parameter(genericArgType, "y");
+                        var propertyInfoForMethod = GetPropertyInfo(genericArgType, propName);
+                        var lambdaBody = Expression.PropertyOrField(innerParameter, propertyInfoForMethod.Name);
+                        var selectLambda = Expression.Lambda(lambdaBody, innerParameter);
+                        var selectResult = Expression.Call(null, selectMethod, member, selectLambda);
+
+                        return HandleGuidConversion(selectResult, propertyType, "Select");
+                    }
+                }
+            }
+
+            if (expr is MethodCallExpression call)
+            {
+                var innerGenericType = GetInnerGenericType(call.Method.ReturnType);
+                var propertyInfoForMethod = GetPropertyInfo(innerGenericType, propName);
+
+                var propertyType = propertyInfoForMethod.PropertyType;
+                var linqMethod = IsEnumerable(propertyType) ? "SelectMany" : "Select";
+                var resultType = IsEnumerable(propertyType) ? propertyType.GetGenericArguments()[0] : propertyType;
+
+                var selectMethod = typeof(Enumerable).GetMethods()
+                    .First(m => m.Name == linqMethod && m.GetParameters().Length == 2)
+                    .MakeGenericMethod(innerGenericType, resultType);
+
+                var innerParameter = Expression.Parameter(innerGenericType, "y");
+                var lambdaBody = Expression.PropertyOrField(innerParameter, propertyInfoForMethod.Name);
+                var selectLambda = Expression.Lambda(lambdaBody, innerParameter);
+
+                return Expression.Call(selectMethod, expr, selectLambda);
+            }
+
+            var propertyInfo = GetPropertyInfo(expr.Type, propName);
+            var actualPropertyName = propertyInfo?.Name ?? propName;
+            try
+            {
+                return Expression.PropertyOrField(expr, actualPropertyName);
+            }
+            catch(ArgumentException)
+            {
+                var derivedPropertyInfo = config?.PropertyMappings?.GetDerivedPropertyInfoByQueryName(fullPropPath);
+                if (derivedPropertyInfo?.DerivedExpression != null)
+                {
+                    return derivedPropertyInfo.DerivedExpression;
+                }
+
+                if(config?.AllowUnknownProperties == true)
+                {
+                    return Expression.Constant(true, typeof(bool));
+                }
+
+                throw new UnknownFilterPropertyException(actualPropertyName);
+            }
+        });
+    }
+
+    private static Parser<Expression> PropertyListComparisonExprParser<T>(
+        ParameterExpression parameter,
+        IQueryKitConfiguration? config)
+    {
+        var comparisonOperatorParser = ComparisonOperatorParser.Token();
+        var rightSideValueParser = RightSideValueParser.Token();
+
+        return PropertyListParser
+            .SelectMany(properties => comparisonOperatorParser,
+                (properties, op) => new { properties, op })
+            .SelectMany(temp => rightSideValueParser,
+                (temp, right) => new { temp.properties, temp.op, right })
+            .Select(temp =>
+            {
+                if (!temp.properties.Any())
+                {
+                    throw new InvalidOperationException("Property list cannot be empty");
+                }
+
+                Expression? result = null;
+
+                // For negative operators (NotEquals, NotContains, NotStartsWith, NotEndsWith, NotIn, DoesNotHave),
+                // we use AND instead of OR so that all properties must NOT match
+                var isNegativeOperator = temp.op.Operator().StartsWith("!") || temp.op.Operator().Contains("!=");
+
+                foreach (var propertyPath in temp.properties)
+                {
+                    var propertyPathList = propertyPath.ToList();
+                    var fullPropPath = string.Join(".", propertyPathList);
+
+                    // Check if property can be filtered
+                    var propertyConfig = config?.PropertyMappings?.GetPropertyInfo(fullPropPath);
+                    if (propertyConfig != null && !propertyConfig.CanFilter)
+                    {
+                        continue;
+                    }
+
+                    // Build expression for each property
+                    var leftExpr = CreatePropertyExpressionFromPath<T>(
+                        parameter, propertyPathList, config);
+
+                    // Skip if it's a placeholder for unknown properties
+                    if (leftExpr.NodeType == ExpressionType.Constant &&
+                        ((ConstantExpression)leftExpr).Value!.Equals(true))
+                    {
+                        continue;
+                    }
+
+                    // Handle custom operations
+                    if (leftExpr.NodeType == ExpressionType.Constant &&
+                        ((ConstantExpression)leftExpr).Value is string constantValue &&
+                        constantValue.StartsWith("CustomOperation:"))
+                    {
+                        var operationName = constantValue.Substring("CustomOperation:".Length);
+                        var customOperationInfo = config?.PropertyMappings?.GetCustomOperationInfoByQueryName(operationName);
+                        if (customOperationInfo?.CustomOperation != null)
+                        {
+                            var customComparison = CreateCustomOperationExpression<T>(parameter, customOperationInfo, temp.op, temp.right);
+                            result = result == null
+                                ? customComparison
+                                : isNegativeOperator
+                                    ? Expression.AndAlso(result, customComparison)
+                                    : Expression.OrElse(result, customComparison);
+                            continue;
+                        }
+                    }
+
+                    // Handle GUID conversion for string operators
+                    if ((leftExpr.Type == typeof(Guid) || leftExpr.Type == typeof(Guid?)) &&
+                        temp.op.IsStringComparisonOperator())
+                    {
+                        leftExpr = HandleGuidConversion(leftExpr, leftExpr.Type);
+                    }
+
+                    var rightExpr = CreateRightExpr(leftExpr, temp.right, temp.op, config, fullPropPath);
+                    var comparison = temp.op.GetExpression<T>(leftExpr, rightExpr, config?.DbContextType);
+
+                    // Combine with AND for negative operators, OR for positive operators
+                    result = result == null
+                        ? comparison
+                        : isNegativeOperator
+                            ? Expression.AndAlso(result, comparison)
+                            : Expression.OrElse(result, comparison);
+                }
+
+                // If all properties were filtered out, return true
+                return result ?? Expression.Constant(true, typeof(bool));
+            });
     }
     
     private static Type? GetInnerGenericType(Type type)
