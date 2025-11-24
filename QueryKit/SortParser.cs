@@ -96,25 +96,64 @@ public static class SortParser
             return parameterReplacer.Visit(derivedPropertyInfo.DerivedExpression);
         }
 
-        // Handle regular properties
+        // Handle regular properties with null-safe navigation
         var propertyPath = config?.GetPropertyPathByQueryName(propertyName) ?? propertyName;
         var propertyNames = propertyPath.Split('.');
 
-        var propertyExpression = propertyNames.Aggregate(parameter, (expr, propName) =>
-        {
-            var propertyInfo = GetPropertyInfo(expr.Type, propName);
-            if (propertyInfo == null)
-            {
-                return null;
-            }
-            var actualPropertyName = propertyInfo?.Name ?? propName;
-            return Expression.PropertyOrField(expr, actualPropertyName);
-        });
-
-        if(propertyExpression == null)
+        var result = CreateNullSafePropertyExpression(parameter, propertyNames, 0);
+        if (result == null)
             throw new SortParsingException(propertyName);
-        
-        return propertyExpression;
+
+        return result;
+    }
+
+    private static Expression? CreateNullSafePropertyExpression(Expression currentExpr, string[] propertyNames, int index)
+    {
+        if (index >= propertyNames.Length)
+            return currentExpr;
+
+        var propName = propertyNames[index];
+        var propertyInfo = GetPropertyInfo(currentExpr.Type, propName);
+        if (propertyInfo == null)
+            return null;
+
+        var propertyAccess = Expression.PropertyOrField(currentExpr, propertyInfo.Name);
+
+        // If this is the last property in the chain, just return the access
+        if (index == propertyNames.Length - 1)
+            return propertyAccess;
+
+        // Get the rest of the property chain
+        var restOfChain = CreateNullSafePropertyExpression(propertyAccess, propertyNames, index + 1);
+        if (restOfChain == null)
+            return null;
+
+        // Check if the current property type is a reference type (could be null)
+        var propertyType = propertyInfo.PropertyType;
+        var isNullableType = !propertyType.IsValueType || Nullable.GetUnderlyingType(propertyType) != null;
+
+        if (isNullableType)
+        {
+            // It's a reference type or nullable value type - add null check
+            // Generate: property == null ? (TargetType)null : <rest of chain>
+            var targetType = restOfChain.Type;
+            var nullableTargetType = targetType.IsValueType && Nullable.GetUnderlyingType(targetType) == null
+                ? typeof(Nullable<>).MakeGenericType(targetType)
+                : targetType;
+
+            var nullCheck = Expression.Equal(propertyAccess, Expression.Constant(null, propertyType));
+            var nullValue = Expression.Constant(null, nullableTargetType);
+
+            // Convert rest of chain to nullable if needed
+            var convertedRest = targetType != nullableTargetType
+                ? Expression.Convert(restOfChain, nullableTargetType)
+                : restOfChain;
+
+            return Expression.Condition(nullCheck, nullValue, convertedRest);
+        }
+
+        // Non-nullable value type - continue without null check
+        return restOfChain;
     }
 
     private static PropertyInfo? GetPropertyInfo(Type type, string propertyName)

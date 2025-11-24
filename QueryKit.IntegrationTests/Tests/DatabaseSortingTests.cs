@@ -6,7 +6,10 @@ using Microsoft.EntityFrameworkCore;
 using QueryKit.Configuration;
 using QueryKit.Exceptions;
 using SharedTestingHelper.Fakes;
+using SharedTestingHelper.Fakes.Author;
+using SharedTestingHelper.Fakes.Recipes;
 using WebApiTestProject.Entities;
+using WebApiTestProject.Entities.Recipes;
 
 public class DatabaseSortingTests : TestBase
 {
@@ -360,5 +363,103 @@ public class DatabaseSortingTests : TestBase
         // Third: null person (unknown name = "ZZZ_Unknown")
         people[2].FirstName.Should().BeNull();
         people[2].LastName.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task can_sort_by_nullable_navigation_property()
+    {
+        // Arrange - This tests the scenario where a navigation property (Author) can be null
+        // Similar to the user's scenario: MatchPlayer.Player.LastName where Player is nullable
+        var testingServiceScope = new TestingServiceScope();
+        var uniqueId = Guid.NewGuid().ToString()[..8];
+
+        // Create recipe WITH author (name starting with "A")
+        var authorA = new FakeAuthorBuilder()
+            .WithName($"Alice_{uniqueId}")
+            .Build();
+        var recipeWithAuthorA = new FakeRecipeBuilder()
+            .WithTitle($"Recipe1_{uniqueId}")
+            .Build();
+        recipeWithAuthorA.SetAuthor(authorA);
+
+        // Create recipe WITH author (name starting with "Z")
+        var authorZ = new FakeAuthorBuilder()
+            .WithName($"Zoe_{uniqueId}")
+            .Build();
+        var recipeWithAuthorZ = new FakeRecipeBuilder()
+            .WithTitle($"Recipe2_{uniqueId}")
+            .Build();
+        recipeWithAuthorZ.SetAuthor(authorZ);
+
+        // Create recipe WITHOUT author (null navigation property)
+        var recipeWithoutAuthor = new FakeRecipeBuilder()
+            .WithTitle($"Recipe3_{uniqueId}")
+            .Build();
+        // Note: No SetAuthor call - Author will be null
+
+        await testingServiceScope.InsertAsync(recipeWithAuthorZ, recipeWithoutAuthor, recipeWithAuthorA);
+
+        // Act - Try to sort by nested navigation property Author.Name when Author can be null
+        var queryableRecipes = testingServiceScope.DbContext().Recipes
+            .Include(r => r.Author)
+            .Where(r => r.Title.Contains(uniqueId));
+
+        // This should handle null navigation properties gracefully
+        var appliedQueryable = queryableRecipes.ApplyQueryKitSort("Author.Name asc");
+        var recipes = await appliedQueryable.ToListAsync();
+
+        // Assert - Should sort without errors, with null authors sorted appropriately
+        recipes.Count.Should().Be(3);
+
+        // In PostgreSQL with ASC, nulls are sorted LAST by default
+        // So we expect: Alice, Zoe, then null
+        recipes[0].Title.Should().Be($"Recipe1_{uniqueId}"); // Alice
+        recipes[1].Title.Should().Be($"Recipe2_{uniqueId}"); // Zoe
+        recipes[2].Title.Should().Be($"Recipe3_{uniqueId}"); // null author
+        recipes[2].Author.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task can_sort_descending_by_nullable_navigation_property()
+    {
+        // Arrange - Test DESC sorting with null navigation properties
+        var testingServiceScope = new TestingServiceScope();
+        var uniqueId = Guid.NewGuid().ToString()[..8];
+
+        var authorA = new FakeAuthorBuilder()
+            .WithName($"Alice_{uniqueId}")
+            .Build();
+        var recipeWithAuthorA = new FakeRecipeBuilder()
+            .WithTitle($"RecipeA_{uniqueId}")
+            .Build();
+        recipeWithAuthorA.SetAuthor(authorA);
+
+        var authorZ = new FakeAuthorBuilder()
+            .WithName($"Zoe_{uniqueId}")
+            .Build();
+        var recipeWithAuthorZ = new FakeRecipeBuilder()
+            .WithTitle($"RecipeZ_{uniqueId}")
+            .Build();
+        recipeWithAuthorZ.SetAuthor(authorZ);
+
+        var recipeWithoutAuthor = new FakeRecipeBuilder()
+            .WithTitle($"RecipeNull_{uniqueId}")
+            .Build();
+
+        await testingServiceScope.InsertAsync(recipeWithAuthorA, recipeWithoutAuthor, recipeWithAuthorZ);
+
+        // Act
+        var queryableRecipes = testingServiceScope.DbContext().Recipes
+            .Include(r => r.Author)
+            .Where(r => r.Title.Contains(uniqueId));
+
+        var appliedQueryable = queryableRecipes.ApplyQueryKitSort("Author.Name desc");
+        var recipes = await appliedQueryable.ToListAsync();
+
+        // Assert - In PostgreSQL with DESC, nulls are sorted FIRST by default
+        recipes.Count.Should().Be(3);
+        recipes[0].Title.Should().Be($"RecipeNull_{uniqueId}"); // null author first in DESC
+        recipes[1].Title.Should().Be($"RecipeZ_{uniqueId}"); // Zoe
+        recipes[2].Title.Should().Be($"RecipeA_{uniqueId}"); // Alice
     }
 }
