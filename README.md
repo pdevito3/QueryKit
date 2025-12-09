@@ -966,3 +966,4 @@ var people = await appliedQueryable.ToListAsync();
 
 ## Community Projects
 - [Fluent QueryKit](https://github.com/CLFPosthumus/fluent-querykit) for easy usage in javascript or typescript projects.
+- [QueryKit Builder](https://github.com/notlimey/querykit-builder) a TypeScript query builder designed to work with
