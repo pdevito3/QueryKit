@@ -404,6 +404,24 @@ public class QueryKitPropertyMappings
 
     public string? GetPropertyPathByQueryName(string? queryName)
         => GetPropertyInfoByQueryName(queryName)?.Name ?? null;
+
+    public int? GetMaxDepthForProperty(string? propertyPath)
+    {
+        if (string.IsNullOrEmpty(propertyPath))
+            return null;
+
+        // Check if the property path starts with any configured property that has MaxDepth
+        foreach (var mapping in _propertyMappings.Values)
+        {
+            if (mapping.MaxDepth.HasValue &&
+                propertyPath.StartsWith(mapping.Name ?? "", StringComparison.OrdinalIgnoreCase))
+            {
+                return mapping.MaxDepth;
+            }
+        }
+
+        return null;
+    }
 }
 
 
@@ -438,6 +456,12 @@ public class QueryKitPropertyMapping<TModel>
     {
         _propertyInfo.UsesConversion = true;
         _propertyInfo.ConversionTargetType = typeof(TTarget);
+        return this;
+    }
+
+    public QueryKitPropertyMapping<TModel> HasMaxDepth(int maxDepth)
+    {
+        _propertyInfo.MaxDepth = maxDepth;
         return this;
     }
 }
@@ -475,4 +499,5 @@ public class QueryKitPropertyInfo
     internal Type? CustomOperationEntityType { get; set; }
     internal bool UsesConversion { get; set; }
     internal Type? ConversionTargetType { get; set; }
+    internal int? MaxDepth { get; set; }
 }

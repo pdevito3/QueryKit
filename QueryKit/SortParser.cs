@@ -98,6 +98,10 @@ public static class SortParser
 
         // Handle regular properties with null-safe navigation
         var propertyPath = config?.GetPropertyPathByQueryName(propertyName) ?? propertyName;
+
+        // Validate property depth before processing
+        config?.ValidatePropertyDepth(propertyPath);
+
         var propertyNames = propertyPath.Split('.');
 
         var result = CreateNullSafePropertyExpression(parameter, propertyNames, 0);

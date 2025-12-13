@@ -35,6 +35,7 @@ public class QueryKitSettings
     public string CaseInsensitiveAppendix { get; set; } = ComparisonOperator.CaseSensitiveAppendix.ToString();
     public bool AllowUnknownProperties { get; set; }
     public Type? DbContextType { get; set; }
+    public int? MaxPropertyDepth { get; set; }
 
     public QueryKitPropertyMapping<TModel> Property<TModel>(Expression<Func<TModel, object>>? propertySelector)
     {

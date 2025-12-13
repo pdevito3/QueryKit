@@ -32,6 +32,7 @@ public interface IQueryKitConfiguration
     public string HasCountLessThanOrEqualOperator { get; set; }
     public string HasOperator { get; set; }
     public string DoesNotHaveOperator { get; set; }
+    public int? MaxPropertyDepth { get; set; }
 }
 
 public class QueryKitConfiguration : IQueryKitConfiguration
@@ -66,6 +67,7 @@ public class QueryKitConfiguration : IQueryKitConfiguration
     public string OrOperator { get; set; }
     public bool AllowUnknownProperties { get; set; } = false;
     public Type? DbContextType { get; set; }
+    public int? MaxPropertyDepth { get; set; }
 
     public QueryKitConfiguration(Action<QueryKitSettings> configureSettings)
     {
@@ -103,5 +105,6 @@ public class QueryKitConfiguration : IQueryKitConfiguration
         HasCountLessThanOrEqualOperator = settings.HasCountLessThanOrEqualOperator;
         HasOperator = settings.HasOperator;
         DoesNotHaveOperator = settings.DoesNotHaveOperator;
+        MaxPropertyDepth = settings.MaxPropertyDepth;
     }
 }

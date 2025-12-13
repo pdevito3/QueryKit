@@ -790,8 +790,10 @@ public static class FilterParser
         return leftIdentifierParser?.Select(left =>
         {
             var leftList = left.ToList();
+            var fullPropPath = string.Join(".", leftList);
 
-            var fullPropPath = leftList?.First();
+            // Validate property depth before processing
+            config?.ValidatePropertyDepth(fullPropPath);
             var propertyExpression = leftList?.Aggregate((Expression)parameter, (expr, propName) =>
             {
                 if (expr is MemberExpression member)
@@ -954,6 +956,9 @@ public static class FilterParser
         IQueryKitConfiguration? config)
     {
         var fullPropPath = string.Join(".", propertyPath);
+
+        // Validate property depth before processing
+        config?.ValidatePropertyDepth(fullPropPath);
 
         return propertyPath.Aggregate((Expression)parameter, (expr, propName) =>
         {
@@ -1330,6 +1335,9 @@ public static class FilterParser
     {
         try
         {
+            // Validate property depth before processing
+            config?.ValidatePropertyDepth(propertyPath);
+
             var propertyNames = propertyPath.Split('.');
             return propertyNames.Aggregate((Expression)parameter, (expr, propName) =>
             {

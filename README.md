@@ -728,6 +728,46 @@ var config = new QueryKitConfiguration(config =>
 var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
 ```
 
+#### Max Property Depth
+
+You can limit the depth of nested property access to prevent deeply nested queries. This is useful for security and performance reasons when exposing QueryKit to external consumers.
+
+```csharp
+var config = new QueryKitConfiguration(config =>
+{
+    config.MaxPropertyDepth = 2; // Allow up to 2 levels of nesting (e.g., Author.Address.City)
+});
+
+// These will work:
+// "Author.Name" (depth 1)
+// "Author.Address.City" (depth 2)
+
+// This will throw QueryKitPropertyDepthExceededException:
+// "Author.Address.Country.Name" (depth 3)
+```
+
+You can also override the global depth limit for specific properties:
+
+```csharp
+var config = new QueryKitConfiguration(config =>
+{
+    config.MaxPropertyDepth = 1; // Global limit of 1
+    config.Property<Book>(x => x.Author).HasMaxDepth(2); // Allow Author to go deeper
+});
+
+// "Title" works (depth 0)
+// "Author.Name" works (depth 1, within global limit)
+// "Author.Address.City" works (depth 2, uses per-property override)
+// "Publisher.Address.City" throws (depth 2, exceeds global limit of 1)
+```
+
+**Depth Calculation:**
+- `Title` = depth 0 (root property)
+- `Author.Name` = depth 1 (one level of nesting)
+- `Author.Address.City` = depth 2 (two levels of nesting)
+
+Setting `MaxPropertyDepth = 0` only allows root-level properties. A `null` value (default) allows unlimited depth.
+
 ### Nested Objects
 
 Say we have a nested object like this:
@@ -913,6 +953,7 @@ any exception thrown by QueryKit.
 * A `QueryKitDbContextTypeException` will be thrown when trying to use a `DbContext` specific workflow without passing that context (e.g. SoundEx)
 * A `SoundsLikeNotImplementedException` will be thrown when trying to use `soundex` on a `DbContext` that doesn't have it implemented.
 * A `QueryKitParsingException` is a more generic error that will include specific details on a more granular error in the parsing pipeline.
+* A `QueryKitPropertyDepthExceededException` will be thrown when a property path exceeds the configured `MaxPropertyDepth` limit.
 
 ## SoundEx
 
