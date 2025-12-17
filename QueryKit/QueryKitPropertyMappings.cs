@@ -241,7 +241,7 @@ public class QueryKitPropertyMappings
                 var newExpression = (NewExpression)expression;
                 var arguments = newExpression.Arguments.Select(arg => arg != null ? GetFullPropertyPath(arg) : "null");
                 return newExpression.Constructor != null
-                    ? $"{newExpression.Constructor.DeclaringType.Name}({string.Join(", ", arguments)})"
+                    ? $"{newExpression.Constructor.DeclaringType?.Name}({string.Join(", ", arguments)})"
                     : $"new({string.Join(", ", arguments)})";
             
             case ExpressionType.Invoke:
@@ -305,12 +305,12 @@ public class QueryKitPropertyMappings
             case ExpressionType.NewArrayInit:
                 var newArrayInit = (NewArrayExpression)expression;
                 var arrayInitElements = newArrayInit.Expressions.Select(GetFullPropertyPath);
-                return $"new {newArrayInit.Type.GetElementType().Name}[] {{ {string.Join(", ", arrayInitElements)} }}";
+                return $"new {newArrayInit.Type.GetElementType()?.Name}[] {{ {string.Join(", ", arrayInitElements)} }}";
 
             case ExpressionType.NewArrayBounds:
                 var newArrayBounds = (NewArrayExpression)expression;
                 var arrayBounds = newArrayBounds.Expressions.Select(GetFullPropertyPath);
-                return $"new {newArrayBounds.Type.GetElementType().Name}[{string.Join(", ", arrayBounds)}]";
+                return $"new {newArrayBounds.Type.GetElementType()?.Name}[{string.Join(", ", arrayBounds)}]";
 
             case ExpressionType.ConvertChecked:
             case ExpressionType.ExclusiveOr:
@@ -391,7 +391,7 @@ public class QueryKitPropertyMappings
 
 
     public QueryKitPropertyInfo? GetPropertyInfo(string? propertyName)
-        =>  _propertyMappings.TryGetValue(propertyName, out var info) ? info : null;
+        => propertyName != null && _propertyMappings.TryGetValue(propertyName, out var info) ? info : null;
 
     public QueryKitPropertyInfo? GetPropertyInfoByQueryName(string? queryName)
         => _propertyMappings.Values.FirstOrDefault(info => info.QueryName != null && info.QueryName.Equals(queryName, StringComparison.InvariantCultureIgnoreCase));
@@ -494,7 +494,7 @@ public class QueryKitPropertyInfo
     public bool CanFilter { get; set; }
     public bool CanSort { get; set; }
     public string? QueryName { get; set; }
-    internal Expression DerivedExpression { get; set; }
+    internal Expression? DerivedExpression { get; set; }
     internal Expression<Func<object, ComparisonOperator, object, bool>>? CustomOperation { get; set; }
     internal Type? CustomOperationEntityType { get; set; }
     internal bool UsesConversion { get; set; }

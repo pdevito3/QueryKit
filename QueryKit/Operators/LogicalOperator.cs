@@ -51,19 +51,25 @@ public abstract class LogicalOperator : SmartEnum<LogicalOperator>
     
     internal class LogicalAliasMatch
     {
-        public string Alias { get; set; }
-        public string Operator { get; set; }
+        public LogicalAliasMatch(string alias, string op)
+        {
+            Alias = alias;
+            Operator = op;
+        }
+
+        public string Alias { get; }
+        public string Operator { get; }
     }
 
     internal static List<LogicalAliasMatch> GetAliasMatches(IQueryKitConfiguration aliases)
     {
         var matches = new List<LogicalAliasMatch>();
-        
+
         if(aliases.OrOperator != OrOperator.Operator())
-            matches.Add(new LogicalAliasMatch { Alias = aliases.OrOperator, Operator = OrOperator.Operator() });
-        
+            matches.Add(new LogicalAliasMatch(aliases.OrOperator, OrOperator.Operator()));
+
         if(aliases.AndOperator != AndOperator.Operator())
-            matches.Add(new LogicalAliasMatch { Alias = aliases.AndOperator, Operator = AndOperator.Operator() });
+            matches.Add(new LogicalAliasMatch(aliases.AndOperator, AndOperator.Operator()));
 
         return matches;
     }

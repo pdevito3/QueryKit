@@ -342,19 +342,19 @@ public static class FilterParser
                     targetType = typeof(string);
                 }
                 var values = right.Trim('[', ']').Split(',').Select(x => x.Trim()).ToList();
-                var elementType = targetType.IsArray ? targetType.GetElementType() : targetType;
-            
+                var elementType = targetType.IsArray ? targetType.GetElementType()! : targetType;
+
                 var expressions = values.Select(x =>
                 {
                     if (elementType == typeof(string) && x.StartsWith("\"") && x.EndsWith("\""))
                     {
                         x = x.Trim('"');
                     }
-            
+
                     var convertedValue = TypeConversionFunctions[elementType](x);
                     return Expression.Constant(convertedValue, elementType);
                 }).ToArray();
-            
+
                 var newArrayExpression = Expression.NewArrayInit(elementType, expressions);
                 return newArrayExpression;
             }
@@ -373,13 +373,13 @@ public static class FilterParser
                     dt = DateTime.SpecifyKind(dt, DateTimeKind.Utc);
                 }
 
-                var dtCtor = typeof(DateTime).GetConstructor(new[] { typeof(long), typeof(DateTimeKind) });
+                var dtCtor = typeof(DateTime).GetConstructor(new[] { typeof(long), typeof(DateTimeKind) })!;
                 var newExpr = Expression.New(dtCtor, Expression.Constant(dt.Ticks), Expression.Constant(dt.Kind));
 
                 var isNullable = rawType == typeof(DateTime?);
                 if (!isNullable) return newExpr;
-                
-                var nullableDtCtor = typeof(DateTime?).GetConstructor(new[] { typeof(DateTime) });
+
+                var nullableDtCtor = typeof(DateTime?).GetConstructor(new[] { typeof(DateTime) })!;
                 newExpr = Expression.New(nullableDtCtor, newExpr);
                 return newExpr;
             }
@@ -388,14 +388,14 @@ public static class FilterParser
             {
                 var dtStyle = right.EndsWith("Z") ? DateTimeStyles.AdjustToUniversal : DateTimeStyles.AssumeLocal;
                 var dto = DateTimeOffset.Parse(right, CultureInfo.InvariantCulture, dtStyle);
-    
-                var dtoCtor = typeof(DateTimeOffset).GetConstructor(new[] { typeof(long), typeof(TimeSpan) });
+
+                var dtoCtor = typeof(DateTimeOffset).GetConstructor(new[] { typeof(long), typeof(TimeSpan) })!;
                 var newExpr = Expression.New(dtoCtor, Expression.Constant(dto.Ticks), Expression.Constant(dto.Offset));
 
                 var isNullable = rawType == typeof(DateTimeOffset?);
                 if (!isNullable) return newExpr;
-                
-                var nullableDtoCtor = typeof(DateTimeOffset?).GetConstructor(new[] { typeof(DateTimeOffset) });
+
+                var nullableDtoCtor = typeof(DateTimeOffset?).GetConstructor(new[] { typeof(DateTimeOffset) })!;
                 newExpr = Expression.New(nullableDtoCtor, newExpr);
                 return newExpr;
             }
@@ -403,17 +403,17 @@ public static class FilterParser
             if (targetType == typeof(DateOnly))
             {
                 var date = DateOnly.Parse(right, CultureInfo.InvariantCulture);
-                var dateCtor = typeof(DateOnly).GetConstructor(new[] { typeof(int), typeof(int), typeof(int) });
+                var dateCtor = typeof(DateOnly).GetConstructor(new[] { typeof(int), typeof(int), typeof(int) })!;
                 var newExpr = Expression.New(dateCtor, Expression.Constant(date.Year), Expression.Constant(date.Month), Expression.Constant(date.Day));
 
                 var isNullable = rawType == typeof(DateOnly?);
                 if (!isNullable) return newExpr;
-                
-                var nullableDateCtor = typeof(DateOnly?).GetConstructor(new[] { typeof(DateOnly) });
+
+                var nullableDateCtor = typeof(DateOnly?).GetConstructor(new[] { typeof(DateOnly) })!;
                 newExpr = Expression.New(nullableDateCtor, newExpr);
                 return newExpr;
             }
-            
+
             if (targetType == typeof(TimeOnly))
             {
                 var time = TimeOnly.Parse(right, CultureInfo.InvariantCulture);
@@ -432,13 +432,13 @@ public static class FilterParser
                     }
                 }
 
-                var timeCtor = typeof(TimeOnly).GetConstructor(new[] { typeof(int), typeof(int), typeof(int), typeof(int), typeof(int) });
+                var timeCtor = typeof(TimeOnly).GetConstructor(new[] { typeof(int), typeof(int), typeof(int), typeof(int), typeof(int) })!;
                 var newExpr = Expression.New(timeCtor, Expression.Constant(time.Hour), Expression.Constant(time.Minute), Expression.Constant(time.Second), Expression.Constant(millisecond), Expression.Constant(microsecond));
 
                 var isNullable = rawType == typeof(TimeOnly?);
                 if (!isNullable) return newExpr;
-                
-                var nullableTimeCtor = typeof(TimeOnly?).GetConstructor(new[] { typeof(TimeOnly) });
+
+                var nullableTimeCtor = typeof(TimeOnly?).GetConstructor(new[] { typeof(TimeOnly) })!;
                 newExpr = Expression.New(nullableTimeCtor, newExpr);
                 return newExpr;
             }
@@ -500,8 +500,8 @@ public static class FilterParser
             var constant = Expression.Constant(enumValue, enumType);
 
             if (rawType == enumType) return constant;
-            
-            var nullableCtor = rawType.GetConstructor(new[] {enumType});
+
+            var nullableCtor = rawType.GetConstructor(new[] {enumType})!;
             return Expression.New(nullableCtor, constant);
         }
         
@@ -526,7 +526,7 @@ public static class FilterParser
     {
         if (targetType.IsNullable())
         {
-            targetType = Nullable.GetUnderlyingType(targetType);
+            targetType = Nullable.GetUnderlyingType(targetType) ?? targetType;
         }
 
         return targetType;
@@ -623,14 +623,19 @@ public static class FilterParser
             .SelectMany(temp => rightSideValueParser, (temp, right) => new { temp.leftExpr, temp.op, right })
             .Select(temp =>
             {
-                if (temp.leftExpr.NodeType == ExpressionType.Constant && ((ConstantExpression)temp.leftExpr).Value!.Equals(true))
+                if (temp.leftExpr == null)
+                {
+                    throw new InvalidOperationException("Left expression cannot be null");
+                }
+
+                if (temp.leftExpr.NodeType == ExpressionType.Constant && true.Equals(((ConstantExpression)temp.leftExpr).Value))
                 {
                     return Expression.Equal(Expression.Constant(true), Expression.Constant(true));
                 }
 
                 // Check if this is a custom operation placeholder
-                if (temp.leftExpr.NodeType == ExpressionType.Constant && 
-                    ((ConstantExpression)temp.leftExpr).Value is string constantValue && 
+                if (temp.leftExpr.NodeType == ExpressionType.Constant &&
+                    ((ConstantExpression)temp.leftExpr).Value is string constantValue &&
                     constantValue.StartsWith("CustomOperation:"))
                 {
                     var operationName = constantValue.Substring("CustomOperation:".Length);
@@ -801,7 +806,7 @@ public static class FilterParser
                     if (IsEnumerable(member.Type))
                     {
                         var genericArgType = member.Type.GetGenericArguments()[0];
-                        var propertyType = genericArgType.GetProperty(propName).PropertyType;
+                        var propertyType = genericArgType.GetProperty(propName)!.PropertyType;
 
                         if (IsEnumerable(propertyType))
                         {
@@ -814,7 +819,7 @@ public static class FilterParser
 
                             var innerParameter = Expression.Parameter(genericArgType, "y");
                             var propertyInfoForMethod = GetPropertyInfo(genericArgType, propName);
-                            Expression lambdaBody = Expression.PropertyOrField(innerParameter, propertyInfoForMethod.Name);
+                            Expression lambdaBody = Expression.PropertyOrField(innerParameter, propertyInfoForMethod!.Name);
 
                             // Ensure the lambda body returns IEnumerable<T> for SelectMany
                             var expectedType = typeof(IEnumerable<>).MakeGenericType(propertyType);
@@ -834,11 +839,11 @@ public static class FilterParser
                         {
                             var selectMethod = typeof(Enumerable).GetMethods()
                                 .First(m => m.Name == "Select" && m.GetParameters().Length == 2)
-                                .MakeGenericMethod(genericArgType, genericArgType.GetProperty(propName).PropertyType);
+                                .MakeGenericMethod(genericArgType, genericArgType.GetProperty(propName)!.PropertyType);
 
                             var innerParameter = Expression.Parameter(genericArgType, "y");
                             var propertyInfoForMethod = GetPropertyInfo(genericArgType, propName);
-                            var lambdaBody = Expression.PropertyOrField(innerParameter, propertyInfoForMethod.Name);
+                            var lambdaBody = Expression.PropertyOrField(innerParameter, propertyInfoForMethod!.Name);
                             var selectLambda = Expression.Lambda(lambdaBody, innerParameter);
                             var selectResult = Expression.Call(null, selectMethod, member, selectLambda);
 
@@ -850,17 +855,17 @@ public static class FilterParser
                 if (expr is MethodCallExpression call)
                 {
                     var innerGenericType = GetInnerGenericType(call.Method.ReturnType);
-                    var propertyInfoForMethod = GetPropertyInfo(innerGenericType, propName);
+                    var propertyInfoForMethod = GetPropertyInfo(innerGenericType!, propName);
 
-                    var propertyType = propertyInfoForMethod.PropertyType;
+                    var propertyType = propertyInfoForMethod!.PropertyType;
                     var linqMethod = IsEnumerable(propertyType) ? "SelectMany" : "Select";
                     var resultType = IsEnumerable(propertyType) ? propertyType.GetGenericArguments()[0] : propertyType;
-                    
+
                     var selectMethod = typeof(Enumerable).GetMethods()
                         .First(m => m.Name == linqMethod && m.GetParameters().Length == 2)
-                        .MakeGenericMethod(innerGenericType, resultType);
+                        .MakeGenericMethod(innerGenericType!, resultType);
 
-                    var innerParameter = Expression.Parameter(innerGenericType, "y");
+                    var innerParameter = Expression.Parameter(innerGenericType!, "y");
                     var lambdaBody = Expression.PropertyOrField(innerParameter, propertyInfoForMethod.Name);
                     var selectLambda = Expression.Lambda(lambdaBody, innerParameter);
 
@@ -967,7 +972,7 @@ public static class FilterParser
                 if (IsEnumerable(member.Type))
                 {
                     var genericArgType = member.Type.GetGenericArguments()[0];
-                    var propertyType = genericArgType.GetProperty(propName).PropertyType;
+                    var propertyType = genericArgType.GetProperty(propName)!.PropertyType;
 
                     if (IsEnumerable(propertyType))
                     {
@@ -980,7 +985,7 @@ public static class FilterParser
 
                         var innerParameter = Expression.Parameter(genericArgType, "y");
                         var propertyInfoForMethod = GetPropertyInfo(genericArgType, propName);
-                        Expression lambdaBody = Expression.PropertyOrField(innerParameter, propertyInfoForMethod.Name);
+                        Expression lambdaBody = Expression.PropertyOrField(innerParameter, propertyInfoForMethod!.Name);
 
                         var expectedType = typeof(IEnumerable<>).MakeGenericType(propertyType);
                         if (lambdaBody.Type != expectedType && !expectedType.IsAssignableFrom(lambdaBody.Type))
@@ -997,11 +1002,11 @@ public static class FilterParser
                     {
                         var selectMethod = typeof(Enumerable).GetMethods()
                             .First(m => m.Name == "Select" && m.GetParameters().Length == 2)
-                            .MakeGenericMethod(genericArgType, genericArgType.GetProperty(propName).PropertyType);
+                            .MakeGenericMethod(genericArgType, genericArgType.GetProperty(propName)!.PropertyType);
 
                         var innerParameter = Expression.Parameter(genericArgType, "y");
                         var propertyInfoForMethod = GetPropertyInfo(genericArgType, propName);
-                        var lambdaBody = Expression.PropertyOrField(innerParameter, propertyInfoForMethod.Name);
+                        var lambdaBody = Expression.PropertyOrField(innerParameter, propertyInfoForMethod!.Name);
                         var selectLambda = Expression.Lambda(lambdaBody, innerParameter);
                         var selectResult = Expression.Call(null, selectMethod, member, selectLambda);
 
@@ -1013,17 +1018,17 @@ public static class FilterParser
             if (expr is MethodCallExpression call)
             {
                 var innerGenericType = GetInnerGenericType(call.Method.ReturnType);
-                var propertyInfoForMethod = GetPropertyInfo(innerGenericType, propName);
+                var propertyInfoForMethod = GetPropertyInfo(innerGenericType!, propName);
 
-                var propertyType = propertyInfoForMethod.PropertyType;
+                var propertyType = propertyInfoForMethod!.PropertyType;
                 var linqMethod = IsEnumerable(propertyType) ? "SelectMany" : "Select";
                 var resultType = IsEnumerable(propertyType) ? propertyType.GetGenericArguments()[0] : propertyType;
 
                 var selectMethod = typeof(Enumerable).GetMethods()
                     .First(m => m.Name == linqMethod && m.GetParameters().Length == 2)
-                    .MakeGenericMethod(innerGenericType, resultType);
+                    .MakeGenericMethod(innerGenericType!, resultType);
 
-                var innerParameter = Expression.Parameter(innerGenericType, "y");
+                var innerParameter = Expression.Parameter(innerGenericType!, "y");
                 var lambdaBody = Expression.PropertyOrField(innerParameter, propertyInfoForMethod.Name);
                 var selectLambda = Expression.Lambda(lambdaBody, innerParameter);
 
@@ -1263,8 +1268,14 @@ public static class FilterParser
 
     private class CollectionInfo
     {
-        public Type CollectionElementType { get; set; }
-        public string PropertyName { get; set; }
+        public CollectionInfo(Type collectionElementType, string propertyName)
+        {
+            CollectionElementType = collectionElementType;
+            PropertyName = propertyName;
+        }
+
+        public Type CollectionElementType { get; }
+        public string PropertyName { get; }
     }
 
     private static List<CollectionInfo> UnwindSelectManyChain(MethodCallExpression methodCall)
@@ -1279,11 +1290,7 @@ public static class FilterParser
                 lambda.Body is MemberExpression member)
             {
                 var elementType = current.Method.GetGenericArguments()[0];
-                result.Insert(0, new CollectionInfo 
-                { 
-                    CollectionElementType = elementType, 
-                    PropertyName = member.Member.Name 
-                });
+                result.Insert(0, new CollectionInfo(elementType, member.Member.Name));
             }
 
             // Move to the next level
@@ -1431,7 +1438,7 @@ public static class FilterParser
 
         // For custom operations, we need to convert the string value to the appropriate basic type
         // instead of trying to match it to the entity type
-        object convertedValue = ConvertStringToBasicType(rightValue);
+        object? convertedValue = ConvertStringToBasicType(rightValue);
         
         // Create the parameter expressions for the custom operation
         var entityParameter = Expression.Convert(parameter, typeof(object));
@@ -1445,7 +1452,7 @@ public static class FilterParser
         return invocationExpression;
     }
 
-    private static object ConvertStringToBasicType(string value)
+    private static object? ConvertStringToBasicType(string value)
     {
         // Handle null
         if (string.IsNullOrEmpty(value) || value.Equals("null", StringComparison.InvariantCultureIgnoreCase))
