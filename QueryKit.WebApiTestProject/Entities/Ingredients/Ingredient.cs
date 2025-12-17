@@ -8,19 +8,19 @@ using Recipes;
 
 public class IngredientPreparation : BaseEntity
 {
-    public string Text { get; set; }
+    public string Text { get; set; } = null!;
 }
 
 public class Ingredient : BaseEntity
 {
-    public string Name { get; private set; }
+    public string Name { get; private set; } = null!;
 
-    public string Quantity { get; private set; }
+    public string Quantity { get; private set; } = null!;
     public long? QualityLevel { get; set; }
 
     public DateTime? ExpiresOn { get; private set; }
 
-    public string Measure { get; private set; }
+    public string Measure { get; private set; } = null!;
 
     public int MinimumQuality { get; private set; }
 
@@ -29,7 +29,7 @@ public class Ingredient : BaseEntity
     [JsonIgnore, IgnoreDataMember]
     [ForeignKey("Recipe")]
     public Guid RecipeId { get; private set; }
-    public Recipe Recipe { get; private set; }
+    public Recipe Recipe { get; private set; } = null!;
 
     public static Ingredient Create(IngredientForCreation ingredientForCreation)
     {

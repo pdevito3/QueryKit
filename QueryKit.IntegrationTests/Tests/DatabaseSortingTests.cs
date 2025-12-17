@@ -343,7 +343,7 @@ public class DatabaseSortingTests : TestBase
         
         // Act - Sort by the derived property (this previously caused Entity Framework translation errors)
         var queryablePeople = testingServiceScope.DbContext().People
-            .Where(p => p.Title.Contains($"Patient") && p.Title.Contains(uniqueId));
+            .Where(p => p.Title != null && p.Title.Contains("Patient") && p.Title.Contains(uniqueId));
             
         // This should NOT generate LeftJoin with `.OrderBy(a => (object)a.Inner)' error
         var appliedQueryable = queryablePeople.ApplyQueryKitSort("patient asc", config);

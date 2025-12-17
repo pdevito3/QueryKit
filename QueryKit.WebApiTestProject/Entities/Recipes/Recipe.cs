@@ -8,9 +8,9 @@ using Models;
 
 public class Recipe : BaseEntity
 {
-    public string Title { get; private set; }
+    public string Title { get; private set; } = null!;
 
-    private VisibilityEnum _visibility;
+    private VisibilityEnum _visibility = null!;
     public string Visibility
     {
         get => _visibility.Name;
@@ -23,9 +23,9 @@ public class Recipe : BaseEntity
         }
     }
 
-    public EmailAddress CollectionEmail { get; private set; }
-    
-    public string Directions { get; private set; }
+    public EmailAddress CollectionEmail { get; private set; } = null!;
+
+    public string Directions { get; private set; } = null!;
 
     public int? Rating { get; private set; }
 
@@ -38,7 +38,7 @@ public class Recipe : BaseEntity
     public List<string> Tags { get; set; } = new();
 
     [JsonIgnore, IgnoreDataMember]
-    public Author Author { get; private set; }
+    public Author Author { get; private set; } = null!;
     
     private List<Ingredient> _ingredients = new();
     [JsonIgnore, IgnoreDataMember]

@@ -8,14 +8,14 @@ using Recipes;
 
 public class Author : BaseEntity
 {
-    public string Name { get; private set; }
+    public string Name { get; private set; } = null!;
 
     [JsonIgnore, IgnoreDataMember]
     [ForeignKey("Recipe")]
     public Guid RecipeId { get; private set; }
-    public Recipe Recipe { get; private set; }
-    
-    public string InternalIdentifier { get; }
+    public Recipe Recipe { get; private set; } = null!;
+
+    public string InternalIdentifier { get; } = null!;
 
 
     public static Author Create(AuthorForCreation authorForCreation)

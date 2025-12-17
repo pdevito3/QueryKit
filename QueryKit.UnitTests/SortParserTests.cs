@@ -21,7 +21,7 @@ public class SortParserTests
         // Assert
         sortExpressions.Should().HaveCount(1);
 
-        var firstSortExpression = sortExpressions[0].Expression;
+        var firstSortExpression = sortExpressions[0].Expression!;
         var directionOne = sortExpressions[0].IsAscending;
         firstSortExpression.Body.Should().BeOfType<UnaryExpression>();
         GetMemberName(firstSortExpression).Should().Be("Title");
@@ -40,13 +40,13 @@ public class SortParserTests
         // Assert
         sortExpressions.Should().HaveCount(2);
 
-        var firstSortExpression = sortExpressions[0].Expression;
+        var firstSortExpression = sortExpressions[0].Expression!;
         var directionOne = sortExpressions[0].IsAscending;
         firstSortExpression.Body.Should().BeOfType<UnaryExpression>();
         GetMemberName(firstSortExpression).Should().Be("Title");
         directionOne.Should().BeTrue();
 
-        var secondSortExpression = sortExpressions[1].Expression;
+        var secondSortExpression = sortExpressions[1].Expression!;
         var directionTwo = sortExpressions[1].IsAscending;
 
         secondSortExpression.Body.Should().BeOfType<UnaryExpression>();
@@ -91,9 +91,9 @@ public class SortParserTests
 
         // Assert
         sortExpressions.Should().HaveCount(1);
-        var sortExpression = sortExpressions[0].Expression;
+        var sortExpression = sortExpressions[0].Expression!;
         var directionOne = sortExpressions[0].IsAscending;
-        
+
         sortExpression.Body.Should().BeOfType<UnaryExpression>();
         GetMemberName(sortExpression).Should().Be("Title");
         directionOne.Should().BeTrue();
@@ -111,15 +111,15 @@ public class SortParserTests
         // Assert
         sortExpressions.Should().HaveCount(2);
 
-        var firstSortExpression = sortExpressions[0].Expression;
+        var firstSortExpression = sortExpressions[0].Expression!;
         var directionOne = sortExpressions[0].IsAscending;
         firstSortExpression.Body.Should().BeOfType<UnaryExpression>();
         GetMemberName(firstSortExpression).Should().Be("Title");
         directionOne.Should().BeTrue();
 
-        var secondSortExpression = sortExpressions[1].Expression;
+        var secondSortExpression = sortExpressions[1].Expression!;
         var directionTwo = sortExpressions[1].IsAscending;
-        
+
         secondSortExpression.Body.Should().BeOfType<UnaryExpression>();
         GetMemberName(secondSortExpression).Should().Be("Age");
         directionTwo.Should().BeFalse();
@@ -137,15 +137,15 @@ public class SortParserTests
         // Assert
         sortExpressions.Should().HaveCount(2);
 
-        var firstSortExpression = sortExpressions[0].Expression;
+        var firstSortExpression = sortExpressions[0].Expression!;
         var directionOne = sortExpressions[0].IsAscending;
         firstSortExpression.Body.Should().BeOfType<UnaryExpression>();
         GetMemberName(firstSortExpression).Should().Be("Title");
         directionOne.Should().BeTrue();
 
-        var secondSortExpression = sortExpressions[1].Expression;
+        var secondSortExpression = sortExpressions[1].Expression!;
         var directionTwo = sortExpressions[1].IsAscending;
-        
+
         secondSortExpression.Body.Should().BeOfType<UnaryExpression>();
         GetMemberName(secondSortExpression).Should().Be("Age");
         directionTwo.Should().BeFalse();
@@ -163,15 +163,15 @@ public class SortParserTests
         // Assert
         sortExpressions.Should().HaveCount(2);
 
-        var firstSortExpression = sortExpressions[0].Expression;
+        var firstSortExpression = sortExpressions[0].Expression!;
         var directionOne = sortExpressions[0].IsAscending;
         firstSortExpression.Body.Should().BeOfType<UnaryExpression>();
         GetMemberName(firstSortExpression).Should().Be("Title");
         directionOne.Should().BeTrue();
 
-        var secondSortExpression = sortExpressions[1].Expression;
+        var secondSortExpression = sortExpressions[1].Expression!;
         var directionTwo = sortExpressions[1].IsAscending;
-        
+
         secondSortExpression.Body.Should().BeOfType<UnaryExpression>();
         GetMemberName(secondSortExpression).Should().Be("Age");
         directionTwo.Should().BeFalse();
@@ -184,13 +184,13 @@ public class SortParserTests
     
         var config = new QueryKitConfiguration(config =>
         {
-            config.Property<TestingPerson>(x => x.Title).HasQueryName("OfficialTitle");
+            config.Property<TestingPerson>(x => x.Title!).HasQueryName("OfficialTitle");
         });
         var sortExpression = SortParser.ParseSort<TestingPerson>(input, config);
         
         sortExpression.Should().HaveCount(2);
-        GetMemberName(sortExpression[0].Expression).Should().Be("Title");
-        GetMemberName(sortExpression[1].Expression).Should().Be("Age");
+        GetMemberName(sortExpression[0].Expression!).Should().Be("Title");
+        GetMemberName(sortExpression[1].Expression!).Should().Be("Age");
         sortExpression[0].IsAscending.Should().BeTrue();
         sortExpression[1].IsAscending.Should().BeFalse();
     }
@@ -207,7 +207,7 @@ public class SortParserTests
         var sortExpression = SortParser.ParseSort<TestingPerson>(input, config);
         
         sortExpression.Should().HaveCount(1);
-        GetMemberName(sortExpression[0].Expression).Should().Be("PhysicalAddress.State");
+        GetMemberName(sortExpression[0].Expression!).Should().Be("PhysicalAddress.State");
         sortExpression[0].IsAscending.Should().BeTrue();
     }
 
@@ -223,10 +223,10 @@ public class SortParserTests
         var sortExpression = SortParser.ParseSort<TestingPerson>(input, config);
         
         sortExpression.Should().HaveCount(1);
-        GetMemberName(sortExpression[0].Expression).Should().Be("PhysicalAddress.State");
+        GetMemberName(sortExpression[0].Expression!).Should().Be("PhysicalAddress.State");
         sortExpression[0].IsAscending.Should().BeTrue();
     }
-    
+
     [Fact]
     public void can_prevent_sort_for_custom_prop()
     {
@@ -234,17 +234,17 @@ public class SortParserTests
     
         var config = new QueryKitConfiguration(config =>
         {
-            config.Property<TestingPerson>(x => x.Title)
+            config.Property<TestingPerson>(x => x.Title!)
                 .PreventSort()
                 .HasQueryName("OfficialTitle");
         });
         var sortExpression = SortParser.ParseSort<TestingPerson>(input, config);
         
         sortExpression.Should().HaveCount(1);
-        GetMemberName(sortExpression[0].Expression).Should().Be("Age");
+        GetMemberName(sortExpression[0].Expression!).Should().Be("Age");
         sortExpression[0].IsAscending.Should().BeFalse();
     }
-    
+
     [Fact]
     public void can_prevent_sort()
     {
@@ -252,13 +252,13 @@ public class SortParserTests
     
         var config = new QueryKitConfiguration(config =>
         {
-            config.Property<TestingPerson>(x => x.Title)
+            config.Property<TestingPerson>(x => x.Title!)
                 .PreventSort();
         });
         var sortExpression = SortParser.ParseSort<TestingPerson>(input, config);
         
         sortExpression.Should().HaveCount(1);
-        GetMemberName(sortExpression[0].Expression).Should().Be("Age");
+        GetMemberName(sortExpression[0].Expression!).Should().Be("Age");
         sortExpression[0].IsAscending.Should().BeFalse();
     }
 

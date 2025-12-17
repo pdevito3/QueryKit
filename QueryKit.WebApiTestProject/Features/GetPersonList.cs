@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 public static class GetPersonList
 {
-    public sealed record Query(string FilterInput, string SortInput, IQueryKitConfiguration QueryKitConfig = default) : IRequest<List<TestingPerson>>;
+    public sealed record Query(string FilterInput, string SortInput, IQueryKitConfiguration? QueryKitConfig = null) : IRequest<List<TestingPerson>>;
 
     public sealed class Handler(TestingDbContext testingDbContext) : IRequestHandler<Query, List<TestingPerson>>
     {

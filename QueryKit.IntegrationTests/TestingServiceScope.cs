@@ -16,29 +16,29 @@ public class TestingServiceScope
         _scope = BaseScopeFactory.CreateScope();
     }
 
-    public TScopedService GetService<TScopedService>()
+    public TScopedService GetService<TScopedService>() where TScopedService : notnull
     {
-        var service = _scope.ServiceProvider.GetService<TScopedService>();
+        var service = _scope.ServiceProvider.GetRequiredService<TScopedService>();
         return service;
     }
 
     public async Task<TResponse> SendAsync<TResponse>(IRequest<TResponse> request)
     {
-        var mediator = _scope.ServiceProvider.GetService<ISender>();
+        var mediator = _scope.ServiceProvider.GetRequiredService<ISender>();
         return await mediator.Send(request);
     }
 
-    public async Task<TEntity> FindAsync<TEntity>(params object[] keyValues)
+    public async Task<TEntity?> FindAsync<TEntity>(params object[] keyValues)
         where TEntity : class
     {
-        var context = _scope.ServiceProvider.GetService<TestingDbContext>();
+        var context = _scope.ServiceProvider.GetRequiredService<TestingDbContext>();
         return await context.FindAsync<TEntity>(keyValues);
     }
 
     public async Task AddAsync<TEntity>(TEntity entity)
         where TEntity : class
     {
-        var context = _scope.ServiceProvider.GetService<TestingDbContext>();
+        var context = _scope.ServiceProvider.GetRequiredService<TestingDbContext>();
         context.Add(entity);
 
         await context.SaveChangesAsync();
@@ -48,7 +48,7 @@ public class TestingServiceScope
         => await action(_scope.ServiceProvider);
 
     public Task<T> ExecuteDbContextAsync<T>(Func<TestingDbContext, Task<T>> action)
-        => ExecuteScopeAsync(sp => action(sp.GetService<TestingDbContext>()));
+        => ExecuteScopeAsync(sp => action(sp.GetRequiredService<TestingDbContext>()));
     
     public Task<int> InsertAsync<T>(params T[] entities) where T : class
     {

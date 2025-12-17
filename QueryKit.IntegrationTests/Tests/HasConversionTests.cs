@@ -8,7 +8,7 @@ using WebApiTestProject.Database;
 using WebApiTestProject.Entities;
 using Xunit.Abstractions;
 
-public class HasConversionTests(ITestOutputHelper testOutputHelper) : TestBase
+public class HasConversionTests : TestBase
 {
     [Fact]
     public async Task can_filter_by_email_with_has_conversion()

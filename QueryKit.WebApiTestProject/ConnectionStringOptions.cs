@@ -11,5 +11,5 @@ public class ConnectionStringOptions
 public static class ConnectionStringOptionsExtensions
 {
     public static ConnectionStringOptions GetConnectionStringOptions(this IConfiguration configuration)
-        => configuration.GetSection(ConnectionStringOptions.SectionName).Get<ConnectionStringOptions>();
+        => configuration.GetSection(ConnectionStringOptions.SectionName).Get<ConnectionStringOptions>() ?? new ConnectionStringOptions();
 }

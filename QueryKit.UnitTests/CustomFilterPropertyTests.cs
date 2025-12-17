@@ -69,7 +69,7 @@ public class CustomFilterPropertyTests
 
         var config = new QueryKitConfiguration(config =>
         {
-            config.Property<TestingPerson>(x => x.Title).HasQueryName("special_title");
+            config.Property<TestingPerson>(x => x.Title!).HasQueryName("special_title");
         });
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
         filterExpression.ToString().Should().Be($"""x => (x.Title == "{value}")""");
@@ -84,7 +84,7 @@ public class CustomFilterPropertyTests
 
         var config = new QueryKitConfiguration(config =>
         {
-            config.Property<TestingPerson>(x => x.Title).HasQueryName("special_title");
+            config.Property<TestingPerson>(x => x.Title!).HasQueryName("special_title");
         });
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
         filterExpression.ToString().Should().Be($"""x => (x.Title == "{value} with special_value")""");
@@ -99,7 +99,7 @@ public class CustomFilterPropertyTests
 
         var config = new QueryKitConfiguration(config =>
         {
-            config.Property<TestingPerson>(x => x.Title).HasQueryName("special_title");
+            config.Property<TestingPerson>(x => x.Title!).HasQueryName("special_title");
         });
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
         filterExpression.ToString().Should().Be($"""x => (x.Title == "{value} with special_value @=* a thing")""");
@@ -115,7 +115,7 @@ public class CustomFilterPropertyTests
 
         var config = new QueryKitConfiguration(config =>
         {
-            config.Property<TestingPerson>(x => x.Title).HasQueryName("special_title");
+            config.Property<TestingPerson>(x => x.Title!).HasQueryName("special_title");
             config.Property<TestingPerson>(x => x.Id).HasQueryName("identifier");
         });
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
@@ -132,7 +132,7 @@ public class CustomFilterPropertyTests
 
         var config = new QueryKitConfiguration(config =>
         {
-            config.Property<TestingPerson>(x => x.Title).HasQueryName("special_title");
+            config.Property<TestingPerson>(x => x.Title!).HasQueryName("special_title");
         });
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
         filterExpression.ToString().Should().Be($"""x => ((x.Title == "{stringValue}") OrElse (x.Id == {guidValue}))""");
@@ -147,7 +147,7 @@ public class CustomFilterPropertyTests
 
         var config = new QueryKitConfiguration(config =>
         {
-            config.Property<TestingPerson>(x => x.Title).HasQueryName("specialtitle");
+            config.Property<TestingPerson>(x => x.Title!).HasQueryName("specialtitle");
         });
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
         filterExpression.ToString().Should().Be($"""x => (x.Title == "{value}")""");
@@ -163,7 +163,7 @@ public class CustomFilterPropertyTests
 
         var config = new QueryKitConfiguration(config =>
         {
-            config.Property<TestingPerson>(x => x.Title).HasQueryName("special_title");
+            config.Property<TestingPerson>(x => x.Title!).HasQueryName("special_title");
             config.Property<TestingPerson>(x => x.Id).PreventFilter();
         });
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
@@ -180,7 +180,7 @@ public class CustomFilterPropertyTests
 
         var config = new QueryKitConfiguration(config =>
         {
-            config.Property<TestingPerson>(x => x.Title).HasQueryName("special_title");
+            config.Property<TestingPerson>(x => x.Title!).HasQueryName("special_title");
             config.Property<TestingPerson>(x => x.Id).HasQueryName("identifier").PreventFilter();
         });
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);

@@ -866,7 +866,7 @@ public class DatabaseFilteringTests() : TestBase
         var queryablePeople = testingServiceScope.DbContext().People;
         var config = new QueryKitConfiguration(config =>
         {
-            config.Property<TestingPerson>(x => x.Email.Value).HasQueryName("email");
+            config.Property<TestingPerson>(x => x.Email!.Value!).HasQueryName("email");
         });
         var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input, config);
         var people = await appliedQueryable.ToListAsync();
@@ -1171,7 +1171,7 @@ public class DatabaseFilteringTests() : TestBase
         var fakePersonTwo = new FakeTestingPersonBuilder().Build();
         await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
 
-        var input = $"""Title ^^* ["{fakePersonOne.Title.ToUpper()}"]""";
+        var input = $"""Title ^^* ["{fakePersonOne.Title!.ToUpper()}"]""";
 
         // Act
         var queryablePeople = testingServiceScope.DbContext().People;
@@ -1192,7 +1192,7 @@ public class DatabaseFilteringTests() : TestBase
         var fakePersonOne = new FakeTestingPersonBuilder().Build();
         await testingServiceScope.InsertAsync(fakePersonOne);
 
-        var input = $"""Title ^^ ["{fakePersonOne.Title.ToUpper()}"]""";
+        var input = $"""Title ^^ ["{fakePersonOne.Title!.ToUpper()}"]""";
 
         // Act
         var queryablePeople = testingServiceScope.DbContext().People;
@@ -1238,7 +1238,7 @@ public class DatabaseFilteringTests() : TestBase
         var fakePersonTwo = new FakeTestingPersonBuilder().Build();
         await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
 
-        var input = $"""Title !^^* ["{fakePersonOne.Title.ToUpper()}"]""";
+        var input = $"""Title !^^* ["{fakePersonOne.Title!.ToUpper()}"]""";
 
         // Act
         var queryablePeople = testingServiceScope.DbContext().People;
@@ -1310,9 +1310,9 @@ public class DatabaseFilteringTests() : TestBase
     private class RecipeDto
     {
         public Guid Id { get; set; }
-        public string Title { get; set; }
-        public string AuthorName { get; set; }
-        public string AuthorInfo { get; set; }
+        public string Title { get; set; } = null!;
+        public string AuthorName { get; set; } = null!;
+        public string AuthorInfo { get; set; } = null!;
     }
     [Fact]
     public async Task can_filter_on_projection()
@@ -1486,7 +1486,7 @@ public class DatabaseFilteringTests() : TestBase
         var queryableRecipes = testingServiceScope.DbContext().Recipes;
         var config = new QueryKitConfiguration(config =>
         {
-            config.Property<Recipe>(x => x.CollectionEmail.Value);
+            config.Property<Recipe>(x => x.CollectionEmail!.Value!);
         });
         var appliedQueryable = queryableRecipes.ApplyQueryKitFilter(input, config);
         var people = await appliedQueryable.ToListAsync();
@@ -1515,7 +1515,7 @@ public class DatabaseFilteringTests() : TestBase
         var queryableRecipes = testingServiceScope.DbContext().Recipes;
         var config = new QueryKitConfiguration(config =>
         {
-            config.Property<Recipe>(x => x.CollectionEmail.Value).HasQueryName("email");
+            config.Property<Recipe>(x => x.CollectionEmail!.Value!).HasQueryName("email");
         });
         var appliedQueryable = queryableRecipes.ApplyQueryKitFilter(input, config);
         var people = await appliedQueryable.ToListAsync();
@@ -1544,7 +1544,7 @@ public class DatabaseFilteringTests() : TestBase
         var queryableRecipes = testingServiceScope.DbContext().Recipes;
         var config = new QueryKitConfiguration(config =>
         {
-            config.Property<Recipe>(x => x.CollectionEmail.Value).HasQueryName("email");
+            config.Property<Recipe>(x => x.CollectionEmail!.Value!).HasQueryName("email");
         });
         var appliedQueryable = queryableRecipes.ApplyQueryKitFilter(input, config);
         var people = await appliedQueryable.ToListAsync();
@@ -1573,7 +1573,7 @@ public class DatabaseFilteringTests() : TestBase
         var queryableRecipes = testingServiceScope.DbContext().Recipes;
         var config = new QueryKitConfiguration(config =>
         {
-            config.Property<Recipe>(x => x.CollectionEmail.Value).HasQueryName("email");
+            config.Property<Recipe>(x => x.CollectionEmail!.Value!).HasQueryName("email");
         });
         var appliedQueryable = queryableRecipes.ApplyQueryKitFilter(input, config);
         var people = await appliedQueryable.ToListAsync();
@@ -2598,10 +2598,10 @@ public class DatabaseFilteringTests() : TestBase
         
         var config = new QueryKitConfiguration(config =>
         {
-            config.CustomOperation<TestingPerson>((x, op, value) => 
-                (bool)value ? 
-                    (x.Age > 30 && x.Rating > 7 && x.FirstName.Contains("VIP")) :
-                    !(x.Age > 30 && x.Rating > 7 && x.FirstName.Contains("VIP")))
+            config.CustomOperation<TestingPerson>((x, op, value) =>
+                (bool)value ?
+                    (x.Age > 30 && x.Rating > 7 && x.FirstName!.Contains("VIP")) :
+                    !(x.Age > 30 && x.Rating > 7 && x.FirstName!.Contains("VIP")))
                 .HasQueryName("isVipCustomer");
         });
         
@@ -3651,11 +3651,13 @@ public class DatabaseFilteringTests() : TestBase
         var input = $"""authorInfo == "John_{uniqueId}" && Title == "RecipeWithAuthor_{uniqueId}" """;
         var config = new QueryKitConfiguration(config =>
         {
-            config.DerivedProperty<Recipe>(x => 
-                x.Author != null 
-                    ? x.Author.Name 
+#pragma warning disable CS8603 // Possible null reference return - intentional for this test
+            config.DerivedProperty<Recipe>(x =>
+                x.Author != null
+                    ? x.Author.Name
                     : null)
                 .HasQueryName("authorInfo");
+#pragma warning restore CS8603
         });
         
         // Act
@@ -3824,12 +3826,14 @@ public class DatabaseFilteringTests() : TestBase
         // Create config with conditional derived property
         var config = new QueryKitConfiguration(config =>
         {
+#pragma warning disable CS8603 // Possible null reference return - intentional for this test
             config.DerivedProperty<TestingPerson>(x =>
                 x.Date.HasValue
                     ? (x.Date.Value.ToDateTime(TimeOnly.MinValue) -
                        DateOnly.FromDateTime(DateTime.UtcNow).ToDateTime(TimeOnly.MinValue)).Days
                     : (int?)null
             ).HasQueryName("daysFromNow");
+#pragma warning restore CS8603
         });
 
         // Act & Assert - Should not throw "Unsupported value '0' for type 'Object'"

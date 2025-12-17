@@ -8,7 +8,7 @@ using SharedTestingHelper.Fakes;
 using WebApiTestProject.Entities;
 using Xunit.Abstractions;
 
-public class GuidFilterBugTests(ITestOutputHelper testOutputHelper) : TestBase
+public class GuidFilterBugTests : TestBase
 {
     [Fact]
     public async Task guid_filter_with_converted_property_should_reproduce_ef_core_translation_error()
@@ -146,7 +146,7 @@ public class GuidFilterBugTests(ITestOutputHelper testOutputHelper) : TestBase
         // Configure QueryKit similar to user's scenario with custom query names
         var config = new QueryKitConfiguration(config =>
         {
-            config.Property<TestingPerson>(x => x.Title)
+            config.Property<TestingPerson>(x => x.Title!)
                 .HasQueryName("status");
             config.Property<TestingPerson>(x => x.Id)
                 .HasQueryName("id");

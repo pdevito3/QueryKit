@@ -14,8 +14,8 @@ public class TestingPerson
     public DateTime SpecificDateTime { get; set; }
     public TimeOnly? Time { get; set; }
     public Guid Id { get; set; } = Guid.NewGuid();
-    public EmailAddress Email { get; set; }
-    public Address PhysicalAddress { get; set; }
+    public EmailAddress Email { get; set; } = null!;
+    public Address PhysicalAddress { get; set; } = null!;
 }
 
 public enum BirthMonthEnum

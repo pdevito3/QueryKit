@@ -11,7 +11,7 @@ public class FakeTestingPersonBuilder
         .RuleFor(x => x.Title, faker => faker.Lorem.Sentence())
         .Generate();
     
-    public FakeTestingPersonBuilder WithTitle(string title)
+    public FakeTestingPersonBuilder WithTitle(string? title)
     {
         _baseTestingPerson.Title = title;
         return this;
@@ -83,13 +83,13 @@ public class FakeTestingPersonBuilder
         return this;
     }
 
-    public FakeTestingPersonBuilder WithFirstName(string firstName)
+    public FakeTestingPersonBuilder WithFirstName(string? firstName)
     {
         _baseTestingPerson.FirstName = firstName;
         return this;
     }
-    
-    public FakeTestingPersonBuilder WithLastName(string lastName)
+
+    public FakeTestingPersonBuilder WithLastName(string? lastName)
     {
         _baseTestingPerson.LastName = lastName;
         return this;

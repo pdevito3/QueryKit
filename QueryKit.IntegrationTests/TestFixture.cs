@@ -21,8 +21,8 @@ public class TestFixtureCollection : ICollectionFixture<TestFixture> {}
 
 public class TestFixture : IAsyncLifetime
 {
-    public static IServiceScopeFactory BaseScopeFactory;
-    private PostgreSqlContainer _dbContainer;
+    public static IServiceScopeFactory BaseScopeFactory = null!;
+    private PostgreSqlContainer _dbContainer = null!;
 
     public async Task InitializeAsync()
     {
@@ -43,7 +43,7 @@ public class TestFixture : IAsyncLifetime
         services.ReplaceServiceWithSingletonMock<IHttpContextAccessor>();
 
         var provider = services.BuildServiceProvider();
-        BaseScopeFactory = provider.GetService<IServiceScopeFactory>();
+        BaseScopeFactory = provider.GetRequiredService<IServiceScopeFactory>();
         SetupDateAssertions();
     }
 
@@ -53,7 +53,7 @@ public class TestFixture : IAsyncLifetime
             .UseNpgsql(connectionString)
             .Options;
         var context = new TestingDbContext(options);
-        await context?.Database?.MigrateAsync();
+        await context.Database.MigrateAsync();
     }
     
     public async Task DisposeAsync()

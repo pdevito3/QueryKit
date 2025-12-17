@@ -2,12 +2,12 @@ namespace QueryKit.WebApiTestProject.Entities;
 
 public class Address : ValueObject
 {
-    public string Line1 { get; }   
-    public string Line2 { get; }
-    public string City { get; }
-    public string State { get; }
-    public PostalCode PostalCode { get; }
-    public string Country { get; }
+    public string Line1 { get; } = null!;
+    public string Line2 { get; } = null!;
+    public string City { get; } = null!;
+    public string State { get; } = null!;
+    public PostalCode PostalCode { get; } = null!;
+    public string Country { get; } = null!;
     public Address(string line1, string line2, string city, string state, string postalCode, string country)
         : this(line1, line2, city, state, PostalCode.Of(postalCode), country)
     {
