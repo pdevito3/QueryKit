@@ -212,12 +212,15 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
             
             if (CaseInsensitive && left.Type == typeof(string) && right.Type == typeof(string))
             {
-                return Expression.Equal(
+                // null != any non-null value, so we need: left != null && left.ToLower() == right.ToLower()
+                var nullCheck = Expression.NotEqual(left, Expression.Constant(null, typeof(string)));
+                var toLowerComparison = Expression.Equal(
                     Expression.Call(left, typeof(string).GetMethod("ToLower", Type.EmptyTypes)!),
                     Expression.Call(right, typeof(string).GetMethod("ToLower", Type.EmptyTypes)!)
                 );
+                return Expression.AndAlso(nullCheck, toLowerComparison);
             }
-            
+
             // for some complex derived expressions
             if (left.NodeType == ExpressionType.Convert)
             {
@@ -247,12 +250,15 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
     
             if (CaseInsensitive && left.Type == typeof(string) && right.Type == typeof(string))
             {
-                return Expression.NotEqual(
+                // null != any non-null value, so we need: left == null || left.ToLower() != right.ToLower()
+                var nullCheck = Expression.Equal(left, Expression.Constant(null, typeof(string)));
+                var toLowerComparison = Expression.NotEqual(
                     Expression.Call(left, typeof(string).GetMethod("ToLower", Type.EmptyTypes)!),
                     Expression.Call(right, typeof(string).GetMethod("ToLower", Type.EmptyTypes)!)
                 );
+                return Expression.OrElse(nullCheck, toLowerComparison);
             }
-            
+
             // for some complex derived expressions
             if (left.NodeType == ExpressionType.Convert)
             {
@@ -364,11 +370,14 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
     
             if (CaseInsensitive && left.Type == typeof(string) && right.Type == typeof(string))
             {
-                return Expression.Call(
+                // null doesn't contain anything, so we need: left != null && left.ToLower().Contains(right.ToLower())
+                var nullCheck = Expression.NotEqual(left, Expression.Constant(null, typeof(string)));
+                var containsCall = Expression.Call(
                     Expression.Call(left, "ToLower", null),
                     typeof(string).GetMethod("Contains", new[] { typeof(string) })!,
                     Expression.Call(right, "ToLower", null)
                 );
+                return Expression.AndAlso(nullCheck, containsCall);
             }
 
             return Expression.Call(left, typeof(string).GetMethod("Contains", new[] { typeof(string) })!, right);
@@ -392,11 +401,14 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         
             if (CaseInsensitive && left.Type == typeof(string) && right.Type == typeof(string))
             {
-                return Expression.Call(
+                // null doesn't start with anything, so we need: left != null && left.ToLower().StartsWith(right.ToLower())
+                var nullCheck = Expression.NotEqual(left, Expression.Constant(null, typeof(string)));
+                var startsWithCall = Expression.Call(
                     Expression.Call(left, "ToLower", null),
                     typeof(string).GetMethod("StartsWith", new[] { typeof(string) })!,
                     Expression.Call(right, "ToLower", null)
                 );
+                return Expression.AndAlso(nullCheck, startsWithCall);
             }
 
             return Expression.Call(left, typeof(string).GetMethod("StartsWith", new[] { typeof(string) })!, right);
@@ -420,11 +432,14 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
             
             if (CaseInsensitive)
             {
-                return Expression.Call(
+                // null doesn't end with anything, so we need: left != null && left.ToLower().EndsWith(right.ToLower())
+                var nullCheck = Expression.NotEqual(left, Expression.Constant(null, typeof(string)));
+                var endsWithCall = Expression.Call(
                     Expression.Call(left, "ToLower", null),
                     typeof(string).GetMethod("EndsWith", new[] { typeof(string) })!,
                     Expression.Call(right, "ToLower", null)
                 );
+                return Expression.AndAlso(nullCheck, endsWithCall);
             }
 
             return Expression.Call(left, typeof(string).GetMethod("EndsWith", new[] { typeof(string) })!, right);
@@ -448,11 +463,14 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
             
             if(CaseInsensitive)
             {
-                return Expression.Not(Expression.Call(
+                // null doesn't contain anything, so it should be included: left == null || !left.ToLower().Contains(right.ToLower())
+                var nullCheck = Expression.Equal(left, Expression.Constant(null, typeof(string)));
+                var notContainsCall = Expression.Not(Expression.Call(
                     Expression.Call(left, "ToLower", null),
                     typeof(string).GetMethod("Contains", new[] { typeof(string) })!,
                     Expression.Call(right, "ToLower", null)
                 ));
+                return Expression.OrElse(nullCheck, notContainsCall);
             }
 
             return Expression.Not(Expression.Call(left, typeof(string).GetMethod("Contains", new[] { typeof(string) })!, right));
@@ -476,11 +494,14 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
             
             if (CaseInsensitive)
             {
-                return Expression.Not(Expression.Call(
+                // null doesn't start with anything, so it should be included: left == null || !left.ToLower().StartsWith(right.ToLower())
+                var nullCheck = Expression.Equal(left, Expression.Constant(null, typeof(string)));
+                var notStartsWithCall = Expression.Not(Expression.Call(
                     Expression.Call(left, "ToLower", null),
                     typeof(string).GetMethod("StartsWith", new[] { typeof(string) })!,
                     Expression.Call(right, "ToLower", null)
                 ));
+                return Expression.OrElse(nullCheck, notStartsWithCall);
             }
 
             return Expression.Not(Expression.Call(left, typeof(string).GetMethod("StartsWith", new[] { typeof(string) })!, right));
@@ -504,11 +525,14 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
             
             if (CaseInsensitive)
             {
-                return Expression.Not(Expression.Call(
+                // null doesn't end with anything, so it should be included: left == null || !left.ToLower().EndsWith(right.ToLower())
+                var nullCheck = Expression.Equal(left, Expression.Constant(null, typeof(string)));
+                var notEndsWithCall = Expression.Not(Expression.Call(
                     Expression.Call(left, "ToLower", null),
                     typeof(string).GetMethod("EndsWith", new[] { typeof(string) })!,
                     Expression.Call(right, "ToLower", null)
                 ));
+                return Expression.OrElse(nullCheck, notEndsWithCall);
             }
 
             return Expression.Not(Expression.Call(left, typeof(string).GetMethod("EndsWith", new[] { typeof(string) })!, right));
@@ -547,6 +571,9 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
 
             if (CaseInsensitive && leftType == typeof(string))
             {
+                // null is not in any list, so: left != null && list.Contains(left.ToLower())
+                var nullCheck = Expression.NotEqual(left, Expression.Constant(null, typeof(string)));
+
                 var listType = typeof(List<string>);
                 var toLowerList = Activator.CreateInstance(listType);
 
@@ -556,7 +583,10 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
                     listType.GetMethod("Add")!.Invoke(toLowerList, new[] { value.ToLower() });
                 }
                 right = Expression.Constant(toLowerList, listType);
-                left = Expression.Call(left, typeof(string).GetMethod("ToLower", Type.EmptyTypes)!);
+                var toLowerLeft = Expression.Call(left, typeof(string).GetMethod("ToLower", Type.EmptyTypes)!);
+
+                var containsCall = Expression.Call(right, containsMethod, toLowerLeft);
+                return Expression.AndAlso(nullCheck, containsCall);
             }
 
             return Expression.Call(right, containsMethod, left);
@@ -783,6 +813,9 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
 
             if (CaseInsensitive && leftType == typeof(string))
             {
+                // null is not in any list, so it should be included: left == null || !list.Contains(left.ToLower())
+                var nullCheck = Expression.Equal(left, Expression.Constant(null, typeof(string)));
+
                 var listType = typeof(List<string>);
                 var toLowerList = Activator.CreateInstance(listType);
 
@@ -792,11 +825,14 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
                     listType.GetMethod("Add")!.Invoke(toLowerList, new[] { value.ToLower() });
                 }
                 right = Expression.Constant(toLowerList, listType);
-                left = Expression.Call(left, typeof(string).GetMethod("ToLower", Type.EmptyTypes)!);
+                var toLowerLeft = Expression.Call(left, typeof(string).GetMethod("ToLower", Type.EmptyTypes)!);
+
+                var containsExpression = Expression.Call(right, containsMethod, toLowerLeft);
+                return Expression.OrElse(nullCheck, Expression.Not(containsExpression));
             }
 
-            var containsExpression = Expression.Call(right, containsMethod, left);
-            return Expression.Not(containsExpression);
+            var containsExpr = Expression.Call(right, containsMethod, left);
+            return Expression.Not(containsExpr);
         }
     }
 

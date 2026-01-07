@@ -540,6 +540,219 @@ public class NullFilteringTests : TestBase
     }
 
     [Fact]
+    public async Task can_filter_nullable_string_with_case_insensitive_contains()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var uniqueLastName = $"CaseInsensitiveContainsTest_{Guid.NewGuid()}";
+        var personWithNullTitle = new FakeTestingPersonBuilder()
+            .WithTitle(null)
+            .WithLastName(uniqueLastName)
+            .WithFirstName("NullTitle")
+            .Build();
+        var personWithMatchingTitle = new FakeTestingPersonBuilder()
+            .WithTitle("Doctor Smith")
+            .WithLastName(uniqueLastName)
+            .WithFirstName("MatchingTitle")
+            .Build();
+        var personWithNonMatchingTitle = new FakeTestingPersonBuilder()
+            .WithTitle("Mr. Jones")
+            .WithLastName(uniqueLastName)
+            .WithFirstName("NonMatchingTitle")
+            .Build();
+        await testingServiceScope.InsertAsync(personWithNullTitle, personWithMatchingTitle, personWithNonMatchingTitle);
+
+        var input = $"""Title @=* "doctor" && LastName == "{uniqueLastName}" """;
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(personWithMatchingTitle.Id);
+    }
+
+    [Fact]
+    public async Task can_filter_nullable_string_with_case_insensitive_starts_with()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var uniqueLastName = $"CaseInsensitiveStartsWithTest_{Guid.NewGuid()}";
+        var personWithNullTitle = new FakeTestingPersonBuilder()
+            .WithTitle(null)
+            .WithLastName(uniqueLastName)
+            .WithFirstName("NullTitle")
+            .Build();
+        var personWithMatchingTitle = new FakeTestingPersonBuilder()
+            .WithTitle("Doctor Smith")
+            .WithLastName(uniqueLastName)
+            .WithFirstName("MatchingTitle")
+            .Build();
+        var personWithNonMatchingTitle = new FakeTestingPersonBuilder()
+            .WithTitle("Mr. Jones")
+            .WithLastName(uniqueLastName)
+            .WithFirstName("NonMatchingTitle")
+            .Build();
+        await testingServiceScope.InsertAsync(personWithNullTitle, personWithMatchingTitle, personWithNonMatchingTitle);
+
+        var input = $"""Title _=* "doctor" && LastName == "{uniqueLastName}" """;
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(personWithMatchingTitle.Id);
+    }
+
+    [Fact]
+    public async Task can_filter_nullable_string_with_case_insensitive_ends_with()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var uniqueLastName = $"CaseInsensitiveEndsWithTest_{Guid.NewGuid()}";
+        var personWithNullTitle = new FakeTestingPersonBuilder()
+            .WithTitle(null)
+            .WithLastName(uniqueLastName)
+            .WithFirstName("NullTitle")
+            .Build();
+        var personWithMatchingTitle = new FakeTestingPersonBuilder()
+            .WithTitle("Doctor Smith")
+            .WithLastName(uniqueLastName)
+            .WithFirstName("MatchingTitle")
+            .Build();
+        var personWithNonMatchingTitle = new FakeTestingPersonBuilder()
+            .WithTitle("Mr. Jones")
+            .WithLastName(uniqueLastName)
+            .WithFirstName("NonMatchingTitle")
+            .Build();
+        await testingServiceScope.InsertAsync(personWithNullTitle, personWithMatchingTitle, personWithNonMatchingTitle);
+
+        var input = $"""Title _-=* "smith" && LastName == "{uniqueLastName}" """;
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(personWithMatchingTitle.Id);
+    }
+
+    [Fact]
+    public async Task can_filter_nullable_string_with_case_insensitive_equals()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var uniqueLastName = $"CaseInsensitiveEqualsTest_{Guid.NewGuid()}";
+        var personWithNullTitle = new FakeTestingPersonBuilder()
+            .WithTitle(null)
+            .WithLastName(uniqueLastName)
+            .WithFirstName("NullTitle")
+            .Build();
+        var personWithMatchingTitle = new FakeTestingPersonBuilder()
+            .WithTitle("Doctor")
+            .WithLastName(uniqueLastName)
+            .WithFirstName("MatchingTitle")
+            .Build();
+        var personWithNonMatchingTitle = new FakeTestingPersonBuilder()
+            .WithTitle("Mr.")
+            .WithLastName(uniqueLastName)
+            .WithFirstName("NonMatchingTitle")
+            .Build();
+        await testingServiceScope.InsertAsync(personWithNullTitle, personWithMatchingTitle, personWithNonMatchingTitle);
+
+        var input = $"""Title ==* "doctor" && LastName == "{uniqueLastName}" """;
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(personWithMatchingTitle.Id);
+    }
+
+    [Fact]
+    public async Task can_filter_nullable_string_with_case_insensitive_not_equals()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var uniqueLastName = $"CaseInsensitiveNotEqualsTest_{Guid.NewGuid()}";
+        var personWithNullTitle = new FakeTestingPersonBuilder()
+            .WithTitle(null)
+            .WithLastName(uniqueLastName)
+            .WithFirstName("NullTitle")
+            .Build();
+        var personWithMatchingTitle = new FakeTestingPersonBuilder()
+            .WithTitle("Doctor")
+            .WithLastName(uniqueLastName)
+            .WithFirstName("MatchingTitle")
+            .Build();
+        var personWithNonMatchingTitle = new FakeTestingPersonBuilder()
+            .WithTitle("Mr.")
+            .WithLastName(uniqueLastName)
+            .WithFirstName("NonMatchingTitle")
+            .Build();
+        await testingServiceScope.InsertAsync(personWithNullTitle, personWithMatchingTitle, personWithNonMatchingTitle);
+
+        // Title !=* "doctor" should return records where Title is not "doctor" (case-insensitive)
+        // null values should be treated as non-matching (i.e. they don't equal "doctor")
+        var input = $"""Title !=* "doctor" && LastName == "{uniqueLastName}" """;
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert - should return null title and "Mr." title (both are != "doctor")
+        people.Count.Should().Be(2);
+        people.Should().Contain(p => p.Id == personWithNullTitle.Id);
+        people.Should().Contain(p => p.Id == personWithNonMatchingTitle.Id);
+    }
+
+    [Fact]
+    public async Task can_filter_nullable_string_with_case_insensitive_in_operator()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var uniqueLastName = $"CaseInsensitiveInTest_{Guid.NewGuid()}";
+        var personWithNullTitle = new FakeTestingPersonBuilder()
+            .WithTitle(null)
+            .WithLastName(uniqueLastName)
+            .WithFirstName("NullTitle")
+            .Build();
+        var personWithMatchingTitle = new FakeTestingPersonBuilder()
+            .WithTitle("Doctor")
+            .WithLastName(uniqueLastName)
+            .WithFirstName("MatchingTitle")
+            .Build();
+        var personWithNonMatchingTitle = new FakeTestingPersonBuilder()
+            .WithTitle("Mr.")
+            .WithLastName(uniqueLastName)
+            .WithFirstName("NonMatchingTitle")
+            .Build();
+        await testingServiceScope.InsertAsync(personWithNullTitle, personWithMatchingTitle, personWithNonMatchingTitle);
+
+        var input = $"""Title ^^* ["doctor", "professor"] && LastName == "{uniqueLastName}" """;
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(personWithMatchingTitle.Id);
+    }
+
+    [Fact]
     public async Task can_filter_with_null_in_complex_expression()
     {
         // Arrange

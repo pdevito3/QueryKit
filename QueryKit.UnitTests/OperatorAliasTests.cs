@@ -104,27 +104,27 @@ public class OperatorAliasTests
     public void can_do_symbols_alias_with_default_case_insensitive()
     {
         var input = """Title @@$* "titilating" """;
-        
+
         var config = new QueryKitConfiguration(config =>
         {
             config.EqualsOperator = "@@$";
         });
         var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
-        filterExpression.ToString().Should().Be($"""x => (x.Title.ToLower() == "titilating".ToLower())""");
+        filterExpression.ToString().Should().Be($"""x => ((x.Title != null) AndAlso (x.Title.ToLower() == "titilating".ToLower()))""");
     }
 
     [Fact]
     public void can_do_symbols_alias_case_insensitive()
     {
         var input = """Title @@$~ "titilating" """;
-        
+
         var config = new QueryKitConfiguration(config =>
         {
             config.EqualsOperator = "@@$";
             config.CaseInsensitiveAppendix = "~";
         });
         var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
-        filterExpression.ToString().Should().Be($"""x => (x.Title.ToLower() == "titilating".ToLower())""");
+        filterExpression.ToString().Should().Be($"""x => ((x.Title != null) AndAlso (x.Title.ToLower() == "titilating".ToLower()))""");
     }
 
     [Fact]
@@ -160,28 +160,28 @@ public class OperatorAliasTests
     public void can_do_symbols_alias_case_insensitive_with_conflicting_chars()
     {
         var input = """Title @@$$ "titilating" """;
-        
+
         var config = new QueryKitConfiguration(config =>
         {
             config.EqualsOperator = "@@$";
             config.CaseInsensitiveAppendix = "$";
         });
         var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
-        filterExpression.ToString().Should().Be($"""x => (x.Title.ToLower() == "titilating".ToLower())""");
+        filterExpression.ToString().Should().Be($"""x => ((x.Title != null) AndAlso (x.Title.ToLower() == "titilating".ToLower()))""");
     }
 
     [Fact]
     public void can_do_symbols_alias_case_insensitive_with_no_symbols()
     {
         var input = """Title eqt "titilating" """;
-        
+
         var config = new QueryKitConfiguration(config =>
         {
             config.EqualsOperator = "eq";
             config.CaseInsensitiveAppendix = "t";
         });
         var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
-        filterExpression.ToString().Should().Be($"""x => (x.Title.ToLower() == "titilating".ToLower())""");
+        filterExpression.ToString().Should().Be($"""x => ((x.Title != null) AndAlso (x.Title.ToLower() == "titilating".ToLower()))""");
     }
 
     [Fact]
