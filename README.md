@@ -728,6 +728,32 @@ var config = new QueryKitConfiguration(config =>
 var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
 ```
 
+#### Case-Insensitive Comparison Mode
+
+By default, QueryKit uses `ToLower()` (which EF Core translates to `LOWER()` in SQL) for case-insensitive string operators like `@=*`, `_=*`, `==*`, etc. If your data is normalized to uppercase, you can switch to `ToUpper()` / `UPPER()` to maintain index efficiency.
+
+```csharp
+var config = new QueryKitConfiguration(settings =>
+{
+    settings.CaseInsensitiveComparison = CaseInsensitiveMode.Upper;
+});
+```
+
+This is particularly useful when:
+- Data is stored in uppercase for consistency
+- Database indexes are defined on uppercase column values (e.g., `CREATE INDEX ON people (UPPER(email))`)
+- You need SARGable queries for better performance
+
+**Per-property override** — you can also control the mode per property, overriding the global setting:
+
+```csharp
+var config = new QueryKitConfiguration(settings =>
+{
+    settings.CaseInsensitiveComparison = CaseInsensitiveMode.Lower; // global default
+    settings.Property<Person>(x => x.Email).HasCaseInsensitiveMode(CaseInsensitiveMode.Upper);
+});
+```
+
 #### Max Property Depth
 
 You can limit the depth of nested property access to prevent deeply nested queries. This is useful for security and performance reasons when exposing QueryKit to external consumers.
