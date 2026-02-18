@@ -177,7 +177,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
     public abstract bool IsCountOperator();
     public bool CaseInsensitive { get; protected set; }
     public bool UsesAll { get; protected set; }
-    public abstract Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType);
+    public abstract Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType, CaseInsensitiveMode caseMode = CaseInsensitiveMode.Lower);
 
     /// <summary>
     /// Returns true if this operator requires string comparison (e.g., Contains, StartsWith, EndsWith).
@@ -203,7 +203,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
 
         public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
         public override bool IsCountOperator() => false; 
-        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
+        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType, CaseInsensitiveMode caseMode = CaseInsensitiveMode.Lower)
         {
             if (left.Type.IsGenericType && left.Type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
             {
@@ -212,13 +212,14 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
             
             if (CaseInsensitive && left.Type == typeof(string) && right.Type == typeof(string))
             {
-                // null != any non-null value, so we need: left != null && left.ToLower() == right.ToLower()
+                // null != any non-null value, so we need: left != null && left.ToCase() == right.ToCase()
+                var caseMethodName = caseMode == CaseInsensitiveMode.Upper ? "ToUpper" : "ToLower";
                 var nullCheck = Expression.NotEqual(left, Expression.Constant(null, typeof(string)));
-                var toLowerComparison = Expression.Equal(
-                    Expression.Call(left, typeof(string).GetMethod("ToLower", Type.EmptyTypes)!),
-                    Expression.Call(right, typeof(string).GetMethod("ToLower", Type.EmptyTypes)!)
+                var caseComparison = Expression.Equal(
+                    Expression.Call(left, typeof(string).GetMethod(caseMethodName, Type.EmptyTypes)!),
+                    Expression.Call(right, typeof(string).GetMethod(caseMethodName, Type.EmptyTypes)!)
                 );
-                return Expression.AndAlso(nullCheck, toLowerComparison);
+                return Expression.AndAlso(nullCheck, caseComparison);
             }
 
             // for some complex derived expressions
@@ -241,7 +242,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
 
         public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
         public override bool IsCountOperator() => false; 
-        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
+        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType, CaseInsensitiveMode caseMode = CaseInsensitiveMode.Lower)
         {
             if (left.Type.IsGenericType && left.Type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
             {
@@ -250,13 +251,14 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
     
             if (CaseInsensitive && left.Type == typeof(string) && right.Type == typeof(string))
             {
-                // null != any non-null value, so we need: left == null || left.ToLower() != right.ToLower()
+                // null != any non-null value, so we need: left == null || left.ToCase() != right.ToCase()
+                var caseMethodName = caseMode == CaseInsensitiveMode.Upper ? "ToUpper" : "ToLower";
                 var nullCheck = Expression.Equal(left, Expression.Constant(null, typeof(string)));
-                var toLowerComparison = Expression.NotEqual(
-                    Expression.Call(left, typeof(string).GetMethod("ToLower", Type.EmptyTypes)!),
-                    Expression.Call(right, typeof(string).GetMethod("ToLower", Type.EmptyTypes)!)
+                var caseComparison = Expression.NotEqual(
+                    Expression.Call(left, typeof(string).GetMethod(caseMethodName, Type.EmptyTypes)!),
+                    Expression.Call(right, typeof(string).GetMethod(caseMethodName, Type.EmptyTypes)!)
                 );
-                return Expression.OrElse(nullCheck, toLowerComparison);
+                return Expression.OrElse(nullCheck, caseComparison);
             }
 
             // for some complex derived expressions
@@ -279,7 +281,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
 
         public override string Operator() => Name;
         public override bool IsCountOperator() => false; 
-        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
+        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType, CaseInsensitiveMode caseMode = CaseInsensitiveMode.Lower)
         {
             if (left.Type.IsGenericType && left.Type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
             {
@@ -300,7 +302,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
 
         public override string Operator() => Name;
         public override bool IsCountOperator() => false; 
-        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
+        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType, CaseInsensitiveMode caseMode = CaseInsensitiveMode.Lower)
         {
             if (left.Type.IsGenericType && left.Type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
             {
@@ -320,7 +322,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         public GreaterThanOrEqualType(bool caseInsensitive = false, bool usesAll = false) : base(">=", 4, caseInsensitive, usesAll)
         {
         }
-        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
+        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType, CaseInsensitiveMode caseMode = CaseInsensitiveMode.Lower)
         {
             if (left.Type.IsGenericType && left.Type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
             {
@@ -340,7 +342,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         }
         public override string Operator() => Name;
         public override bool IsCountOperator() => false; 
-        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
+        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType, CaseInsensitiveMode caseMode = CaseInsensitiveMode.Lower)
         {
             if (left.Type.IsGenericType && left.Type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
             {
@@ -361,7 +363,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
 
         public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
         public override bool IsCountOperator() => false; 
-        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
+        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType, CaseInsensitiveMode caseMode = CaseInsensitiveMode.Lower)
         {
             if (left.Type.IsGenericType && left.Type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
             {
@@ -370,12 +372,13 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
     
             if (CaseInsensitive && left.Type == typeof(string) && right.Type == typeof(string))
             {
-                // null doesn't contain anything, so we need: left != null && left.ToLower().Contains(right.ToLower())
+                // null doesn't contain anything, so we need: left != null && left.ToCase().Contains(right.ToCase())
+                var caseMethodName = caseMode == CaseInsensitiveMode.Upper ? "ToUpper" : "ToLower";
                 var nullCheck = Expression.NotEqual(left, Expression.Constant(null, typeof(string)));
                 var containsCall = Expression.Call(
-                    Expression.Call(left, "ToLower", null),
+                    Expression.Call(left, caseMethodName, null),
                     typeof(string).GetMethod("Contains", new[] { typeof(string) })!,
-                    Expression.Call(right, "ToLower", null)
+                    Expression.Call(right, caseMethodName, null)
                 );
                 return Expression.AndAlso(nullCheck, containsCall);
             }
@@ -392,7 +395,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
 
         public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
         public override bool IsCountOperator() => false; 
-        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
+        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType, CaseInsensitiveMode caseMode = CaseInsensitiveMode.Lower)
         {
             if (left.Type.IsGenericType && left.Type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
             {
@@ -401,12 +404,13 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         
             if (CaseInsensitive && left.Type == typeof(string) && right.Type == typeof(string))
             {
-                // null doesn't start with anything, so we need: left != null && left.ToLower().StartsWith(right.ToLower())
+                // null doesn't start with anything, so we need: left != null && left.ToCase().StartsWith(right.ToCase())
+                var caseMethodName = caseMode == CaseInsensitiveMode.Upper ? "ToUpper" : "ToLower";
                 var nullCheck = Expression.NotEqual(left, Expression.Constant(null, typeof(string)));
                 var startsWithCall = Expression.Call(
-                    Expression.Call(left, "ToLower", null),
+                    Expression.Call(left, caseMethodName, null),
                     typeof(string).GetMethod("StartsWith", new[] { typeof(string) })!,
-                    Expression.Call(right, "ToLower", null)
+                    Expression.Call(right, caseMethodName, null)
                 );
                 return Expression.AndAlso(nullCheck, startsWithCall);
             }
@@ -423,7 +427,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
 
         public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
         public override bool IsCountOperator() => false; 
-        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
+        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType, CaseInsensitiveMode caseMode = CaseInsensitiveMode.Lower)
         {
             if (left.Type.IsGenericType && left.Type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
             {
@@ -432,12 +436,13 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
             
             if (CaseInsensitive)
             {
-                // null doesn't end with anything, so we need: left != null && left.ToLower().EndsWith(right.ToLower())
+                // null doesn't end with anything, so we need: left != null && left.ToCase().EndsWith(right.ToCase())
+                var caseMethodName = caseMode == CaseInsensitiveMode.Upper ? "ToUpper" : "ToLower";
                 var nullCheck = Expression.NotEqual(left, Expression.Constant(null, typeof(string)));
                 var endsWithCall = Expression.Call(
-                    Expression.Call(left, "ToLower", null),
+                    Expression.Call(left, caseMethodName, null),
                     typeof(string).GetMethod("EndsWith", new[] { typeof(string) })!,
-                    Expression.Call(right, "ToLower", null)
+                    Expression.Call(right, caseMethodName, null)
                 );
                 return Expression.AndAlso(nullCheck, endsWithCall);
             }
@@ -454,7 +459,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
 
         public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
         public override bool IsCountOperator() => false; 
-        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
+        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType, CaseInsensitiveMode caseMode = CaseInsensitiveMode.Lower)
         {
             if (left.Type.IsGenericType && left.Type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
             {
@@ -463,12 +468,13 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
             
             if(CaseInsensitive)
             {
-                // null doesn't contain anything, so it should be included: left == null || !left.ToLower().Contains(right.ToLower())
+                // null doesn't contain anything, so it should be included: left == null || !left.ToCase().Contains(right.ToCase())
+                var caseMethodName = caseMode == CaseInsensitiveMode.Upper ? "ToUpper" : "ToLower";
                 var nullCheck = Expression.Equal(left, Expression.Constant(null, typeof(string)));
                 var notContainsCall = Expression.Not(Expression.Call(
-                    Expression.Call(left, "ToLower", null),
+                    Expression.Call(left, caseMethodName, null),
                     typeof(string).GetMethod("Contains", new[] { typeof(string) })!,
-                    Expression.Call(right, "ToLower", null)
+                    Expression.Call(right, caseMethodName, null)
                 ));
                 return Expression.OrElse(nullCheck, notContainsCall);
             }
@@ -485,7 +491,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
 
         public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
         public override bool IsCountOperator() => false; 
-        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
+        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType, CaseInsensitiveMode caseMode = CaseInsensitiveMode.Lower)
         {
             if (left.Type.IsGenericType && left.Type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
             {
@@ -494,12 +500,13 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
             
             if (CaseInsensitive)
             {
-                // null doesn't start with anything, so it should be included: left == null || !left.ToLower().StartsWith(right.ToLower())
+                // null doesn't start with anything, so it should be included: left == null || !left.ToCase().StartsWith(right.ToCase())
+                var caseMethodName = caseMode == CaseInsensitiveMode.Upper ? "ToUpper" : "ToLower";
                 var nullCheck = Expression.Equal(left, Expression.Constant(null, typeof(string)));
                 var notStartsWithCall = Expression.Not(Expression.Call(
-                    Expression.Call(left, "ToLower", null),
+                    Expression.Call(left, caseMethodName, null),
                     typeof(string).GetMethod("StartsWith", new[] { typeof(string) })!,
-                    Expression.Call(right, "ToLower", null)
+                    Expression.Call(right, caseMethodName, null)
                 ));
                 return Expression.OrElse(nullCheck, notStartsWithCall);
             }
@@ -516,7 +523,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
 
         public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
         public override bool IsCountOperator() => false; 
-        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
+        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType, CaseInsensitiveMode caseMode = CaseInsensitiveMode.Lower)
         {
             if (left.Type.IsGenericType && left.Type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
             {
@@ -525,12 +532,13 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
             
             if (CaseInsensitive)
             {
-                // null doesn't end with anything, so it should be included: left == null || !left.ToLower().EndsWith(right.ToLower())
+                // null doesn't end with anything, so it should be included: left == null || !left.ToCase().EndsWith(right.ToCase())
+                var caseMethodName = caseMode == CaseInsensitiveMode.Upper ? "ToUpper" : "ToLower";
                 var nullCheck = Expression.Equal(left, Expression.Constant(null, typeof(string)));
                 var notEndsWithCall = Expression.Not(Expression.Call(
-                    Expression.Call(left, "ToLower", null),
+                    Expression.Call(left, caseMethodName, null),
                     typeof(string).GetMethod("EndsWith", new[] { typeof(string) })!,
-                    Expression.Call(right, "ToLower", null)
+                    Expression.Call(right, caseMethodName, null)
                 ));
                 return Expression.OrElse(nullCheck, notEndsWithCall);
             }
@@ -547,7 +555,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
 
         public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
         public override bool IsCountOperator() => false; 
-        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
+        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType, CaseInsensitiveMode caseMode = CaseInsensitiveMode.Lower)
         {
             var leftType = left.Type;
 
@@ -571,21 +579,22 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
 
             if (CaseInsensitive && leftType == typeof(string))
             {
-                // null is not in any list, so: left != null && list.Contains(left.ToLower())
+                // null is not in any list, so: left != null && list.Contains(left.ToCase())
+                var caseMethodName = caseMode == CaseInsensitiveMode.Upper ? "ToUpper" : "ToLower";
                 var nullCheck = Expression.NotEqual(left, Expression.Constant(null, typeof(string)));
 
                 var listType = typeof(List<string>);
-                var toLowerList = Activator.CreateInstance(listType);
+                var caseList = Activator.CreateInstance(listType);
 
                 var originalList = ((ConstantExpression)right).Value as IEnumerable<string>;
                 foreach (var value in originalList!)
                 {
-                    listType.GetMethod("Add")!.Invoke(toLowerList, new[] { value.ToLower() });
+                    listType.GetMethod("Add")!.Invoke(caseList, new[] { caseMode == CaseInsensitiveMode.Upper ? value.ToUpper() : value.ToLower() });
                 }
-                right = Expression.Constant(toLowerList, listType);
-                var toLowerLeft = Expression.Call(left, typeof(string).GetMethod("ToLower", Type.EmptyTypes)!);
+                right = Expression.Constant(caseList, listType);
+                var caseLeft = Expression.Call(left, typeof(string).GetMethod(caseMethodName, Type.EmptyTypes)!);
 
-                var containsCall = Expression.Call(right, containsMethod, toLowerLeft);
+                var containsCall = Expression.Call(right, containsMethod, caseLeft);
                 return Expression.AndAlso(nullCheck, containsCall);
             }
 
@@ -602,7 +611,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         public override string Operator() => Name;
         public override bool IsCountOperator() => false; 
 
-        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
+        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType, CaseInsensitiveMode caseMode = CaseInsensitiveMode.Lower)
         {
             if (dbContextType == null)
             {
@@ -631,7 +640,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         public override string Operator() => Name;
         public override bool IsCountOperator() => false; 
 
-        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
+        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType, CaseInsensitiveMode caseMode = CaseInsensitiveMode.Lower)
         {
             if (dbContextType == null)
             {
@@ -659,7 +668,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
 
         public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
         public override bool IsCountOperator() => true; 
-        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
+        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType, CaseInsensitiveMode caseMode = CaseInsensitiveMode.Lower)
         {
             return GetCountExpression(left, right, nameof(Expression.Equal));
         }
@@ -673,7 +682,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
 
         public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
         public override bool IsCountOperator() => true; 
-        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
+        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType, CaseInsensitiveMode caseMode = CaseInsensitiveMode.Lower)
         {
             return GetCountExpression(left, right, nameof(Expression.NotEqual));
         }
@@ -687,7 +696,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
 
         public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
         public override bool IsCountOperator() => true; 
-        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
+        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType, CaseInsensitiveMode caseMode = CaseInsensitiveMode.Lower)
         {
             return GetCountExpression(left, right, nameof(Expression.GreaterThan));
         }
@@ -701,7 +710,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
 
         public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
         public override bool IsCountOperator() => true; 
-        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
+        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType, CaseInsensitiveMode caseMode = CaseInsensitiveMode.Lower)
         {
             return GetCountExpression(left, right, nameof(Expression.LessThan));
         }
@@ -715,7 +724,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
 
         public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
         public override bool IsCountOperator() => true; 
-        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
+        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType, CaseInsensitiveMode caseMode = CaseInsensitiveMode.Lower)
         {
             return GetCountExpression(left, right, nameof(Expression.GreaterThanOrEqual));
         }
@@ -729,7 +738,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
 
         public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
         public override bool IsCountOperator() => true; 
-        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
+        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType, CaseInsensitiveMode caseMode = CaseInsensitiveMode.Lower)
         {
             return GetCountExpression(left, right, nameof(Expression.LessThanOrEqual));
         }
@@ -743,7 +752,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
 
         public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
         public override bool IsCountOperator() => false; 
-        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
+        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType, CaseInsensitiveMode caseMode = CaseInsensitiveMode.Lower)
         {
             if (left.Type.IsGenericType && 
                 (left.Type.GetGenericTypeDefinition() == typeof(List<>) || 
@@ -766,7 +775,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
 
         public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
         public override bool IsCountOperator() => false; 
-        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
+        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType, CaseInsensitiveMode caseMode = CaseInsensitiveMode.Lower)
         {
             if (left.Type.IsGenericType && 
                 (left.Type.GetGenericTypeDefinition() == typeof(List<>) || 
@@ -789,7 +798,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
 
         public override string Operator() => CaseInsensitive ? $"{Name}{CaseSensitiveAppendix}" : Name;
         public override bool IsCountOperator() => false; 
-        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType)
+        public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType, CaseInsensitiveMode caseMode = CaseInsensitiveMode.Lower)
         {
             var leftType = left.Type;
 
@@ -813,21 +822,22 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
 
             if (CaseInsensitive && leftType == typeof(string))
             {
-                // null is not in any list, so it should be included: left == null || !list.Contains(left.ToLower())
+                // null is not in any list, so it should be included: left == null || !list.Contains(left.ToCase())
+                var caseMethodName = caseMode == CaseInsensitiveMode.Upper ? "ToUpper" : "ToLower";
                 var nullCheck = Expression.Equal(left, Expression.Constant(null, typeof(string)));
 
                 var listType = typeof(List<string>);
-                var toLowerList = Activator.CreateInstance(listType);
+                var caseList = Activator.CreateInstance(listType);
 
                 var originalList = ((ConstantExpression)right).Value as IEnumerable<string>;
                 foreach (var value in originalList!)
                 {
-                    listType.GetMethod("Add")!.Invoke(toLowerList, new[] { value.ToLower() });
+                    listType.GetMethod("Add")!.Invoke(caseList, new[] { caseMode == CaseInsensitiveMode.Upper ? value.ToUpper() : value.ToLower() });
                 }
-                right = Expression.Constant(toLowerList, listType);
-                var toLowerLeft = Expression.Call(left, typeof(string).GetMethod("ToLower", Type.EmptyTypes)!);
+                right = Expression.Constant(caseList, listType);
+                var caseLeft = Expression.Call(left, typeof(string).GetMethod(caseMethodName, Type.EmptyTypes)!);
 
-                var containsExpression = Expression.Call(right, containsMethod, toLowerLeft);
+                var containsExpression = Expression.Call(right, containsMethod, caseLeft);
                 return Expression.OrElse(nullCheck, Expression.Not(containsExpression));
             }
 

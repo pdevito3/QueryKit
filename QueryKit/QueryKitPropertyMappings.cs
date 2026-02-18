@@ -1,8 +1,8 @@
 namespace QueryKit;
 
 using System.Linq.Expressions;
-using System.Text;
 using System.Text.RegularExpressions;
+using Configuration;
 using Operators;
 
 public class QueryKitPropertyMappings
@@ -464,6 +464,12 @@ public class QueryKitPropertyMapping<TModel>
         _propertyInfo.MaxDepth = maxDepth;
         return this;
     }
+
+    public QueryKitPropertyMapping<TModel> HasCaseInsensitiveMode(CaseInsensitiveMode mode)
+    {
+        _propertyInfo.CaseInsensitiveComparison = mode;
+        return this;
+    }
 }
 
 public class QueryKitCustomOperationMapping<TModel>
@@ -500,4 +506,5 @@ public class QueryKitPropertyInfo
     internal bool UsesConversion { get; set; }
     internal Type? ConversionTargetType { get; set; }
     internal int? MaxDepth { get; set; }
+    public CaseInsensitiveMode? CaseInsensitiveComparison { get; set; }
 }

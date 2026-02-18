@@ -607,6 +607,18 @@ public static class FilterParser
                value.All(c => char.IsLetterOrDigit(c) || c == '_' || c == '.');
     }
 
+    private static CaseInsensitiveMode ResolveCaseMode(string? propertyPath, IQueryKitConfiguration? config)
+    {
+        if (!string.IsNullOrEmpty(propertyPath) && config?.PropertyMappings != null)
+        {
+            var propertyInfo = config.PropertyMappings.GetPropertyInfo(propertyPath)
+                               ?? config.PropertyMappings.GetPropertyInfoByQueryName(propertyPath);
+            if (propertyInfo?.CaseInsensitiveComparison.HasValue == true)
+                return propertyInfo.CaseInsensitiveComparison.Value;
+        }
+        return config?.CaseInsensitiveComparison ?? CaseInsensitiveMode.Lower;
+    }
+
     private static Parser<Expression> ComparisonExprParser<T>(ParameterExpression parameter, IQueryKitConfiguration? config)
     {
         var comparisonOperatorParser = ComparisonOperatorParser.Token();
@@ -661,7 +673,7 @@ public static class FilterParser
                     {
                         var guidStringExpr = HandleGuidConversion(temp.leftExpr, temp.leftExpr.Type);
                         return temp.op.GetExpression<T>(guidStringExpr, CreateRightExpr(temp.leftExpr, temp.right, temp.op, config, guidPropertyPath),
-                            config?.DbContextType);
+                            config?.DbContextType, ResolveCaseMode(guidPropertyPath, config));
                     }
 
                     // For non-string operators, use direct GUID comparison
@@ -692,7 +704,8 @@ public static class FilterParser
 
                         // Ensure compatible types for property-to-property comparison
                         var (leftCompatible, rightCompatible) = EnsureCompatibleTypes(leftExpr, rightPropertyExpr);
-                        return temp.op.GetExpression<T>(leftCompatible, rightCompatible, config?.DbContextType);
+                        var propToProptPath = temp.leftExpr is MemberExpression ptpMemberExpr ? GetPropertyPath(ptpMemberExpr, parameter) : null;
+                        return temp.op.GetExpression<T>(leftCompatible, rightCompatible, config?.DbContextType, ResolveCaseMode(propToProptPath, config));
                     }
                 }
 
@@ -782,7 +795,7 @@ public static class FilterParser
                 }
 
 
-                return temp.op.GetExpression<T>(leftExprForComparison, rightExpr, config?.DbContextType);
+                return temp.op.GetExpression<T>(leftExprForComparison, rightExpr, config?.DbContextType, ResolveCaseMode(propertyPath, config));
             });
 
         return propertyListComparison.Or(arithmeticComparison).Or(regularComparison);
@@ -1134,7 +1147,7 @@ public static class FilterParser
                     }
 
                     var rightExpr = CreateRightExpr(leftExpr, temp.right, temp.op, config, fullPropPath);
-                    var comparison = temp.op.GetExpression<T>(leftExpr, rightExpr, config?.DbContextType);
+                    var comparison = temp.op.GetExpression<T>(leftExpr, rightExpr, config?.DbContextType, ResolveCaseMode(fullPropPath, config));
 
                     // Combine with AND for negative operators, OR for positive operators
                     result = result == null

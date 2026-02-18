@@ -36,6 +36,7 @@ public class QueryKitSettings
     public bool AllowUnknownProperties { get; set; }
     public Type? DbContextType { get; set; }
     public int? MaxPropertyDepth { get; set; }
+    public CaseInsensitiveMode CaseInsensitiveComparison { get; set; } = CaseInsensitiveMode.Lower;
 
     public QueryKitPropertyMapping<TModel> Property<TModel>(Expression<Func<TModel, object>>? propertySelector)
     {
