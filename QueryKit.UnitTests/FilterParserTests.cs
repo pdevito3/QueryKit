@@ -796,4 +796,199 @@ public class FilterParserTests
         expressionString.Should().Contain("x.Email");
         expressionString.Should().Contain("test@example.com");
     }
+
+    [Fact]
+    public void case_insensitive_default_config_uses_to_lower()
+    {
+        // Arrange - no config, should default to ToLower
+        var input = """Title @=* "waffle" """;
+
+        // Act
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
+
+        // Assert
+        filterExpression.ToString().Should()
+            .Be("""x => ((x.Title != null) AndAlso x.Title.ToLower().Contains("waffle".ToLower()))""");
+    }
+
+    [Fact]
+    public void case_insensitive_upper_mode_global_uses_to_upper()
+    {
+        // Arrange - global Upper mode
+        var input = """Title @=* "waffle" """;
+        var config = new QueryKitConfiguration(settings =>
+        {
+            settings.CaseInsensitiveComparison = CaseInsensitiveMode.Upper;
+        });
+
+        // Act
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+
+        // Assert - should use ToUpper instead of ToLower
+        filterExpression.ToString().Should()
+            .Be("""x => ((x.Title != null) AndAlso x.Title.ToUpper().Contains("waffle".ToUpper()))""");
+    }
+
+    [Fact]
+    public void case_insensitive_per_property_upper_mode_overrides_global_lower()
+    {
+        // Arrange - global Lower (default), per-property Title set to Upper
+        var input = """Title @=* "waffle" """;
+        var config = new QueryKitConfiguration(settings =>
+        {
+            settings.CaseInsensitiveComparison = CaseInsensitiveMode.Lower;
+            settings.Property<TestingPerson>(x => x.Title).HasCaseInsensitiveMode(CaseInsensitiveMode.Upper);
+        });
+
+        // Act
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+
+        // Assert - Title should use ToUpper because of per-property override
+        filterExpression.ToString().Should()
+            .Be("""x => ((x.Title != null) AndAlso x.Title.ToUpper().Contains("waffle".ToUpper()))""");
+    }
+
+    [Fact]
+    public void case_insensitive_equals_upper_mode_uses_to_upper()
+    {
+        // Arrange
+        var input = """Title ==* "waffle" """;
+        var config = new QueryKitConfiguration(settings =>
+        {
+            settings.CaseInsensitiveComparison = CaseInsensitiveMode.Upper;
+        });
+
+        // Act
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+
+        // Assert
+        filterExpression.ToString().Should()
+            .Contain("ToUpper");
+        filterExpression.ToString().Should()
+            .NotContain("ToLower");
+    }
+
+    [Fact]
+    public void case_insensitive_not_equals_upper_mode_uses_to_upper()
+    {
+        var input = """Title !=* "lamb" """;
+        var config = new QueryKitConfiguration(settings =>
+        {
+            settings.CaseInsensitiveComparison = CaseInsensitiveMode.Upper;
+        });
+
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+
+        filterExpression.ToString().Should()
+            .Be("x => ((x.Title == null) OrElse (x.Title.ToUpper() != \"lamb\".ToUpper()))");
+    }
+
+    [Fact]
+    public void case_insensitive_starts_with_upper_mode_uses_to_upper()
+    {
+        var input = """Title _=* "lamb" """;
+        var config = new QueryKitConfiguration(settings =>
+        {
+            settings.CaseInsensitiveComparison = CaseInsensitiveMode.Upper;
+        });
+
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+
+        filterExpression.ToString().Should()
+            .Be("x => ((x.Title != null) AndAlso x.Title.ToUpper().StartsWith(\"lamb\".ToUpper()))");
+    }
+
+    [Fact]
+    public void case_insensitive_ends_with_upper_mode_uses_to_upper()
+    {
+        var input = """Title _-=* "lamb" """;
+        var config = new QueryKitConfiguration(settings =>
+        {
+            settings.CaseInsensitiveComparison = CaseInsensitiveMode.Upper;
+        });
+
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+
+        filterExpression.ToString().Should()
+            .Be("x => ((x.Title != null) AndAlso x.Title.ToUpper().EndsWith(\"lamb\".ToUpper()))");
+    }
+
+    [Fact]
+    public void case_insensitive_not_contains_upper_mode_uses_to_upper()
+    {
+        var input = """Title !@=* "lamb" """;
+        var config = new QueryKitConfiguration(settings =>
+        {
+            settings.CaseInsensitiveComparison = CaseInsensitiveMode.Upper;
+        });
+
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+
+        filterExpression.ToString().Should()
+            .Be("x => ((x.Title == null) OrElse Not(x.Title.ToUpper().Contains(\"lamb\".ToUpper())))");
+    }
+
+    [Fact]
+    public void case_insensitive_not_starts_with_upper_mode_uses_to_upper()
+    {
+        var input = """Title !_=* "lamb" """;
+        var config = new QueryKitConfiguration(settings =>
+        {
+            settings.CaseInsensitiveComparison = CaseInsensitiveMode.Upper;
+        });
+
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+
+        filterExpression.ToString().Should()
+            .Be("x => ((x.Title == null) OrElse Not(x.Title.ToUpper().StartsWith(\"lamb\".ToUpper())))");
+    }
+
+    [Fact]
+    public void case_insensitive_not_ends_with_upper_mode_uses_to_upper()
+    {
+        var input = """Title !_-=* "lamb" """;
+        var config = new QueryKitConfiguration(settings =>
+        {
+            settings.CaseInsensitiveComparison = CaseInsensitiveMode.Upper;
+        });
+
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+
+        filterExpression.ToString().Should()
+            .Be("x => ((x.Title == null) OrElse Not(x.Title.ToUpper().EndsWith(\"lamb\".ToUpper())))");
+    }
+
+    [Fact]
+    public void case_insensitive_in_operator_upper_mode_uses_to_upper()
+    {
+        var input = """Title ^^* ["lamb","chicken"] """;
+        var config = new QueryKitConfiguration(settings =>
+        {
+            settings.CaseInsensitiveComparison = CaseInsensitiveMode.Upper;
+        });
+
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+        var asString = filterExpression.ToString();
+
+        asString.Should().Contain("ToUpper");
+        asString.Should().NotContain("ToLower");
+    }
+
+    [Fact]
+    public void case_insensitive_per_property_lower_overrides_global_upper()
+    {
+        // Arrange - global Upper, per-property Title set back to Lower
+        var input = """Title @=* "waffle" """;
+        var config = new QueryKitConfiguration(settings =>
+        {
+            settings.CaseInsensitiveComparison = CaseInsensitiveMode.Upper;
+            settings.Property<TestingPerson>(x => x.Title).HasCaseInsensitiveMode(CaseInsensitiveMode.Lower);
+        });
+
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+
+        // Title should use ToLower because per-property overrides global Upper
+        filterExpression.ToString().Should()
+            .Be("""x => ((x.Title != null) AndAlso x.Title.ToLower().Contains("waffle".ToLower()))""");
+    }
 }
