@@ -3853,4 +3853,352 @@ public class DatabaseFilteringTests() : TestBase
         pastPeople.Should().Contain(p => p.Id == fakePersonTwo.Id, "past date should match < 0");
     }
 
+    [Fact]
+    public async Task case_insensitive_upper_mode_finds_uppercase_data_with_lowercase_filter()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var uniqueSuffix = Guid.NewGuid().ToString("N")[..8].ToUpper();
+        var uppercaseTitle = $"UNIQUE TITLE {uniqueSuffix}";
+
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithTitle(uppercaseTitle)
+            .Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder().Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+
+        // Search with a lowercase version of the unique suffix
+        var lowercaseSearchValue = uniqueSuffix.ToLower();
+        var input = $"""Title @=* "{lowercaseSearchValue}" """;
+
+        var config = new QueryKitConfiguration(settings =>
+        {
+            settings.CaseInsensitiveComparison = CaseInsensitiveMode.Upper;
+        });
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var people = await queryablePeople.ApplyQueryKitFilter(input, config).ToListAsync();
+
+        // Assert - Upper mode: UPPER(title) contains UPPER(searchValue) → should match
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakePersonOne.Id);
+    }
+
+    [Fact]
+    public async Task case_insensitive_per_property_upper_mode_finds_uppercase_data()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var uniqueSuffix = Guid.NewGuid().ToString("N")[..8].ToUpper();
+        var uppercaseTitle = $"PERPROPTITLE {uniqueSuffix}";
+
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithTitle(uppercaseTitle)
+            .Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder().Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+
+        var lowerSearch = uniqueSuffix.ToLower();
+        var input = $"""Title @=* "{lowerSearch}" """;
+
+        // Global mode is Lower, but Title is overridden to Upper
+        var config = new QueryKitConfiguration(settings =>
+        {
+            settings.CaseInsensitiveComparison = CaseInsensitiveMode.Lower;
+            settings.Property<TestingPerson>(x => x.Title).HasCaseInsensitiveMode(CaseInsensitiveMode.Upper);
+        });
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var people = await queryablePeople.ApplyQueryKitFilter(input, config).ToListAsync();
+
+        // Assert - per-property Upper mode: UPPER(title) contains UPPER(searchValue) → should match
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakePersonOne.Id);
+    }
+
+    [Fact]
+    public async Task case_insensitive_upper_mode_equals_operator_finds_uppercase_data()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var uniqueSuffix = Guid.NewGuid().ToString("N")[..8].ToUpper();
+        var uppercaseTitle = $"EQTITLE {uniqueSuffix}";
+
+        var fakePersonOne = new FakeTestingPersonBuilder().WithTitle(uppercaseTitle).Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder().Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+
+        var input = $"""Title ==* "{uppercaseTitle.ToLower()}" """;
+        var config = new QueryKitConfiguration(s => s.CaseInsensitiveComparison = CaseInsensitiveMode.Upper);
+
+        // Act
+        var people = await testingServiceScope.DbContext().People
+            .ApplyQueryKitFilter(input, config).ToListAsync();
+
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakePersonOne.Id);
+    }
+
+    [Fact]
+    public async Task case_insensitive_upper_mode_not_equals_operator_excludes_matching_record()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var uniqueSuffix = Guid.NewGuid().ToString("N")[..8].ToUpper();
+        var uppercaseTitle = $"NEQTITLE {uniqueSuffix}";
+
+        var fakePersonOne = new FakeTestingPersonBuilder().WithTitle(uppercaseTitle).Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder().WithTitle($"OTHER {uniqueSuffix}").Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+
+        // Search with lowercase — should exclude fakePersonOne
+        var input = $"""Title !=* "{uppercaseTitle.ToLower()}" """;
+        var config = new QueryKitConfiguration(s => s.CaseInsensitiveComparison = CaseInsensitiveMode.Upper);
+
+        // Act
+        var people = await testingServiceScope.DbContext().People
+            .ApplyQueryKitFilter(input, config).ToListAsync();
+
+        // Assert
+        people.Should().NotContain(p => p.Id == fakePersonOne.Id);
+        people.Should().Contain(p => p.Id == fakePersonTwo.Id);
+    }
+
+    [Fact]
+    public async Task case_insensitive_upper_mode_starts_with_operator_finds_uppercase_data()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var uniqueSuffix = Guid.NewGuid().ToString("N")[..8].ToUpper();
+        var uppercaseTitle = $"SWTITLE {uniqueSuffix}";
+
+        var fakePersonOne = new FakeTestingPersonBuilder().WithTitle(uppercaseTitle).Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder().Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+
+        // Search with lowercase prefix
+        var input = $"""Title _=* "swtitle" """;
+        var config = new QueryKitConfiguration(s => s.CaseInsensitiveComparison = CaseInsensitiveMode.Upper);
+
+        // Act
+        var people = await testingServiceScope.DbContext().People
+            .ApplyQueryKitFilter(input, config).ToListAsync();
+
+        // Assert
+        people.Count.Should().BeGreaterOrEqualTo(1);
+        people.Should().Contain(p => p.Id == fakePersonOne.Id);
+    }
+
+    [Fact]
+    public async Task case_insensitive_upper_mode_ends_with_operator_finds_uppercase_data()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var uniqueSuffix = Guid.NewGuid().ToString("N")[..8].ToUpper();
+        var uppercaseTitle = $"EWTITLE {uniqueSuffix}";
+
+        var fakePersonOne = new FakeTestingPersonBuilder().WithTitle(uppercaseTitle).Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder().Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+
+        // Search with lowercase suffix
+        var input = $"""Title _-=* "{uniqueSuffix.ToLower()}" """;
+        var config = new QueryKitConfiguration(s => s.CaseInsensitiveComparison = CaseInsensitiveMode.Upper);
+
+        // Act
+        var people = await testingServiceScope.DbContext().People
+            .ApplyQueryKitFilter(input, config).ToListAsync();
+
+        // Assert
+        people.Count.Should().BeGreaterOrEqualTo(1);
+        people.Should().Contain(p => p.Id == fakePersonOne.Id);
+    }
+
+    [Fact]
+    public async Task case_insensitive_upper_mode_not_contains_operator_excludes_matching_record()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var uniqueSuffix = Guid.NewGuid().ToString("N")[..8].ToUpper();
+        var uppercaseTitle = $"NOTCONTAINS {uniqueSuffix}";
+
+        var fakePersonOne = new FakeTestingPersonBuilder().WithTitle(uppercaseTitle).Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder().WithTitle($"DIFFERENT {Guid.NewGuid():N}").Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+
+        // Lowercase search — Upper mode should still find the match and therefore exclude it
+        var input = $"""Title !@=* "{uniqueSuffix.ToLower()}" """;
+        var config = new QueryKitConfiguration(s => s.CaseInsensitiveComparison = CaseInsensitiveMode.Upper);
+
+        // Act
+        var people = await testingServiceScope.DbContext().People
+            .ApplyQueryKitFilter(input, config).ToListAsync();
+
+        // Assert
+        people.Should().NotContain(p => p.Id == fakePersonOne.Id);
+        people.Should().Contain(p => p.Id == fakePersonTwo.Id);
+    }
+
+    [Fact]
+    public async Task case_insensitive_upper_mode_not_starts_with_operator_excludes_matching_record()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var uniqueSuffix = Guid.NewGuid().ToString("N")[..8].ToUpper();
+        var uppercaseTitle = $"NSWPREFIX {uniqueSuffix}";
+
+        var fakePersonOne = new FakeTestingPersonBuilder().WithTitle(uppercaseTitle).Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder().WithTitle($"DIFFERENT {Guid.NewGuid():N}").Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+
+        var input = $"""Title !_=* "nswprefix" """;
+        var config = new QueryKitConfiguration(s => s.CaseInsensitiveComparison = CaseInsensitiveMode.Upper);
+
+        // Act
+        var people = await testingServiceScope.DbContext().People
+            .ApplyQueryKitFilter(input, config).ToListAsync();
+
+        // Assert
+        people.Should().NotContain(p => p.Id == fakePersonOne.Id);
+        people.Should().Contain(p => p.Id == fakePersonTwo.Id);
+    }
+
+    [Fact]
+    public async Task case_insensitive_upper_mode_not_ends_with_operator_excludes_matching_record()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var uniqueSuffix = Guid.NewGuid().ToString("N")[..8].ToUpper();
+        var uppercaseTitle = $"NEWSUFFIX {uniqueSuffix}";
+
+        var fakePersonOne = new FakeTestingPersonBuilder().WithTitle(uppercaseTitle).Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder().WithTitle($"DIFFERENT {Guid.NewGuid():N}").Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+
+        var input = $"""Title !_-=* "{uniqueSuffix.ToLower()}" """;
+        var config = new QueryKitConfiguration(s => s.CaseInsensitiveComparison = CaseInsensitiveMode.Upper);
+
+        // Act
+        var people = await testingServiceScope.DbContext().People
+            .ApplyQueryKitFilter(input, config).ToListAsync();
+
+        // Assert
+        people.Should().NotContain(p => p.Id == fakePersonOne.Id);
+        people.Should().Contain(p => p.Id == fakePersonTwo.Id);
+    }
+
+    [Fact]
+    public async Task case_insensitive_upper_mode_in_operator_finds_uppercase_data()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var uniqueSuffix = Guid.NewGuid().ToString("N")[..8].ToUpper();
+        var uppercaseTitle = $"INTITLE {uniqueSuffix}";
+
+        var fakePersonOne = new FakeTestingPersonBuilder().WithTitle(uppercaseTitle).Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder().Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+
+        // Provide lowercase version in the list
+        var input = $"""Title ^^* ["{uppercaseTitle.ToLower()}"]""";
+        var config = new QueryKitConfiguration(s => s.CaseInsensitiveComparison = CaseInsensitiveMode.Upper);
+
+        // Act
+        var people = await testingServiceScope.DbContext().People
+            .ApplyQueryKitFilter(input, config).ToListAsync();
+
+        // Assert
+        people.Count.Should().BeGreaterOrEqualTo(1);
+        people.Should().Contain(p => p.Id == fakePersonOne.Id);
+    }
+
+    [Fact]
+    public async Task case_insensitive_upper_mode_not_in_operator_excludes_matching_record()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var uniqueSuffix = Guid.NewGuid().ToString("N")[..8].ToUpper();
+        var uppercaseTitle = $"NOTINTITLE {uniqueSuffix}";
+
+        var fakePersonOne = new FakeTestingPersonBuilder().WithTitle(uppercaseTitle).Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder().WithTitle($"DIFFERENT {Guid.NewGuid():N}").Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+
+        // Lowercase version in exclusion list — should still exclude fakePersonOne
+        var input = $"""Title !^^* ["{uppercaseTitle.ToLower()}"]""";
+        var config = new QueryKitConfiguration(s => s.CaseInsensitiveComparison = CaseInsensitiveMode.Upper);
+
+        // Act
+        var people = await testingServiceScope.DbContext().People
+            .ApplyQueryKitFilter(input, config).ToListAsync();
+
+        // Assert
+        people.Should().NotContain(p => p.Id == fakePersonOne.Id);
+        people.Should().Contain(p => p.Id == fakePersonTwo.Id);
+    }
+
+    [Fact]
+    public async Task case_insensitive_per_property_lower_overrides_global_upper()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var uniqueSuffix = Guid.NewGuid().ToString("N")[..8].ToLower();
+        var lowercaseTitle = $"lowertitle {uniqueSuffix}";
+
+        var fakePersonOne = new FakeTestingPersonBuilder().WithTitle(lowercaseTitle).Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder().Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+
+        // Search with uppercase — per-property Lower (lower(data) == lower(search)) should still match
+        var input = $"""Title @=* "{uniqueSuffix.ToUpper()}" """;
+        var config = new QueryKitConfiguration(settings =>
+        {
+            settings.CaseInsensitiveComparison = CaseInsensitiveMode.Upper;
+            settings.Property<TestingPerson>(x => x.Title).HasCaseInsensitiveMode(CaseInsensitiveMode.Lower);
+        });
+
+        // Act
+        var people = await testingServiceScope.DbContext().People
+            .ApplyQueryKitFilter(input, config).ToListAsync();
+
+        // Assert - even though global is Upper, per-property Lower means lower(title) contains lower(search) → match
+        people.Count.Should().BeGreaterOrEqualTo(1);
+        people.Should().Contain(p => p.Id == fakePersonOne.Id);
+    }
+
+    [Fact]
+    public async Task case_insensitive_per_property_overrides_independent_of_other_properties()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var uniqueTitleSuffix = Guid.NewGuid().ToString("N")[..8].ToUpper();
+        var uniqueFirstName = $"FIRSTNAME{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
+
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithTitle($"OVERTITLE {uniqueTitleSuffix}")
+            .WithFirstName(uniqueFirstName)
+            .Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder().Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+
+        // Title uses per-property Upper (global is Lower); FirstName uses global Lower
+        var input = $"""Title @=* "{uniqueTitleSuffix.ToLower()}" && FirstName ==* "{uniqueFirstName.ToLower()}" """;
+        var config = new QueryKitConfiguration(settings =>
+        {
+            settings.CaseInsensitiveComparison = CaseInsensitiveMode.Lower;
+            settings.Property<TestingPerson>(x => x.Title).HasCaseInsensitiveMode(CaseInsensitiveMode.Upper);
+        });
+
+        // Act
+        var people = await testingServiceScope.DbContext().People
+            .ApplyQueryKitFilter(input, config).ToListAsync();
+
+        // Assert - both conditions resolve correctly despite using different modes
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakePersonOne.Id);
+    }
+
 }
