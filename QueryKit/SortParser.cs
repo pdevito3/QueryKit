@@ -17,7 +17,7 @@ public static class SortParser
     private const string Ascending = "asc";
     private const string Descending = "desc";
 
-    internal static List<SortExpressionInfo<T>> ParseSort<T>(string input, IQueryKitConfiguration? config = null)
+    public static List<SortExpressionInfo<T>> ParseSort<T>(string input, IQueryKitConfiguration? config = null)
     {
         if(string.IsNullOrWhiteSpace(input))
             return new List<SortExpressionInfo<T>>();
