@@ -178,19 +178,24 @@ public static class FilterParser
         from closingQuotes in Parse.Char('"').Repeat(count).Text()
         select content;
 
-    private static Parser<string> RightSideValueParser =>
+    // Carries whether the right-hand value was written as a quoted string literal (e.g. "id").
+    // This is needed to disambiguate a literal from a bare property reference (property-to-property
+    // comparison) once the surrounding quotes have been stripped, since both are otherwise identical strings.
+    private readonly record struct RightSideValue(string Value, bool IsQuotedLiteral);
+
+    private static Parser<RightSideValue> RightSideValueParser =>
         from atSign in Parse.Char('@').Optional()
         from leadingSpaces in Parse.WhiteSpace.Many()
-        from value in Parse.String("null").Text()
-            .Or(GuidFormatParser)
-            .XOr(DateTimeFormatParser)
-            .XOr(TimeFormatParser)
-            .XOr(NumberParser)
-            .XOr(RawStringLiteralParser.Or(DoubleQuoteParser))
-            .XOr(SquareBracketParser)
-            .XOr(Identifier) // Keep this last to try property paths only if nothing else matches
+        from value in Parse.String("null").Text().Select(v => new RightSideValue(v, false))
+            .Or(GuidFormatParser.Select(v => new RightSideValue(v, false)))
+            .XOr(DateTimeFormatParser.Select(v => new RightSideValue(v, false)))
+            .XOr(TimeFormatParser.Select(v => new RightSideValue(v, false)))
+            .XOr(NumberParser.Select(v => new RightSideValue(v, false)))
+            .XOr((RawStringLiteralParser.Or(DoubleQuoteParser)).Select(v => new RightSideValue(v, true)))
+            .XOr(SquareBracketParser.Select(v => new RightSideValue(v, false)))
+            .XOr(Identifier.Select(v => new RightSideValue(v, false))) // Keep this last to try property paths only if nothing else matches
         from trailingSpaces in Parse.WhiteSpace.Many()
-        select atSign.IsDefined ? "@" + value : value;
+        select atSign.IsDefined ? value with { Value = "@" + value.Value } : value;
     
     private static Parser<string> SquareBracketParser =>
         from openingBracket in Parse.Char('[')
@@ -557,7 +562,7 @@ public static class FilterParser
         
         return validArithmeticExpr
             .SelectMany(leftArithmetic => comparisonOperatorParser, (leftArithmetic, op) => new { leftArithmetic, op })
-            .SelectMany(temp => parenthesizedArithmetic.Or(rightSideValueParser.Select(value => CreateArithmeticFromValue(value))), (temp, rightSide) => new { temp.leftArithmetic, temp.op, rightSide })
+            .SelectMany(temp => parenthesizedArithmetic.Or(rightSideValueParser.Select(value => CreateArithmeticFromValue(value.Value))), (temp, rightSide) => new { temp.leftArithmetic, temp.op, rightSide })
             .Select(temp =>
             {
                 var leftExpr = temp.leftArithmetic.ToLinqExpression(parameter, typeof(T));
@@ -632,7 +637,7 @@ public static class FilterParser
 
         var regularComparison = CreateLeftExprParser(parameter, config)
             .SelectMany(leftExpr => comparisonOperatorParser, (leftExpr, op) => new { leftExpr, op })
-            .SelectMany(temp => rightSideValueParser, (temp, right) => new { temp.leftExpr, temp.op, right })
+            .SelectMany(temp => rightSideValueParser, (temp, rightValue) => new { temp.leftExpr, temp.op, right = rightValue.Value, rightIsQuotedLiteral = rightValue.IsQuotedLiteral })
             .Select(temp =>
             {
                 if (temp.leftExpr == null)
@@ -681,8 +686,9 @@ public static class FilterParser
                         config?.DbContextType);
                 }
 
-                // Check if the right side is a property path for property-to-property comparison
-                if (IsPropertyPath(temp.right, parameter.Type))
+                // Check if the right side is a property path for property-to-property comparison.
+                // A quoted string literal is always a value, even when its text matches a property name.
+                if (!temp.rightIsQuotedLiteral && IsPropertyPath(temp.right, parameter.Type))
                 {
                     var rightPropertyExpr = CreateRightPropertyExpr<T>(parameter, temp.right, config);
                     if (rightPropertyExpr != null)
@@ -1083,7 +1089,7 @@ public static class FilterParser
             .SelectMany(properties => comparisonOperatorParser,
                 (properties, op) => new { properties, op })
             .SelectMany(temp => rightSideValueParser,
-                (temp, right) => new { temp.properties, temp.op, right })
+                (temp, rightValue) => new { temp.properties, temp.op, right = rightValue.Value })
             .Select(temp =>
             {
                 if (!temp.properties.Any())

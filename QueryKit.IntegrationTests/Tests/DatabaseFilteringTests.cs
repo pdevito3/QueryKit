@@ -4201,4 +4201,56 @@ public class DatabaseFilteringTests() : TestBase
         people[0].Id.Should().Be(fakePersonOne.Id);
     }
 
+    [Fact]
+    public async Task quoted_string_literal_matching_a_property_name_is_treated_as_a_literal()
+    {
+        // Arrange - reproduces the reported bug against a real database: filtering for a
+        // literal string ("LastName") whose text coincides with a property name must be a
+        // literal contains, not a property-to-property comparison.
+        var testingServiceScope = new TestingServiceScope();
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithTitle("has LastName in the title")
+            .Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder()
+            .WithTitle("nothing to see here")
+            .Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+
+        var input = $"""{nameof(TestingPerson.Title)} @=* "LastName" """;
+
+        // Act
+        var people = await testingServiceScope.DbContext().People
+            .ApplyQueryKitFilter(input).ToListAsync();
+
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakePersonOne.Id);
+    }
+
+    [Fact]
+    public async Task bare_property_name_on_the_right_is_still_a_property_to_property_comparison()
+    {
+        // Arrange - guards the property-to-property feature against the database: an unquoted
+        // right-hand side that names a property still compares the two columns.
+        var testingServiceScope = new TestingServiceScope();
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithFirstName("same")
+            .WithLastName("same")
+            .Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder()
+            .WithFirstName("different")
+            .WithLastName("values")
+            .Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+
+        var input = $"{nameof(TestingPerson.FirstName)} == {nameof(TestingPerson.LastName)}";
+
+        // Act
+        var people = await testingServiceScope.DbContext().People
+            .ApplyQueryKitFilter(input).ToListAsync();
+
+        // Assert
+        people.Should().ContainSingle(p => p.Id == fakePersonOne.Id);
+    }
+
 }

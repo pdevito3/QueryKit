@@ -189,9 +189,59 @@ public class EnumerableFilteringTests()
         result.Should().Contain(p => p.Name == "Carol");
     }
 
+    [Fact]
+    public void quoted_string_literal_matching_a_property_name_is_treated_as_a_literal()
+    {
+        // Arrange - reproduces the reported bug: filtering for the literal string "id"
+        // in the Name property. "id" coincides with the Id property name, so the parser
+        // wrongly resolved it to a property-to-property comparison and threw.
+        var items = new List<EntityWithIdAndName>
+        {
+            new() { Id = 1, Name = "the id column" },
+            new() { Id = 2, Name = "something else" }
+        };
+
+        var filter = """Name @=* "id" """;
+
+        // Act
+        var result = items.ApplyQueryKitFilter(filter).ToList();
+
+        // Assert
+        result.Count.Should().Be(1);
+        result[0].Id.Should().Be(1);
+    }
+
+    [Fact]
+    public void bare_property_name_on_the_right_is_still_a_property_to_property_comparison()
+    {
+        // Arrange - guards the property-to-property feature: an unquoted right-hand side
+        // that names a property must still compare the two properties.
+        var items = new List<EntityWithIdAndName>
+        {
+            new() { Id = 1, Name = "match", Code = "match" },
+            new() { Id = 2, Name = "left", Code = "right" }
+        };
+
+        var filter = "Name == Code";
+
+        // Act
+        var result = items.ApplyQueryKitFilter(filter).ToList();
+
+        // Assert
+        result.Count.Should().Be(1);
+        result[0].Id.Should().Be(1);
+    }
+
     private class PersonWithNullableEmail
     {
         public string Name { get; set; } = null!;
         public string? Email { get; set; }
+    }
+
+    private class EntityWithIdAndName
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = null!;
+        public string Code { get; set; } = null!;
     }
 }
