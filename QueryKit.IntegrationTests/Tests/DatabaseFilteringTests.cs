@@ -877,6 +877,39 @@ public class DatabaseFilteringTests() : TestBase
     }
     
     [Fact]
+    public async Task can_filter_with_alias_and_in_operator()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var faker = new Faker();
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithTitle(faker.Lorem.Sentence())
+            .Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder()
+            .WithTitle(faker.Lorem.Sentence())
+            .Build();
+        var fakePersonThree = new FakeTestingPersonBuilder()
+            .WithTitle(faker.Lorem.Sentence())
+            .Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo, fakePersonThree);
+
+        var input = $"""alias ^^ ["{fakePersonOne.Title}", "{fakePersonTwo.Title}"] """;
+
+        // Act
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.Title!).HasQueryName("alias");
+        });
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input, config);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert
+        people.Count.Should().Be(2);
+        people.Select(x => x.Id).Should().BeEquivalentTo(new[] { fakePersonOne.Id, fakePersonTwo.Id });
+    }
+
+    [Fact]
     public async Task can_filter_nested_property_using_ownsone()
     {
         // Arrange

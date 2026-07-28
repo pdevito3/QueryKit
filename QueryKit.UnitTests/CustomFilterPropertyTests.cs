@@ -188,6 +188,54 @@ public class CustomFilterPropertyTests
     }
     
     [Fact]
+    public void can_have_custom_prop_name_with_in_operator()
+    {
+        var input = """special_title ^^ ["id1", "id2"] """;
+
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.Title!).HasQueryName("special_title");
+        });
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+        filterExpression.ToString().Should()
+            .Be("""x => value(System.Collections.Generic.List`1[System.String]).Contains(x.Title)""");
+    }
+
+    [Theory]
+    [InlineData("^^")]
+    [InlineData("^^*")]
+    [InlineData("!^^")]
+    [InlineData("!^^*")]
+    public void can_have_custom_prop_name_with_regex_special_character_operators(string comparisonOperator)
+    {
+        var input = $"""special_title {comparisonOperator} ["id1", "id2"] """;
+
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.Title!).HasQueryName("special_title");
+        });
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+        filterExpression.ToString().Should().Contain("x.Title");
+    }
+
+    [Theory]
+    [InlineData("^$")]
+    [InlineData("^$*")]
+    [InlineData("!^$")]
+    [InlineData("!^$*")]
+    public void can_have_custom_prop_name_with_has_operators(string comparisonOperator)
+    {
+        var input = $"""special_tags {comparisonOperator} "winner" """;
+
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<Recipe>(x => x.Tags).HasQueryName("special_tags");
+        });
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
+        filterExpression.ToString().Should().Contain("x.Tags");
+    }
+
+    [Fact]
     public void can_have_custom_prop_work_with_collection_filters()
     {
         var faker = new Faker();

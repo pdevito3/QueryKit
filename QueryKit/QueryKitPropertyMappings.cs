@@ -134,8 +134,10 @@ public class QueryKitPropertyMappings
             {
                 foreach (var op in operators)
                 {
-                    // Use regular expression to isolate left side of the expression
-                    var regex = new Regex($@"\b{queryKitPropertyInfo.QueryName}\b(?=\s*{op})", RegexOptions.IgnoreCase);
+                    // Use regular expression to isolate left side of the expression. Query names and
+                    // operators are matched literally, so escape any regex metacharacters they contain
+                    // (e.g. the `^` in `^^` would otherwise be read as a start-of-line anchor).
+                    var regex = new Regex($@"\b{Regex.Escape(queryKitPropertyInfo.QueryName!)}\b(?=\s*{Regex.Escape(op)})", RegexOptions.IgnoreCase);
 
                     if (queryKitPropertyInfo is { CanSort: false, CanFilter: false} && regex.IsMatch(input))
                     {
