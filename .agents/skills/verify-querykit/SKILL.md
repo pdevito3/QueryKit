@@ -78,13 +78,14 @@ If the doctor fails and `qk rebuild` does not correct it, run `qk down` and then
 ## Drive
 
 ```bash
-.agents/skills/verify-querykit/qk run <label> [--filter '<f>'] [--sort '<s>'] [--config <preset>] [--target memory|postgres|both] [--aggregate]
+.agents/skills/verify-querykit/qk run <label> [--filter '<f>'] [--sort '<s>'] [--config <preset>] [--target memory|postgres|both] [--aggregate] [--culture <name>]
 ```
 
 - `<label>` names the evidence files. Use letters, digits, `.`, `_`, and `-` only. Use a label that tells the feature, for example `filtering-in-operator`.
 - `--filter` calls `ApplyQueryKitFilter`. `--sort` calls `ApplyQueryKitSort` after the filter.
 - `--aggregate` calls `ApplyQueryKit(new QueryKitData { Filters, SortOrder, Configuration })` instead.
 - `--config` selects a `QueryKitConfiguration` preset. The default is `none`. Run `qk configs` to list the presets. The presets are in `harness/Driver/Configs.cs`.
+- `--culture` sets the thread culture of the driver, for example `de-DE`. The default is the culture of the machine.
 - `--target` defaults to `both`. Use `both` for a proof. A difference between the two targets is a finding.
 
 Put the filter in single quotes in the shell, because QueryKit strings use double quotes:
