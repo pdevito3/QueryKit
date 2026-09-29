@@ -1,10 +1,14 @@
 namespace QueryKit.UnitTests;
 
 using System.Globalization;
+using System.Linq.Expressions;
+using System.Reflection;
 using Configuration;
 using Exceptions;
 using FluentAssertions;
+using Operators;
 using WebApiTestProject.Entities;
+using WebApiTestProject.Entities.Recipes;
 
 public class FilterParsingRegressionTests
 {
@@ -268,6 +272,43 @@ public class FilterParsingRegressionTests
             .ToList();
 
         result.Select(x => x.Title).Should().Equal("match");
+    }
+
+    public static IEnumerable<object[]> ComparisonOperatorFactories() =>
+        typeof(ComparisonOperator).GetMethods(BindingFlags.Public | BindingFlags.Static)
+            .Where(x => x.ReturnType == typeof(ComparisonOperator)
+                && x.GetParameters().Select(p => p.Name).SequenceEqual(new[] { "caseInsensitive", "usesAll" }))
+            .Select(x => new object[] { x.Name });
+
+    [Theory]
+    [MemberData(nameof(ComparisonOperatorFactories))]
+    public void comparison_operator_factory_keeps_uses_all(string factoryName)
+    {
+        var factory = typeof(ComparisonOperator).GetMethod(factoryName, BindingFlags.Public | BindingFlags.Static)!;
+
+        var comparisonOperator = (ComparisonOperator)factory.Invoke(null, new object[] { true, true })!;
+
+        comparisonOperator.UsesAll.Should().BeTrue();
+        comparisonOperator.CaseInsensitive.Should().BeTrue();
+    }
+
+    [Fact]
+    public void comparison_operator_factory_has_one_test_case_per_operator_type()
+    {
+        ComparisonOperatorFactories().Should().HaveCount(24);
+    }
+
+    [Fact]
+    public void comparison_operator_factory_with_uses_all_builds_all_expression()
+    {
+        Expression<Func<Recipe, IEnumerable<string>>> ingredientNames = x => x.Ingredients.Select(y => y.Name);
+
+        var body = ComparisonOperator.EqualsOperator(usesAll: true)
+            .GetExpression<Recipe>(ingredientNames.Body, Expression.Constant("waffle"), null);
+        var filterExpression = Expression.Lambda<Func<Recipe, bool>>(body, ingredientNames.Parameters);
+
+        filterExpression.ToDisplayString().Should()
+            .Be(FilterParser.ParseFilter<Recipe>("""Ingredients.Name %== "waffle" """).ToDisplayString());
     }
 
     private static TResult WithCulture<TResult>(string cultureName, Func<TResult> action)
