@@ -205,9 +205,26 @@ public static class FilterParser
         from micros in DateTimeMicrosParser
         select dateFormat + timeFormat + micros + timeZone;
 
+    // A number with a '.' decimal point, or with the decimal separator of the current culture.
+    // The longer match wins, so '4.5' parses in every culture and '4,5' still parses in a culture that uses ','.
+    private static readonly Parser<string> UnsignedNumberParser = input =>
+    {
+        var invariant = Parse.DecimalInvariant(input);
+        var culture = Parse.Decimal(input);
+        return culture.WasSuccessful && (!invariant.WasSuccessful || culture.Remainder.Position > invariant.Remainder.Position)
+            ? culture
+            : invariant;
+    };
+
     private static readonly Parser<string> NumberParser =
         from sign in Parse.Char('-').Optional().Select(x => x.IsDefined ? "-" : "")
-        from number in Parse.Decimal
+        from number in UnsignedNumberParser
+        select sign + number;
+
+    // List items are separated by ',', so a list number always uses the '.' decimal point.
+    private static readonly Parser<string> ListNumberParser =
+        from sign in Parse.Char('-').Optional().Select(x => x.IsDefined ? "-" : "")
+        from number in Parse.DecimalInvariant
         select sign + number;
 
     private static readonly Parser<string> GuidFormatParser = Parse.Regex(@"[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}").Text();
@@ -229,7 +246,7 @@ public static class FilterParser
             .Or(GuidFormatParser)
             .Or(DateTimeFormatParser)
             .Or(TimeFormatParser)
-            .Or(NumberParser)
+            .Or(ListNumberParser)
             .Or(RawStringLiteralParser.Or(DoubleQuoteParser))
             .Or(Identifier)
             .DelimitedBy(Parse.Char(',').Token());
@@ -424,7 +441,7 @@ public static class FilterParser
         var targetType = leftExprType;
         if (isEnumerable)
         {
-            if (op.IsCountOperator() && int.TryParse(right, out var intVal))
+            if (op.IsCountOperator() && (int.TryParse(right, out var intVal) || int.TryParse(right, NumberStyles.Integer, CultureInfo.InvariantCulture, out intVal)))
             {
                 return FilterValue.Parameter(intVal, typeof(int));
             }
@@ -1326,8 +1343,9 @@ public static class FilterParser
         if (value == "null" || 
             value.StartsWith("\"") || 
             value.StartsWith("[") ||
-            value.Contains("-") && DateTime.TryParse(value, out _) ||
+            value.Contains("-") && (DateTime.TryParse(value, out _) || DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.None, out _)) ||
             decimal.TryParse(value, out _) ||
+            decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out _) ||
             bool.TryParse(value, out _) ||
             Guid.TryParse(value, out _))
         {
