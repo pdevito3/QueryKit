@@ -270,4 +270,59 @@ public class PropertyResolverTests : TestBase
         // Assert
         people.Select(x => x.Id).Should().Equal(firstPerson.Id, secondPerson.Id);
     }
+
+    [Fact]
+    public async Task query_name_in_a_property_list_is_filtered()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var title = new Faker().Lorem.Sentence();
+        var fakePerson = new FakeTestingPersonBuilder()
+            .WithTitle(title)
+            .WithFirstName("Paul")
+            .WithLastName("Other")
+            .Build();
+        await testingServiceScope.InsertAsync(fakePerson);
+
+        var input = $"""Title == "{title}" && (first, LastName) == "Paul" """;
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.FirstName).HasQueryName("first");
+        });
+
+        // Act
+        var people = await testingServiceScope.DbContext().People
+            .ApplyQueryKitFilter(input, config)
+            .ToListAsync();
+
+        // Assert
+        people.Should().ContainSingle(x => x.Id == fakePerson.Id);
+    }
+
+    [Fact]
+    public async Task query_name_in_arithmetic_is_filtered()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var title = new Faker().Lorem.Sentence();
+        var fakePerson = new FakeTestingPersonBuilder()
+            .WithTitle(title)
+            .WithAge(30)
+            .Build();
+        await testingServiceScope.InsertAsync(fakePerson);
+
+        var input = $"""Title == "{title}" && (years + 0) > 20""";
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.Age).HasQueryName("years");
+        });
+
+        // Act
+        var people = await testingServiceScope.DbContext().People
+            .ApplyQueryKitFilter(input, config)
+            .ToListAsync();
+
+        // Assert
+        people.Should().ContainSingle(x => x.Id == fakePerson.Id);
+    }
 }
