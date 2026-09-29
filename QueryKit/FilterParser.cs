@@ -373,7 +373,7 @@ public static class FilterParser
         { typeof(short), value => short.Parse(value, CultureInfo.InvariantCulture) },
         { typeof(byte), value => byte.Parse(value, CultureInfo.InvariantCulture) },
         { typeof(DateTime), value => DateTime.Parse(value, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal) },
-        { typeof(DateTimeOffset), value => DateTimeOffset.Parse(value) },
+        { typeof(DateTimeOffset), value => DateTimeOffset.Parse(value).ToUniversalTime() },
         { typeof(DateOnly), value => DateOnly.Parse(value) },
         { typeof(TimeOnly), value => TimeOnly.Parse(value) },
         { typeof(TimeSpan), value => TimeSpan.Parse(value) },
@@ -543,7 +543,8 @@ public static class FilterParser
             {
                 var dtStyle = right.EndsWith("Z") ? DateTimeStyles.AdjustToUniversal : DateTimeStyles.AssumeLocal;
                 var dto = DateTimeOffset.Parse(right, CultureInfo.InvariantCulture, dtStyle);
-                return FilterValue.Parameter(dto, rawType);
+                // Npgsql only accepts a DateTimeOffset parameter with offset 0. The UTC value is the same instant.
+                return FilterValue.Parameter(dto.ToUniversalTime(), rawType);
             }
 
             if (targetType == typeof(DateOnly))
