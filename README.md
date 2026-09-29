@@ -66,7 +66,7 @@ var config = new QueryKitConfiguration(config =>
       		.PreventSort();
 });
 var people = _dbContext.People
-  		.ApplyQueryKitFilter(@$"first == "Jane" && Age < 10", config)
+  		.ApplyQueryKitFilter("""first == "Jane" && Age < 10""", config)
   		.ToList();
 ```
 
@@ -924,7 +924,7 @@ Sorting is set up to create an expression using the property names you have on y
 * `PreventSort()` to prevent filtering on a given property
 
 ```c#
-var input = $"""Age desc, first"";
+var input = "Age desc, first";
 var config = new QueryKitConfiguration(config =>
 {
     config.Property<SpecialPerson>(x => x.FirstName)
