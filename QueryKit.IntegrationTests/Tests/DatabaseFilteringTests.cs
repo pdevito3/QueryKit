@@ -1973,7 +1973,8 @@ public class DatabaseFilteringTests() : TestBase
         
         // Act
         var queryableRecipes = testingServiceScope.DbContext().Recipes
-            .Include(x => x.Author);
+            .Include(x => x.Author)
+            .Where(x => x.Id == fakeRecipe.Id || x.Id == differentRecipe.Id);
         var appliedQueryable = queryableRecipes.ApplyQueryKitFilter(input);
         var recipes = await appliedQueryable.ToListAsync();
 
