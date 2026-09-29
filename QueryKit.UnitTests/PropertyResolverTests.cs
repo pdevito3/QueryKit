@@ -290,4 +290,76 @@ public class PropertyResolverTests
         sortExpressions.Should().ContainSingle();
         sortExpressions[0].Expression!.ToString().Should().Be("x => Convert(x.Age, Object)");
     }
+
+    [Fact]
+    public void query_name_in_a_property_list_resolves_to_its_property()
+    {
+        var input = """(name, FirstName) == "x" """;
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.Title).HasQueryName("name");
+        });
+
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+
+        filterExpression.ToDisplayString().Should().Be("""x => ((x.Title == "x") OrElse (x.FirstName == "x"))""");
+    }
+
+    [Fact]
+    public void query_name_in_arithmetic_resolves_to_its_property()
+    {
+        var input = """(stars + 0) > 3""";
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.Rating).HasQueryName("stars");
+        });
+
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+
+        filterExpression.ToDisplayString().Should().Contain("x.Rating");
+    }
+
+    [Fact]
+    public void query_name_in_a_value_is_not_replaced()
+    {
+        var input = """FirstName == "name == x" """;
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.Title).HasQueryName("name");
+        });
+
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+
+        filterExpression.ToDisplayString().Should().Be("""x => (x.FirstName == "name == x")""");
+    }
+
+    [Fact]
+    public void property_prevented_for_filter_and_sort_is_rejected_by_its_query_name()
+    {
+        var input = """name == "x" """;
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.Title).HasQueryName("name").PreventFilter().PreventSort();
+        });
+
+        var act = () => FilterParser.ParseFilter<TestingPerson>(input, config);
+
+        act.Should().Throw<ParsingException>()
+            .WithInnerException<InvalidOperationException>()
+            .WithMessage("'Title' is not allowed for filtering or sorting.");
+    }
+
+    [Fact]
+    public void property_prevented_for_filter_and_sort_is_removed_by_its_member_name()
+    {
+        var input = """Title == "x" || Age > 100""";
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.Title).HasQueryName("name").PreventFilter().PreventSort();
+        });
+
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+
+        filterExpression.ToDisplayString().Should().Be("x => (x.Age > 100)");
+    }
 }
