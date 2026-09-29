@@ -119,4 +119,32 @@ public class PropertyResolverTests : TestBase
         // Assert
         people.Should().BeEmpty();
     }
+
+    [Fact]
+    public async Task prevented_property_in_a_list_is_not_filtered_in_any_case()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var title = new Faker().Lorem.Sentence();
+        var fakePerson = new FakeTestingPersonBuilder()
+            .WithTitle(title)
+            .WithFirstName("Paul")
+            .WithLastName("Other")
+            .Build();
+        await testingServiceScope.InsertAsync(fakePerson);
+
+        var input = $"""Title == "{title}" && (firstname, LastName) == "Paul" """;
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.FirstName).PreventFilter();
+        });
+
+        // Act
+        var people = await testingServiceScope.DbContext().People
+            .ApplyQueryKitFilter(input, config)
+            .ToListAsync();
+
+        // Assert
+        people.Should().BeEmpty();
+    }
 }
