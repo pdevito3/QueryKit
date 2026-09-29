@@ -265,7 +265,7 @@ public class FilterParserTests
     {
         var input = """SpecificDateTime == 2022-07-01T00:00:03""";
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToDisplayString().Should().Be(""""x => (x.SpecificDateTime == new DateTime(637922304030000000, Local))"""");
+        filterExpression.ToDisplayString().Should().Be(""""x => (x.SpecificDateTime == new DateTime(637922304030000000, Utc))"""");
     }
 
     [Fact]
@@ -292,7 +292,7 @@ public class FilterParserTests
     {
         var input = """SpecificDateTime == "2022-07-01T00:00:03" """;
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToDisplayString().Should().Be(""""x => (x.SpecificDateTime == new DateTime(637922304030000000, Local))"""");
+        filterExpression.ToDisplayString().Should().Be(""""x => (x.SpecificDateTime == new DateTime(637922304030000000, Utc))"""");
     }
 
     [Fact]
@@ -340,7 +340,7 @@ public class FilterParserTests
     {
         var input = """SpecificDateTime == 2022-07-01T00:00:03.123""";
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToDisplayString().Should().Be("x => (x.SpecificDateTime == new DateTime(637922304031230000, Local))");
+        filterExpression.ToDisplayString().Should().Be("x => (x.SpecificDateTime == new DateTime(637922304031230000, Utc))");
     }
 
     [Fact]

@@ -167,4 +167,40 @@ public class FilterParsingRegressionTests : TestBase
         // Assert
         people.Select(x => x.Id).Should().Equal(fakePersonOne.Id);
     }
+
+    [Theory]
+    [InlineData("SpecificDateTime == 2024-01-15T08:00:00")]
+    [InlineData("SpecificDateTime == 2024-01-15T10:00:00+02:00")]
+    [InlineData("SpecificDateTime ^^ [2024-01-15T08:00:00]")]
+    [InlineData("SpecificDateTime ^^ [2024-01-15T10:00:00+02:00]")]
+    [InlineData("SpecificDate == 2024-01-15T08:00:00")]
+    [InlineData("SpecificDate == 2024-01-15T10:00:00+02:00")]
+    [InlineData("SpecificDate ^^ [2024-01-15T08:00:00]")]
+    [InlineData("SpecificDate ^^ [2024-01-15T10:00:00+02:00]")]
+    public async Task date_time_without_offset_is_utc(string valueFilter)
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var title = $"utc {Guid.NewGuid()}";
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithTitle(title)
+            .WithSpecificDateTime(new DateTime(2024, 1, 15, 8, 0, 0, DateTimeKind.Utc))
+            .WithSpecificDate(new DateTimeOffset(2024, 1, 15, 8, 0, 0, TimeSpan.Zero))
+            .Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder()
+            .WithTitle(title)
+            .WithSpecificDateTime(new DateTime(2024, 1, 15, 9, 0, 0, DateTimeKind.Utc))
+            .WithSpecificDate(new DateTimeOffset(2024, 1, 15, 9, 0, 0, TimeSpan.Zero))
+            .Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+
+        var input = $"""{nameof(TestingPerson.Title)} == "{title}" && {valueFilter}""";
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var people = await queryablePeople.ApplyQueryKitFilter(input).ToListAsync();
+
+        // Assert
+        people.Select(x => x.Id).Should().Equal(fakePersonOne.Id);
+    }
 }
