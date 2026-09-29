@@ -40,9 +40,9 @@ public static class SortParser
 
     private static SortExpressionInfo<T> CreateSortExpression<T>(string sortClause, IQueryKitConfiguration? config = null)
     {
-        var parts = sortClause.Split();
+        var parts = sortClause.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
 
-        var propertyName = parts[0];
+        var propertyName = parts.Length > 0 ? parts[0] : sortClause;
         var direction = parts.Length > 1 ? parts[1].ToLowerInvariant() : Ascending;
         if (sortClause.StartsWith("-"))
         {
@@ -52,7 +52,7 @@ public static class SortParser
 
         if (direction != Ascending && direction != Descending)
         {
-            throw new ArgumentException($"Invalid direction: {direction}. Allowed values are '{Ascending}' and '{Descending}'.");
+            throw new QueryKitParsingException($"Invalid direction: {direction}. Allowed values are '{Ascending}' and '{Descending}'.");
         }
 
         var propertyPath = config?.GetPropertyPathByQueryName(propertyName) ?? propertyName;

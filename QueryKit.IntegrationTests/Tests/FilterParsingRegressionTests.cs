@@ -349,4 +349,49 @@ public class FilterParsingRegressionTests : TestBase
         // Assert
         recipes.Select(x => x.Id).Should().Equal(fakeRecipeOne.Id);
     }
+
+    [Theory]
+    [InlineData("""Age == "abc" """)]
+    [InlineData("""Age == abc""")]
+    [InlineData("""Rating > "abc" """)]
+    [InlineData("""Rating > abc""")]
+    public async Task invalid_value_throws_parsing_exception(string input)
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var act = async () => await queryablePeople.ApplyQueryKitFilter(input).ToListAsync();
+
+        // Assert
+        await act.Should().ThrowAsync<ParsingException>();
+    }
+
+    [Fact]
+    public async Task sort_direction_after_double_space_is_read()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var title = $"sort {Guid.NewGuid()}";
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithTitle(title)
+            .WithAge(20)
+            .Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder()
+            .WithTitle(title)
+            .WithAge(40)
+            .Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var people = await queryablePeople
+            .Where(x => x.Title == title)
+            .ApplyQueryKitSort("Age  desc")
+            .ToListAsync();
+
+        // Assert
+        people.Select(x => x.Id).Should().Equal(fakePersonTwo.Id, fakePersonOne.Id);
+    }
 }
