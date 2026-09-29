@@ -621,12 +621,23 @@ public static class FilterParser
         {
             case PropertyArithmeticExpression property:
                 var reference = PropertyResolver.Resolve(entityType, property.PropertyPath, config);
-                if (reference.Kind != PropertyReferenceKind.Member)
+                if (!reference.CanFilter)
                 {
-                    return property;
+                    return null;
                 }
 
-                return reference.CanFilter ? new PropertyArithmeticExpression(reference.Path) : null;
+                // Arithmetic supports only members, so a derived property or a custom operation is unknown here
+                if (reference.Kind != PropertyReferenceKind.Member)
+                {
+                    if (config?.AllowUnknownProperties == true)
+                    {
+                        return null;
+                    }
+
+                    throw new UnknownFilterPropertyException(reference.UnknownSegment!);
+                }
+
+                return new PropertyArithmeticExpression(reference.Path);
             case BinaryArithmeticExpression binary:
                 var left = ResolveArithmeticProperties(binary.Left, entityType, config);
                 var right = ResolveArithmeticProperties(binary.Right, entityType, config);

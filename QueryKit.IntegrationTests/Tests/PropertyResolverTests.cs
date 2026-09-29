@@ -354,4 +354,31 @@ public class PropertyResolverTests : TestBase
         // Assert
         recipes.Should().ContainSingle(x => x.Id == matchingRecipe.Id);
     }
+
+    [Fact]
+    public async Task unknown_property_in_arithmetic_removes_the_clause_when_unknown_properties_are_allowed()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var title = new Faker().Lorem.Sentence();
+        var fakePerson = new FakeTestingPersonBuilder()
+            .WithTitle(title)
+            .WithAge(30)
+            .Build();
+        await testingServiceScope.InsertAsync(fakePerson);
+
+        var input = $"""Title == "{title}" && ((Nope + 1) > 3 || Age > 100)""";
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.AllowUnknownProperties = true;
+        });
+
+        // Act
+        var people = await testingServiceScope.DbContext().People
+            .ApplyQueryKitFilter(input, config)
+            .ToListAsync();
+
+        // Assert
+        people.Should().BeEmpty();
+    }
 }
