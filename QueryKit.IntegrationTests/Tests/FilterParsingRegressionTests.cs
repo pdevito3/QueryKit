@@ -199,4 +199,36 @@ public class FilterParsingRegressionTests : TestBase
         // Assert
         people.Select(x => x.Id).Should().Equal(expectEqualPerson ? fakePersonOne.Id : fakePersonTwo.Id);
     }
+
+    [Theory]
+    [InlineData("""Title @= "am" """, false)]
+    [InlineData("""Title _= "la" """, false)]
+    [InlineData("""Title _-= "mb" """, false)]
+    [InlineData("""Title !@= "am" """, true)]
+    [InlineData("""Title !_= "la" """, true)]
+    [InlineData("""Title !_-= "mb" """, true)]
+    public async Task case_sensitive_string_operator_handles_null_property(string valueFilter, bool expectNullPerson)
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var firstName = $"null title {Guid.NewGuid()}";
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithFirstName(firstName)
+            .WithTitle(null)
+            .Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder()
+            .WithFirstName(firstName)
+            .WithTitle("lamb")
+            .Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+
+        var input = $"""{nameof(TestingPerson.FirstName)} == "{firstName}" && {valueFilter}""";
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var people = await queryablePeople.ApplyQueryKitFilter(input).ToListAsync();
+
+        // Assert
+        people.Select(x => x.Id).Should().Equal(expectNullPerson ? fakePersonOne.Id : fakePersonTwo.Id);
+    }
 }

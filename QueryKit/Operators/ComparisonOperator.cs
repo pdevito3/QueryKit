@@ -383,7 +383,10 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
                 return Expression.AndAlso(nullCheck, containsCall);
             }
 
-            return Expression.Call(left, typeof(string).GetMethod("Contains", new[] { typeof(string) })!, right);
+            // null doesn't contain anything, so we need: left != null && left.Contains(right)
+            return Expression.AndAlso(
+                Expression.NotEqual(left, Expression.Constant(null, typeof(string))),
+                Expression.Call(left, typeof(string).GetMethod("Contains", new[] { typeof(string) })!, right));
         }
     }
 
@@ -415,7 +418,10 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
                 return Expression.AndAlso(nullCheck, startsWithCall);
             }
 
-            return Expression.Call(left, typeof(string).GetMethod("StartsWith", new[] { typeof(string) })!, right);
+            // null doesn't start with anything, so we need: left != null && left.StartsWith(right)
+            return Expression.AndAlso(
+                Expression.NotEqual(left, Expression.Constant(null, typeof(string))),
+                Expression.Call(left, typeof(string).GetMethod("StartsWith", new[] { typeof(string) })!, right));
         }
     }
 
@@ -447,7 +453,10 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
                 return Expression.AndAlso(nullCheck, endsWithCall);
             }
 
-            return Expression.Call(left, typeof(string).GetMethod("EndsWith", new[] { typeof(string) })!, right);
+            // null doesn't end with anything, so we need: left != null && left.EndsWith(right)
+            return Expression.AndAlso(
+                Expression.NotEqual(left, Expression.Constant(null, typeof(string))),
+                Expression.Call(left, typeof(string).GetMethod("EndsWith", new[] { typeof(string) })!, right));
         }
     }
 
@@ -479,7 +488,10 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
                 return Expression.OrElse(nullCheck, notContainsCall);
             }
 
-            return Expression.Not(Expression.Call(left, typeof(string).GetMethod("Contains", new[] { typeof(string) })!, right));
+            // null doesn't contain anything, so it should be included: left == null || !left.Contains(right)
+            return Expression.OrElse(
+                Expression.Equal(left, Expression.Constant(null, typeof(string))),
+                Expression.Not(Expression.Call(left, typeof(string).GetMethod("Contains", new[] { typeof(string) })!, right)));
         }
     }
 
@@ -511,7 +523,10 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
                 return Expression.OrElse(nullCheck, notStartsWithCall);
             }
 
-            return Expression.Not(Expression.Call(left, typeof(string).GetMethod("StartsWith", new[] { typeof(string) })!, right));
+            // null doesn't start with anything, so it should be included: left == null || !left.StartsWith(right)
+            return Expression.OrElse(
+                Expression.Equal(left, Expression.Constant(null, typeof(string))),
+                Expression.Not(Expression.Call(left, typeof(string).GetMethod("StartsWith", new[] { typeof(string) })!, right)));
         }
     }
 
@@ -543,7 +558,10 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
                 return Expression.OrElse(nullCheck, notEndsWithCall);
             }
 
-            return Expression.Not(Expression.Call(left, typeof(string).GetMethod("EndsWith", new[] { typeof(string) })!, right));
+            // null doesn't end with anything, so it should be included: left == null || !left.EndsWith(right)
+            return Expression.OrElse(
+                Expression.Equal(left, Expression.Constant(null, typeof(string))),
+                Expression.Not(Expression.Call(left, typeof(string).GetMethod("EndsWith", new[] { typeof(string) })!, right)));
         }
     }
 
