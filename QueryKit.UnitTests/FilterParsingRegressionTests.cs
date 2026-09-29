@@ -46,6 +46,41 @@ public class FilterParsingRegressionTests
         result.Select(x => x.Title).Should().Equal("high");
     }
 
+    [Theory]
+    [InlineData("Title ^^ [\"Warm, with syrup\", \"a\\b\"]", new[] { "Warm, with syrup", "a\\b" })]
+    [InlineData("Title !^^ [\"Warm, with syrup\", \"a\\b\"]", new[] { "Warm", "with syrup" })]
+    [InlineData("Title ^^* [\"WARM, WITH SYRUP\"]", new[] { "Warm, with syrup" })]
+    [InlineData("Title ^^ [\"\"\"Warm, with syrup\"\"\", \"Warm\"]", new[] { "Warm, with syrup", "Warm" })]
+    public void list_value_with_comma_is_one_item(string input, string[] expectedTitles)
+    {
+        var people = new[]
+        {
+            new TestingPerson { Title = "Warm, with syrup" },
+            new TestingPerson { Title = "Warm" },
+            new TestingPerson { Title = "with syrup" },
+            new TestingPerson { Title = "a\\b" },
+        };
+
+        var result = people.AsQueryable().ApplyQueryKitFilter(input).ToList();
+
+        result.Select(x => x.Title).Should().BeEquivalentTo(expectedTitles);
+    }
+
+    [Fact]
+    public void enum_list_value_is_split_into_items()
+    {
+        var people = new[]
+        {
+            new TestingPerson { Title = "jan", BirthMonth = BirthMonthEnum.January },
+            new TestingPerson { Title = "feb", BirthMonth = BirthMonthEnum.February },
+            new TestingPerson { Title = "mar", BirthMonth = BirthMonthEnum.March },
+        };
+
+        var result = people.AsQueryable().ApplyQueryKitFilter("""BirthMonth ^^ ["January", "March"]""").ToList();
+
+        result.Select(x => x.Title).Should().BeEquivalentTo("jan", "mar");
+    }
+
     private static TResult WithCulture<TResult>(string cultureName, Func<TResult> action)
     {
         var originalCulture = CultureInfo.CurrentCulture;
