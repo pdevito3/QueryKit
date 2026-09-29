@@ -394,4 +394,33 @@ public class FilterParsingRegressionTests : TestBase
         // Assert
         people.Select(x => x.Id).Should().Equal(fakePersonTwo.Id, fakePersonOne.Id);
     }
+
+    [Theory]
+    [InlineData("""Tags ^$ "sweet" """, new[] { "pancakes" })]
+    [InlineData("""Tags !^$ "sweet" """, new[] { "stew", "bread", "water" })]
+    [InlineData("""Tags ^$* "WINNER" """, new[] { "bread" })]
+    [InlineData("""Tags !^$* "WINNER" """, new[] { "pancakes", "stew", "water" })]
+    [InlineData("""Tags %^$ "dinner" """, new[] { "stew", "water" })]
+    [InlineData("""Tags %!^$ "dinner" """, new[] { "pancakes", "bread" })]
+    public async Task has_and_does_not_have_return_matching_rows(string input, string[] expectedTitles)
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var prefix = $"tags {Guid.NewGuid()} ";
+        var pancakes = new FakeRecipeBuilder().WithTitle($"{prefix}pancakes").Build().SetTags(["breakfast", "sweet"]);
+        var stew = new FakeRecipeBuilder().WithTitle($"{prefix}stew").Build().SetTags(["dinner"]);
+        var bread = new FakeRecipeBuilder().WithTitle($"{prefix}bread").Build().SetTags(["bread", "Winner"]);
+        var water = new FakeRecipeBuilder().WithTitle($"{prefix}water").Build().SetTags([]);
+        await testingServiceScope.InsertAsync(pancakes, stew, bread, water);
+
+        // Act
+        var queryableRecipes = testingServiceScope.DbContext().Recipes;
+        var recipes = await queryableRecipes
+            .Where(x => x.Title.StartsWith(prefix))
+            .ApplyQueryKitFilter(input)
+            .ToListAsync();
+
+        // Assert
+        recipes.Select(x => x.Title[prefix.Length..]).Should().BeEquivalentTo(expectedTitles);
+    }
 }

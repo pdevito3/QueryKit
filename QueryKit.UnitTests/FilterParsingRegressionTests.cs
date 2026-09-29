@@ -7,6 +7,7 @@ using Configuration;
 using Exceptions;
 using FluentAssertions;
 using Operators;
+using SharedTestingHelper.Fakes.Recipes;
 using WebApiTestProject.Entities;
 using WebApiTestProject.Entities.Recipes;
 
@@ -361,6 +362,28 @@ public class FilterParsingRegressionTests
         var act = () => LogicalOperator.GetByOperatorString("xor");
 
         act.Should().Throw<QueryKitParsingException>().WithMessage("Operator xor is not supported");
+    }
+
+    [Theory]
+    [InlineData("""Tags ^$ "sweet" """, new[] { "pancakes" })]
+    [InlineData("""Tags !^$ "sweet" """, new[] { "stew", "bread", "water" })]
+    [InlineData("""Tags ^$* "WINNER" """, new[] { "bread" })]
+    [InlineData("""Tags !^$* "WINNER" """, new[] { "pancakes", "stew", "water" })]
+    [InlineData("""Tags %^$ "dinner" """, new[] { "stew", "water" })]
+    [InlineData("""Tags %!^$ "dinner" """, new[] { "pancakes", "bread" })]
+    public void has_and_does_not_have_return_matching_rows(string input, string[] expectedTitles)
+    {
+        var recipes = new[]
+        {
+            new FakeRecipeBuilder().WithTitle("pancakes").Build().SetTags(["breakfast", "sweet"]),
+            new FakeRecipeBuilder().WithTitle("stew").Build().SetTags(["dinner"]),
+            new FakeRecipeBuilder().WithTitle("bread").Build().SetTags(["bread", "Winner"]),
+            new FakeRecipeBuilder().WithTitle("water").Build().SetTags([]),
+        };
+
+        var result = recipes.AsQueryable().ApplyQueryKitFilter(input).ToList();
+
+        result.Select(x => x.Title).Should().BeEquivalentTo(expectedTitles);
     }
 
     private static TResult WithCulture<TResult>(string cultureName, Func<TResult> action)

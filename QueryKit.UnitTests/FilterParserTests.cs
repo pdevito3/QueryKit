@@ -740,7 +740,7 @@ public class FilterParserTests
         var input = """Tags !^$ "winner" """;
         var filterExpression = FilterParser.ParseFilter<Recipe>(input);
         filterExpression.ToDisplayString().Should()
-            .Be(""""x => x.Tags.Any(z => (z != "winner"))"""");
+            .Be(""""x => Not(x.Tags.Any(z => (z == "winner")))"""");
     }
 
     [Fact]
@@ -758,7 +758,7 @@ public class FilterParserTests
         var input = """Tags !^$* "winner" """;
         var filterExpression = FilterParser.ParseFilter<Recipe>(input);
         filterExpression.ToDisplayString().Should()
-            .Be(""""x => x.Tags.Any(z => (z.ToLower() != "winner".ToLower()))"""");
+            .Be(""""x => Not(x.Tags.Any(z => (z.ToLower() == "winner".ToLower())))"""");
     }
 
     [Fact]
