@@ -376,4 +376,42 @@ public class PropertyResolverTests
 
         input.Should().Be("""Author.Name == "x" && Title == "y" """);
     }
+
+    [Fact]
+    public void property_path_on_the_right_side_is_compared()
+    {
+        var input = """Title == Author.Name""";
+
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input);
+
+        filterExpression.ToDisplayString().Should().Be("x => (x.Title == x.Author.Name)");
+    }
+
+    [Fact]
+    public void property_path_on_the_right_side_obeys_max_property_depth()
+    {
+        var input = """Title == Author.Name""";
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.MaxPropertyDepth = 0;
+        });
+
+        var act = () => FilterParser.ParseFilter<Recipe>(input, config);
+
+        act.Should().Throw<QueryKitPropertyDepthExceededException>();
+    }
+
+    [Fact]
+    public void prevented_property_path_on_the_right_side_removes_the_clause()
+    {
+        var input = """Title == Author.Name || Directions == "x" """;
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<Recipe>(x => x.Author.Name).PreventFilter();
+        });
+
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
+
+        filterExpression.ToDisplayString().Should().Be("""x => (x.Directions == "x")""");
+    }
 }
