@@ -20,6 +20,8 @@ public static class FilterParser
     /// <returns>Returns a Func delegate that represents a lambda expression that applies the filter defined by the input parameter.</returns>
     public static Expression<Func<T, bool>> ParseFilter<T>(string input, IQueryKitConfiguration? config = null)
     {
+        EnsureWithinParseLimits(input, config);
+
         input = config?.ReplaceLogicalAliases(input) ?? input;
         input = config?.ReplaceComparisonAliases(input) ?? input;
         input = config?.PropertyMappings?.ReplaceAliasesWithPropertyPaths(input) ?? input;
@@ -53,6 +55,39 @@ public static class FilterParser
         return new ParameterReplacer(parameter).Visit(expr);
     }
 
+    // Runs before the grammar sees the input, so a hostile filter (deeply nested parentheses,
+    // or an oversized `in` list) is rejected with a QueryKitException instead of overflowing the
+    // call stack or exhausting CPU and memory during parsing.
+    private static void EnsureWithinParseLimits(string input, IQueryKitConfiguration? config)
+    {
+        var maxLength = config?.MaxInputLength ?? QueryKitSettings.DefaultMaxInputLength;
+        if (input.Length > maxLength)
+        {
+            throw new QueryKitInputLengthExceededException(input.Length, maxLength);
+        }
+
+        // Counts every '(' and ')', including ones inside quoted values. QueryKit supports several
+        // quoting styles (plain and raw-string style with 3+ quote marks), so a scanner that tries
+        // to skip "quoted" spans could misjudge one of them and undercount real nesting. Counting
+        // everything can only reject too much, never too little.
+        var maxDepth = config?.MaxNestingDepth ?? QueryKitSettings.DefaultMaxNestingDepth;
+        var depth = 0;
+        foreach (var c in input)
+        {
+            if (c == '(')
+            {
+                depth++;
+                if (depth > maxDepth)
+                {
+                    throw new QueryKitNestingDepthExceededException(depth, maxDepth);
+                }
+            }
+            else if (c == ')')
+            {
+                depth--;
+            }
+        }
+    }
 
     private static readonly Parser<string> Identifier =
         from first in Parse.Letter.Once()
