@@ -286,17 +286,26 @@ public static class FilterParser
         // Check if this property uses HasConversion
         if (config?.PropertyMappings != null && !string.IsNullOrEmpty(propertyPath))
         {
-            var propertyConfig = config.PropertyMappings.GetPropertyInfoByQueryName(propertyPath);
+            var propertyConfig = config.PropertyMappings.GetPropertyInfo(propertyPath);
             if (propertyConfig?.UsesConversion == true && propertyConfig.ConversionTargetType != null)
             {
                 // For HasConversion properties, try to create a constant of the original type
                 // by constructing it from the string value using a constructor that takes the target type
                 if (propertyConfig.ConversionTargetType == typeof(string))
                 {
-                    var stringCtor = leftExpr.Type.GetConstructor(new[] { typeof(string) });
+                    // A null literal compares against null instead of being passed to the constructor
+                    var underlyingType = Nullable.GetUnderlyingType(leftExpr.Type);
+                    if (right == "null" && (!leftExpr.Type.IsValueType || underlyingType != null))
+                    {
+                        return Expression.Constant(null, leftExpr.Type);
+                    }
+
+                    // Nullable structs are constructed from their underlying type, then converted back
+                    var stringCtor = (underlyingType ?? leftExpr.Type).GetConstructor(new[] { typeof(string) });
                     if (stringCtor != null)
                     {
-                        return Expression.New(stringCtor, Expression.Constant(right, typeof(string)));
+                        Expression constructed = Expression.New(stringCtor, Expression.Constant(right, typeof(string)));
+                        return underlyingType == null ? constructed : Expression.Convert(constructed, leftExpr.Type);
                     }
                 }
                 
@@ -677,7 +686,7 @@ public static class FilterParser
                     if (temp.op.IsStringComparisonOperator())
                     {
                         var guidStringExpr = HandleGuidConversion(temp.leftExpr, temp.leftExpr.Type);
-                        return temp.op.GetExpression<T>(guidStringExpr, CreateRightExpr(temp.leftExpr, temp.right, temp.op, config, guidPropertyPath),
+                        return temp.op.GetExpression<T>(guidStringExpr, CreateRightExpr(guidStringExpr, temp.right, temp.op, config, guidPropertyPath),
                             config?.DbContextType, ResolveCaseMode(guidPropertyPath, config));
                     }
 
@@ -929,7 +938,7 @@ public static class FilterParser
             }
 
             // Check if this property uses HasConversion
-            var currentPropertyConfig = config?.PropertyMappings?.GetPropertyInfoByQueryName(fullPropPath);
+            var currentPropertyConfig = config?.PropertyMappings?.GetPropertyInfo(fullPropPath);
             if (currentPropertyConfig?.UsesConversion == true)
             {
                 // For HasConversion properties, return the property expression as-is
@@ -943,7 +952,7 @@ public static class FilterParser
                 nestedMemberExpression.Expression is MemberExpression parentExpression)
             {
                 var parentPropertyPath = GetPropertyPath(parentExpression, parameter);
-                var parentPropertyConfig = config?.PropertyMappings?.GetPropertyInfoByQueryName(parentPropertyPath);
+                var parentPropertyConfig = config?.PropertyMappings?.GetPropertyInfo(parentPropertyPath);
                 
                 if (parentPropertyConfig?.UsesConversion == true)
                 {
@@ -1145,6 +1154,11 @@ public static class FilterParser
                         }
                     }
 
+                    // Use the resolved member path for HasConversion support, since the typed path can differ in casing
+                    var resolvedPropPath = leftExpr is MemberExpression listMemberExpr
+                        ? GetPropertyPath(listMemberExpr, parameter)
+                        : fullPropPath;
+
                     // Handle GUID conversion for string operators
                     if ((leftExpr.Type == typeof(Guid) || leftExpr.Type == typeof(Guid?)) &&
                         temp.op.IsStringComparisonOperator())
@@ -1152,7 +1166,7 @@ public static class FilterParser
                         leftExpr = HandleGuidConversion(leftExpr, leftExpr.Type);
                     }
 
-                    var rightExpr = CreateRightExpr(leftExpr, temp.right, temp.op, config, fullPropPath);
+                    var rightExpr = CreateRightExpr(leftExpr, temp.right, temp.op, config, resolvedPropPath);
                     var comparison = temp.op.GetExpression<T>(leftExpr, rightExpr, config?.DbContextType, ResolveCaseMode(fullPropPath, config));
 
                     // Combine with AND for negative operators, OR for positive operators
