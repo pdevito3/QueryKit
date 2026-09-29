@@ -754,6 +754,15 @@ public class FilterParserTests
     }
 
     [Fact]
+    public void has_type_throws_correct_message_on_non_collection_property()
+    {
+        var input = """Title ^$ "winner" """;
+        var act = () => FilterParser.ParseFilter<Recipe>(input);
+        act.Should().Throw<QueryKitParsingException>()
+            .WithMessage("HasType is only supported for collections");
+    }
+
+    [Fact]
     public void can_throw_exception_when_invalid_enum_value()
     {
         var input = $"""BirthMonth == invalid""";
