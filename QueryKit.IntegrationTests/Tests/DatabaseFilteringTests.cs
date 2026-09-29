@@ -735,7 +735,7 @@ public class DatabaseFilteringTests() : TestBase
         var fakePersonTwo = new FakeTestingPersonBuilder().Build();
         await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
         
-        var input = $"""(id @=* "9edb")""";
+        var input = $"""(id @=* "9edb-a3ec")""";
 
         // Act
         var queryablePeople = testingServiceScope.DbContext().People;
