@@ -12,7 +12,7 @@ internal static class QueryKitConfigurationExtensions
         foreach (var comparisonAliasMatch in aliasedOperators)
         {
             var escapedAlias = Regex.Escape(comparisonAliasMatch.Alias);
-            var regex = new Regex($@"(?<=\s|^){escapedAlias}(?=\s|$)", RegexOptions.IgnoreCase);
+            var regex = AliasRegexCache.Get($@"(?<=\s|^){escapedAlias}(?=\s|$)");
             input = regex.Replace(input, comparisonAliasMatch.Operator);
         }
         
@@ -25,7 +25,7 @@ internal static class QueryKitConfigurationExtensions
         foreach (var logicalAliasMatch in aliasedOperators)
         {
             var escapedAlias = Regex.Escape(logicalAliasMatch.Alias);
-            var regex = new Regex($@"(?<=\s|^){escapedAlias}(?=\s|$)", RegexOptions.IgnoreCase);
+            var regex = AliasRegexCache.Get($@"(?<=\s|^){escapedAlias}(?=\s|$)");
             input = regex.Replace(input, logicalAliasMatch.Operator);
         }
         

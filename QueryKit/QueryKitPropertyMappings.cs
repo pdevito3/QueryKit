@@ -137,7 +137,7 @@ public class QueryKitPropertyMappings
                     // Use regular expression to isolate left side of the expression. Query names and
                     // operators are matched literally, so escape any regex metacharacters they contain
                     // (e.g. the `^` in `^^` would otherwise be read as a start-of-line anchor).
-                    var regex = new Regex($@"\b{Regex.Escape(queryKitPropertyInfo.QueryName!)}\b(?=\s*{Regex.Escape(op)})", RegexOptions.IgnoreCase);
+                    var regex = AliasRegexCache.Get($@"\b{Regex.Escape(queryKitPropertyInfo.QueryName!)}\b(?=\s*{Regex.Escape(op)})");
 
                     if (queryKitPropertyInfo is { CanSort: false, CanFilter: false} && regex.IsMatch(input))
                     {

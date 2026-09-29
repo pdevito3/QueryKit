@@ -59,64 +59,146 @@ public static class FilterParser
         from rest in Parse.LetterOrDigit.XOr(Parse.Char('_')).Many()
         select new string(first.Concat(rest).ToArray());
 
-    private static Parser<IEnumerable<IEnumerable<string>>> PropertyListParser =>
+    // Each parser is built once. A parser in a second or later `from` clause is built in a lambda
+    // that runs on each parse, so keep those parsers in fields too. A field can only use fields that
+    // are declared above it, so the recursive arithmetic parser goes through Parse.Ref.
+    private static readonly Parser<IEnumerable<IEnumerable<string>>> PropertyListParser =
         from openParen in Parse.Char('(')
         from properties in Identifier.DelimitedBy(Parse.Char('.')).Token()
                                     .DelimitedBy(Parse.Char(',').Token())
         from closeParen in Parse.Char(')')
         select properties;
-    
-    private static Parser<ComparisonOperator> ComparisonOperatorParser =>
+
+    private static readonly Parser<string> ComparisonOperatorTextParser =
+        Parse.String(ComparisonOperator.EqualsOperator().Operator()).Text()
+            .Or(Parse.String(ComparisonOperator.NotEqualsOperator().Operator()).Text())
+            .Or(Parse.String(ComparisonOperator.GreaterThanOrEqualOperator().Operator()).Text())
+            .Or(Parse.String(ComparisonOperator.LessThanOrEqualOperator().Operator()).Text())
+            .Or(Parse.String(ComparisonOperator.GreaterThanOperator().Operator()).Text())
+            .Or(Parse.String(ComparisonOperator.LessThanOperator().Operator()).Text())
+            .Or(Parse.String(ComparisonOperator.ContainsOperator().Operator()).Text())
+            .Or(Parse.String(ComparisonOperator.StartsWithOperator().Operator()).Text())
+            .Or(Parse.String(ComparisonOperator.EndsWithOperator().Operator()).Text())
+            .Or(Parse.String(ComparisonOperator.NotContainsOperator().Operator()).Text())
+            .Or(Parse.String(ComparisonOperator.NotStartsWithOperator().Operator()).Text())
+            .Or(Parse.String(ComparisonOperator.NotEndsWithOperator().Operator()).Text())
+            .Or(Parse.String(ComparisonOperator.InOperator().Operator()).Text())
+            .Or(Parse.String(ComparisonOperator.NotInOperator().Operator()).Text())
+            .Or(Parse.String(ComparisonOperator.SoundsLikeOperator().Operator()).Text())
+            .Or(Parse.String(ComparisonOperator.DoesNotSoundLikeOperator().Operator()).Text())
+            .Or(Parse.String(ComparisonOperator.HasCountEqualToOperator().Operator()).Text())
+            .Or(Parse.String(ComparisonOperator.HasCountNotEqualToOperator().Operator()).Text())
+            .Or(Parse.String(ComparisonOperator.HasCountGreaterThanOrEqualOperator().Operator()).Text())
+            .Or(Parse.String(ComparisonOperator.HasCountLessThanOrEqualOperator().Operator()).Text())
+            .Or(Parse.String(ComparisonOperator.HasCountGreaterThanOperator().Operator()).Text())
+            .Or(Parse.String(ComparisonOperator.HasCountLessThanOperator().Operator()).Text())
+            .Or(Parse.String(ComparisonOperator.HasOperator().Operator()).Text())
+            .Or(Parse.String(ComparisonOperator.DoesNotHaveOperator().Operator()).Text());
+
+    private static readonly Parser<ComparisonOperator> ComparisonOperatorParser =
         Parse.Char(ComparisonOperator.AllPrefix).Optional().Select(opt => opt.IsDefined)
             .Then(hasHash => 
-                Parse.String(ComparisonOperator.EqualsOperator().Operator()).Text()
-                    .Or(Parse.String(ComparisonOperator.NotEqualsOperator().Operator()).Text())
-                    .Or(Parse.String(ComparisonOperator.GreaterThanOrEqualOperator().Operator()).Text())
-                    .Or(Parse.String(ComparisonOperator.LessThanOrEqualOperator().Operator()).Text())
-                    .Or(Parse.String(ComparisonOperator.GreaterThanOperator().Operator()).Text())
-                    .Or(Parse.String(ComparisonOperator.LessThanOperator().Operator()).Text())
-                    .Or(Parse.String(ComparisonOperator.ContainsOperator().Operator()).Text())
-                    .Or(Parse.String(ComparisonOperator.StartsWithOperator().Operator()).Text())
-                    .Or(Parse.String(ComparisonOperator.EndsWithOperator().Operator()).Text())
-                    .Or(Parse.String(ComparisonOperator.NotContainsOperator().Operator()).Text())
-                    .Or(Parse.String(ComparisonOperator.NotStartsWithOperator().Operator()).Text())
-                    .Or(Parse.String(ComparisonOperator.NotEndsWithOperator().Operator()).Text())
-                    .Or(Parse.String(ComparisonOperator.InOperator().Operator()).Text())
-                    .Or(Parse.String(ComparisonOperator.NotInOperator().Operator()).Text())
-                    .Or(Parse.String(ComparisonOperator.SoundsLikeOperator().Operator()).Text())
-                    .Or(Parse.String(ComparisonOperator.DoesNotSoundLikeOperator().Operator()).Text())
-                    .Or(Parse.String(ComparisonOperator.HasCountEqualToOperator().Operator()).Text())
-                    .Or(Parse.String(ComparisonOperator.HasCountNotEqualToOperator().Operator()).Text())
-                    .Or(Parse.String(ComparisonOperator.HasCountGreaterThanOrEqualOperator().Operator()).Text())
-                    .Or(Parse.String(ComparisonOperator.HasCountLessThanOrEqualOperator().Operator()).Text())
-                    .Or(Parse.String(ComparisonOperator.HasCountGreaterThanOperator().Operator()).Text())
-                    .Or(Parse.String(ComparisonOperator.HasCountLessThanOperator().Operator()).Text())
-                    .Or(Parse.String(ComparisonOperator.HasOperator().Operator()).Text())
-                    .Or(Parse.String(ComparisonOperator.DoesNotHaveOperator().Operator()).Text())
+                ComparisonOperatorTextParser
                     .SelectMany(op => Parse.Char(ComparisonOperator.CaseSensitiveAppendix).Optional(), (op, caseInsensitive) => new { op, caseInsensitive, hasHash })
                     .Select(x => ComparisonOperator.GetByOperatorString(x.op, x.caseInsensitive.IsDefined, x.hasHash)));
 
     private static PropertyInfo? GetPropertyInfo(Type type, string propertyName)
         => type.GetProperty(propertyName, BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance);
 
+    private static readonly Parser<string> LogicalOperatorTextParser =
+        Parse.String(LogicalOperator.AndOperator.Operator()).Text().Or(Parse.String(LogicalOperator.OrOperator.Operator()).Text());
+
+    public static Parser<LogicalOperator> LogicalOperatorParser { get; } =
+        from leadingSpaces in Parse.WhiteSpace.Many()
+        from op in LogicalOperatorTextParser
+        from trailingSpaces in Parse.WhiteSpace.Many()
+        select LogicalOperator.GetByOperatorString(op);
+    
+    private static readonly Parser<string> DoubleQuoteParser
+        = Parse.Char('"').Then(_ => Parse.AnyChar.Except(Parse.Char('"')).Many().Text().Then(innerValue => Parse.Char('"').Return(innerValue)));
+
+    /* ISO 8601
+     * DateTimeOffset (with offset): yyyy-MM-ddTHH:mm:ss.ffffffzzz
+     * DateTimeOffset (in UTC): yyyy-MM-ddTHH:mm:ss.ffffffZ
+     * DateTime (no offset information): yyyy-MM-ddTHH:mm:ss.ffffff
+     * DateTime (in UTC): yyyy-MM-ddTHH:mm:ss.ffffffZ
+     */
+    private static readonly Parser<string> TimeFormatParser = Parse.Regex(@"\d{2}:\d{2}:\d{2}").Text();
+    private static readonly Parser<string> DateTimeTimeParser = Parse.Regex(@"T\d{2}:\d{2}:\d{2}").Text().Optional().Select(x => x.GetOrElse(""));
+    private static readonly Parser<string> DateTimeZoneParser = Parse.Regex(@"Z|[+-]\d{2}(:\d{2})?").Text().Optional().Select(x => x.GetOrElse(""));
+    private static readonly Parser<string> DateTimeMicrosParser = Parse.Regex(@"\.\d{1,6}").Text().Optional().Select(x => x.GetOrElse(""));
+    private static readonly Parser<string> DateTimeFormatParser =
+        from dateFormat in Parse.Regex(@"\d{4}-\d{2}-\d{2}").Text()
+        from timeFormat in DateTimeTimeParser
+        from timeZone in DateTimeZoneParser
+        from micros in DateTimeMicrosParser
+        select dateFormat + timeFormat + micros + timeZone;
+
+    private static readonly Parser<string> NumberParser =
+        from sign in Parse.Char('-').Optional().Select(x => x.IsDefined ? "-" : "")
+        from number in Parse.Decimal
+        select sign + number;
+
+    private static readonly Parser<string> GuidFormatParser = Parse.Regex(@"[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}").Text();
+    
+    private static readonly Parser<string> RawStringLiteralParser =
+        from openingQuotes in Parse.Regex("\"{3,}").Text()
+        let count = openingQuotes.Length
+        from content in Parse.AnyChar.Except(Parse.Char('"').Repeat(count)).Many().Text()
+        from closingQuotes in Parse.Char('"').Repeat(count).Text()
+        select content;
+
+    // Carries whether the right-hand value was written as a quoted string literal (e.g. "id").
+    // This is needed to disambiguate a literal from a bare property reference (property-to-property
+    // comparison) once the surrounding quotes have been stripped, since both are otherwise identical strings.
+    private readonly record struct RightSideValue(string Value, bool IsQuotedLiteral);
+
+    private static readonly Parser<IEnumerable<string>> SquareBracketValuesParser =
+        Parse.String("null").Text()
+            .Or(GuidFormatParser)
+            .Or(DateTimeFormatParser)
+            .Or(TimeFormatParser)
+            .Or(NumberParser)
+            .Or(RawStringLiteralParser.Or(DoubleQuoteParser))
+            .Or(Identifier)
+            .DelimitedBy(Parse.Char(',').Token());
+
+    private static readonly Parser<string> SquareBracketParser =
+        from openingBracket in Parse.Char('[')
+        from content in SquareBracketValuesParser
+        from closingBracket in Parse.Char(']')
+        select "[" + string.Join(",", content) + "]";
+
+    private static readonly Parser<RightSideValue> RightSideValueChoiceParser =
+        Parse.String("null").Text().Select(v => new RightSideValue(v, false))
+            .Or(GuidFormatParser.Select(v => new RightSideValue(v, false)))
+            .XOr(DateTimeFormatParser.Select(v => new RightSideValue(v, false)))
+            .XOr(TimeFormatParser.Select(v => new RightSideValue(v, false)))
+            .XOr(NumberParser.Select(v => new RightSideValue(v, false)))
+            .XOr((RawStringLiteralParser.Or(DoubleQuoteParser)).Select(v => new RightSideValue(v, true)))
+            .XOr(SquareBracketParser.Select(v => new RightSideValue(v, false)))
+            .XOr(Identifier.Select(v => new RightSideValue(v, false))); // Keep this last to try property paths only if nothing else matches
+
+    private static readonly Parser<RightSideValue> RightSideValueParser =
+        from atSign in Parse.Char('@').Optional()
+        from leadingSpaces in Parse.WhiteSpace.Many()
+        from value in RightSideValueChoiceParser
+        from trailingSpaces in Parse.WhiteSpace.Many()
+        select atSign.IsDefined ? value with { Value = "@" + value.Value } : value;
+
     // Arithmetic expression parsers
-    private static Parser<ArithmeticOperator> ArithmeticOperatorParser =>
+    private static readonly Parser<ArithmeticOperator> ArithmeticOperatorParser =
         Parse.Char('+').Return(ArithmeticOperator.Add)
             .Or(Parse.Char('-').Return(ArithmeticOperator.Subtract))
             .Or(Parse.Char('*').Return(ArithmeticOperator.Multiply))
             .Or(Parse.Char('/').Return(ArithmeticOperator.Divide))
             .Or(Parse.Char('%').Return(ArithmeticOperator.Modulo));
 
-    private static Parser<ArithmeticExpression> ArithmeticTermParser =>
-        PropertyArithmeticParser
-            .Or(LiteralArithmeticParser)
-            .Or(Parse.Ref(() => ArithmeticExpressionParser).Contained(Parse.Char('('), Parse.Char(')')).Select(expr => new GroupedArithmeticExpression(expr)));
-
-    private static Parser<ArithmeticExpression> PropertyArithmeticParser =>
+    private static readonly Parser<ArithmeticExpression> PropertyArithmeticParser =
         Identifier.DelimitedBy(Parse.Char('.'))
             .Select(props => new PropertyArithmeticExpression(string.Join(".", props)));
 
-    private static Parser<ArithmeticExpression> LiteralArithmeticParser =>
+    private static readonly Parser<ArithmeticExpression> LiteralArithmeticParser =
         NumberParser.Select(numStr =>
         {
             if (int.TryParse(numStr, NumberStyles.Integer, CultureInfo.InvariantCulture, out var intVal))
@@ -129,86 +211,22 @@ public static class FilterParser
             throw new InvalidOperationException($"Cannot parse number: {numStr}");
         });
 
-    private static Parser<ArithmeticExpression> ArithmeticFactorParser =>
+    private static readonly Parser<ArithmeticExpression> ArithmeticTermParser =
+        PropertyArithmeticParser
+            .Or(LiteralArithmeticParser)
+            .Or(Parse.Ref(() => ArithmeticExpressionParser).Contained(Parse.Char('('), Parse.Char(')')).Select(expr => new GroupedArithmeticExpression(expr)));
+
+    private static readonly Parser<ArithmeticExpression> ArithmeticFactorParser =
         Parse.ChainOperator(
             ArithmeticOperatorParser.Where(op => op.Precedence == 2).Token(), // *, /, %
             ArithmeticTermParser.Token(),
             (op, left, right) => new BinaryArithmeticExpression(left, op, right));
 
-    private static Parser<ArithmeticExpression> ArithmeticExpressionParser =>
+    private static readonly Parser<ArithmeticExpression> ArithmeticExpressionParser =
         Parse.ChainOperator(
             ArithmeticOperatorParser.Where(op => op.Precedence == 1).Token(), // +, -
             ArithmeticFactorParser.Token(),
             (op, left, right) => new BinaryArithmeticExpression(left, op, right));
-
-    public static Parser<LogicalOperator> LogicalOperatorParser =>
-        from leadingSpaces in Parse.WhiteSpace.Many()
-        from op in Parse.String(LogicalOperator.AndOperator.Operator()).Text().Or(Parse.String(LogicalOperator.OrOperator.Operator()).Text())
-        from trailingSpaces in Parse.WhiteSpace.Many()
-        select LogicalOperator.GetByOperatorString(op);
-    
-    private static Parser<string> DoubleQuoteParser
-        => Parse.Char('"').Then(_ => Parse.AnyChar.Except(Parse.Char('"')).Many().Text().Then(innerValue => Parse.Char('"').Return(innerValue)));
-
-    /* ISO 8601
-     * DateTimeOffset (with offset): yyyy-MM-ddTHH:mm:ss.ffffffzzz
-     * DateTimeOffset (in UTC): yyyy-MM-ddTHH:mm:ss.ffffffZ
-     * DateTime (no offset information): yyyy-MM-ddTHH:mm:ss.ffffff
-     * DateTime (in UTC): yyyy-MM-ddTHH:mm:ss.ffffffZ
-     */
-    private static Parser<string> TimeFormatParser => Parse.Regex(@"\d{2}:\d{2}:\d{2}").Text();
-    private static Parser<string> DateTimeFormatParser => 
-        from dateFormat in Parse.Regex(@"\d{4}-\d{2}-\d{2}").Text()
-        from timeFormat in Parse.Regex(@"T\d{2}:\d{2}:\d{2}").Text().Optional().Select(x => x.GetOrElse(""))
-        from timeZone in Parse.Regex(@"Z|[+-]\d{2}(:\d{2})?").Text().Optional().Select(x => x.GetOrElse(""))
-        from micros in Parse.Regex(@"\.\d{1,6}").Text().Optional().Select(x => x.GetOrElse(""))
-        select dateFormat + timeFormat + micros + timeZone;
-
-    private static Parser<string> NumberParser =>
-        from sign in Parse.Char('-').Optional().Select(x => x.IsDefined ? "-" : "")
-        from number in Parse.Decimal
-        select sign + number;
-
-    private static Parser<string> GuidFormatParser => Parse.Regex(@"[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}").Text();
-    
-    private static Parser<string> RawStringLiteralParser =>
-        from openingQuotes in Parse.Regex("\"{3,}").Text()
-        let count = openingQuotes.Length
-        from content in Parse.AnyChar.Except(Parse.Char('"').Repeat(count)).Many().Text()
-        from closingQuotes in Parse.Char('"').Repeat(count).Text()
-        select content;
-
-    // Carries whether the right-hand value was written as a quoted string literal (e.g. "id").
-    // This is needed to disambiguate a literal from a bare property reference (property-to-property
-    // comparison) once the surrounding quotes have been stripped, since both are otherwise identical strings.
-    private readonly record struct RightSideValue(string Value, bool IsQuotedLiteral);
-
-    private static Parser<RightSideValue> RightSideValueParser =>
-        from atSign in Parse.Char('@').Optional()
-        from leadingSpaces in Parse.WhiteSpace.Many()
-        from value in Parse.String("null").Text().Select(v => new RightSideValue(v, false))
-            .Or(GuidFormatParser.Select(v => new RightSideValue(v, false)))
-            .XOr(DateTimeFormatParser.Select(v => new RightSideValue(v, false)))
-            .XOr(TimeFormatParser.Select(v => new RightSideValue(v, false)))
-            .XOr(NumberParser.Select(v => new RightSideValue(v, false)))
-            .XOr((RawStringLiteralParser.Or(DoubleQuoteParser)).Select(v => new RightSideValue(v, true)))
-            .XOr(SquareBracketParser.Select(v => new RightSideValue(v, false)))
-            .XOr(Identifier.Select(v => new RightSideValue(v, false))) // Keep this last to try property paths only if nothing else matches
-        from trailingSpaces in Parse.WhiteSpace.Many()
-        select atSign.IsDefined ? value with { Value = "@" + value.Value } : value;
-    
-    private static Parser<string> SquareBracketParser =>
-        from openingBracket in Parse.Char('[')
-        from content in Parse.String("null").Text()
-            .Or(GuidFormatParser)
-            .Or(DateTimeFormatParser)
-            .Or(TimeFormatParser)
-            .Or(NumberParser)
-            .Or(RawStringLiteralParser.Or(DoubleQuoteParser))
-            .Or(Identifier)
-            .DelimitedBy(Parse.Char(',').Token())
-        from closingBracket in Parse.Char(']')
-        select "[" + string.Join(",", content) + "]";
 
     private static readonly Dictionary<Type, Func<string, object>> TypeConversionFunctions = new()
     {
