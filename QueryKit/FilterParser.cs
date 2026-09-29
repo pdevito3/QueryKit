@@ -662,39 +662,32 @@ public static class FilterParser
         // Try arithmetic comparison (e.g., (price + tax) > 100)
         var arithmeticComparison = ArithmeticComparisonExprParser<T>(parameter, config);
 
-        var regularComparison = CreateLeftExprParser(parameter, config)
-            .SelectMany(leftExpr => comparisonOperatorParser, (leftExpr, op) => new { leftExpr, op })
-            .SelectMany(temp => rightSideValueParser, (temp, rightValue) => new { temp.leftExpr, temp.op, right = rightValue.Value, rightIsQuotedLiteral = rightValue.IsQuotedLiteral })
+        var regularComparison = CreateLeftExprParser(parameter.Type, config)
+            .SelectMany(reference => comparisonOperatorParser, (reference, op) => new { reference, op })
+            .SelectMany(temp => rightSideValueParser, (temp, rightValue) => new { temp.reference, temp.op, right = rightValue.Value, rightIsQuotedLiteral = rightValue.IsQuotedLiteral })
             .Select(temp =>
             {
-                if (temp.leftExpr == null)
+                if (temp.reference.Kind == PropertyReferenceKind.CustomOperation)
                 {
-                    throw new InvalidOperationException("Left expression cannot be null");
+                    return CreateCustomOperationExpression<T>(parameter, temp.reference.Mapping!, temp.op, temp.right);
                 }
 
-                if (temp.leftExpr.NodeType == ExpressionType.Constant && true.Equals(((ConstantExpression)temp.leftExpr).Value))
+                if (temp.reference.Kind == PropertyReferenceKind.Unknown)
                 {
                     return Expression.Equal(Expression.Constant(true), Expression.Constant(true));
                 }
 
-                // Check if this is a custom operation placeholder
-                if (temp.leftExpr.NodeType == ExpressionType.Constant &&
-                    ((ConstantExpression)temp.leftExpr).Value is string constantValue &&
-                    constantValue.StartsWith("CustomOperation:"))
+                var leftExpr = CreateLeftExpr(parameter, temp.reference, config);
+                if (leftExpr.NodeType == ExpressionType.Constant && true.Equals(((ConstantExpression)leftExpr).Value))
                 {
-                    var operationName = constantValue.Substring("CustomOperation:".Length);
-                    var customOperationInfo = config?.PropertyMappings?.GetCustomOperationInfoByQueryName(operationName);
-                    if (customOperationInfo?.CustomOperation != null)
-                    {
-                        return CreateCustomOperationExpression<T>(parameter, customOperationInfo, temp.op, temp.right);
-                    }
+                    return Expression.Equal(Expression.Constant(true), Expression.Constant(true));
                 }
-                
-                if (temp.leftExpr.Type == typeof(Guid) || temp.leftExpr.Type == typeof(Guid?))
+
+                if (leftExpr.Type == typeof(Guid) || leftExpr.Type == typeof(Guid?))
                 {
                     // Try to determine the property path for HasConversion support
                     string? guidPropertyPath = null;
-                    if (temp.leftExpr is MemberExpression guidMemberExpr)
+                    if (leftExpr is MemberExpression guidMemberExpr)
                     {
                         guidPropertyPath = GetPropertyPath(guidMemberExpr, parameter);
                     }
@@ -703,13 +696,13 @@ public static class FilterParser
                     // For equality/comparison operators, keep as GUID for better EF Core translation
                     if (temp.op.IsStringComparisonOperator())
                     {
-                        var guidStringExpr = HandleGuidConversion(temp.leftExpr, temp.leftExpr.Type);
+                        var guidStringExpr = HandleGuidConversion(leftExpr, leftExpr.Type);
                         return temp.op.GetExpression<T>(guidStringExpr, CreateRightExpr(guidStringExpr, temp.right, temp.op, config, guidPropertyPath),
                             config?.DbContextType, ResolveCaseMode(guidPropertyPath, config));
                     }
 
                     // For non-string operators, use direct GUID comparison
-                    return temp.op.GetExpression<T>(temp.leftExpr, CreateRightExpr(temp.leftExpr, temp.right, temp.op, config, guidPropertyPath),
+                    return temp.op.GetExpression<T>(leftExpr, CreateRightExpr(leftExpr, temp.right, temp.op, config, guidPropertyPath),
                         config?.DbContextType);
                 }
 
@@ -722,12 +715,12 @@ public static class FilterParser
                     {
                         // Handle GUID conversion for property-to-property comparisons
                         // Only convert to string for string operators
-                        var leftExpr = temp.leftExpr;
+                        var comparedLeftExpr = leftExpr;
                         if (temp.op.IsStringComparisonOperator())
                         {
-                            if (leftExpr.Type == typeof(Guid) || leftExpr.Type == typeof(Guid?))
+                            if (comparedLeftExpr.Type == typeof(Guid) || comparedLeftExpr.Type == typeof(Guid?))
                             {
-                                leftExpr = HandleGuidConversion(leftExpr, leftExpr.Type);
+                                comparedLeftExpr = HandleGuidConversion(comparedLeftExpr, comparedLeftExpr.Type);
                             }
                             if (rightPropertyExpr.Type == typeof(Guid) || rightPropertyExpr.Type == typeof(Guid?))
                             {
@@ -736,20 +729,20 @@ public static class FilterParser
                         }
 
                         // Ensure compatible types for property-to-property comparison
-                        var (leftCompatible, rightCompatible) = EnsureCompatibleTypes(leftExpr, rightPropertyExpr);
-                        var propToProptPath = temp.leftExpr is MemberExpression ptpMemberExpr ? GetPropertyPath(ptpMemberExpr, parameter) : null;
+                        var (leftCompatible, rightCompatible) = EnsureCompatibleTypes(comparedLeftExpr, rightPropertyExpr);
+                        var propToProptPath = leftExpr is MemberExpression ptpMemberExpr ? GetPropertyPath(ptpMemberExpr, parameter) : null;
                         return temp.op.GetExpression<T>(leftCompatible, rightCompatible, config?.DbContextType, ResolveCaseMode(propToProptPath, config));
                     }
                 }
 
                 // Try to determine the property path for HasConversion support
                 string? propertyPath = null;
-                if (temp.leftExpr is MemberExpression memberExpr)
+                if (leftExpr is MemberExpression memberExpr)
                 {
                     propertyPath = GetPropertyPath(memberExpr, parameter);
                 }
 
-                var leftExprForComparison = temp.leftExpr;
+                var leftExprForComparison = leftExpr;
 
                 // If the left expression is a conditional with Object type, convert it to the proper type
                 if (leftExprForComparison.Type == typeof(object))
@@ -834,153 +827,58 @@ public static class FilterParser
         return propertyListComparison.Or(arithmeticComparison).Or(regularComparison);
     }
 
-    private static Parser<Expression?>? CreateLeftExprParser(ParameterExpression parameter, IQueryKitConfiguration? config)
+    private static Parser<PropertyReference> CreateLeftExprParser(Type entityType, IQueryKitConfiguration? config)
     {
         var leftIdentifierParser = Identifier.DelimitedBy(Parse.Char('.')).Token();
 
-        return leftIdentifierParser?.Select(left =>
+        return leftIdentifierParser.Select(left =>
         {
-            var leftList = left.ToList();
-            var fullPropPath = string.Join(".", leftList);
-
-            // Validate property depth before processing
-            config?.ValidatePropertyDepth(fullPropPath);
-            var propertyExpression = leftList?.Aggregate((Expression)parameter, (expr, propName) =>
+            var reference = PropertyResolver.Resolve(entityType, string.Join(".", left), config);
+            if (reference.Kind == PropertyReferenceKind.Unknown && config?.AllowUnknownProperties != true)
             {
-                if (expr is MemberExpression member)
-                {
-                    if (IsEnumerable(member.Type))
-                    {
-                        var genericArgType = member.Type.GetGenericArguments()[0];
-                        var propertyType = genericArgType.GetProperty(propName)!.PropertyType;
-
-                        if (IsEnumerable(propertyType))
-                        {
-                            propertyType = propertyType.GetGenericArguments()[0];
-
-                            var linqMethod = "SelectMany";
-                            var selectMethod = typeof(Enumerable).GetMethods()
-                                .First(m => m.Name ==  linqMethod && m.GetParameters().Length == 2)
-                                .MakeGenericMethod(genericArgType, propertyType);
-
-                            var innerParameter = Expression.Parameter(genericArgType, "y");
-                            var propertyInfoForMethod = GetPropertyInfo(genericArgType, propName);
-                            Expression lambdaBody = Expression.PropertyOrField(innerParameter, propertyInfoForMethod!.Name);
-
-                            // Ensure the lambda body returns IEnumerable<T> for SelectMany
-                            var expectedType = typeof(IEnumerable<>).MakeGenericType(propertyType);
-                            if (lambdaBody.Type != expectedType && !expectedType.IsAssignableFrom(lambdaBody.Type))
-                            {
-                                // Convert to IEnumerable<T> if needed (e.g., List<T> to IEnumerable<T>)
-                                lambdaBody = Expression.Convert(lambdaBody, expectedType);
-                            }
-
-                            // Create lambda with the correct return type
-                            var lambdaType = typeof(Func<,>).MakeGenericType(genericArgType, expectedType);
-                            lambdaBody = Expression.Lambda(lambdaType, lambdaBody, innerParameter);
-
-                            return Expression.Call(selectMethod, member, lambdaBody);
-                        }
-                        else
-                        {
-                            var selectMethod = typeof(Enumerable).GetMethods()
-                                .First(m => m.Name == "Select" && m.GetParameters().Length == 2)
-                                .MakeGenericMethod(genericArgType, genericArgType.GetProperty(propName)!.PropertyType);
-
-                            var innerParameter = Expression.Parameter(genericArgType, "y");
-                            var propertyInfoForMethod = GetPropertyInfo(genericArgType, propName);
-                            var lambdaBody = Expression.PropertyOrField(innerParameter, propertyInfoForMethod!.Name);
-                            var selectLambda = Expression.Lambda(lambdaBody, innerParameter);
-                            var selectResult = Expression.Call(null, selectMethod, member, selectLambda);
-
-                            return HandleGuidConversion(selectResult, propertyType, "Select");
-                        }
-                    }
-                }
-
-                if (expr is MethodCallExpression call)
-                {
-                    var innerGenericType = GetInnerGenericType(call.Method.ReturnType);
-                    var propertyInfoForMethod = GetPropertyInfo(innerGenericType!, propName);
-
-                    var propertyType = propertyInfoForMethod!.PropertyType;
-                    var linqMethod = IsEnumerable(propertyType) ? "SelectMany" : "Select";
-                    var resultType = IsEnumerable(propertyType) ? propertyType.GetGenericArguments()[0] : propertyType;
-
-                    var selectMethod = typeof(Enumerable).GetMethods()
-                        .First(m => m.Name == linqMethod && m.GetParameters().Length == 2)
-                        .MakeGenericMethod(innerGenericType!, resultType);
-
-                    var innerParameter = Expression.Parameter(innerGenericType!, "y");
-                    var lambdaBody = Expression.PropertyOrField(innerParameter, propertyInfoForMethod.Name);
-                    var selectLambda = Expression.Lambda(lambdaBody, innerParameter);
-
-                    return Expression.Call(selectMethod, expr, selectLambda);
-                }
-
-                var propertyInfo = GetPropertyInfo(expr.Type, propName);
-                var actualPropertyName = propertyInfo?.Name ?? propName;
-                try
-                {
-                    return Expression.PropertyOrField(expr, actualPropertyName);
-                }
-                catch(ArgumentException)
-                {
-                    // Check for custom operations first
-                    var customOperationInfo = config?.PropertyMappings?.GetCustomOperationInfoByQueryName(fullPropPath);
-                    if (customOperationInfo?.CustomOperation != null)
-                    {
-                        // Custom operations will be handled in the comparison parsing, so return a placeholder
-                        return Expression.Constant($"CustomOperation:{fullPropPath}", typeof(string));
-                    }
-
-                    var derivedPropertyInfo = config?.PropertyMappings?.GetDerivedPropertyInfoByQueryName(fullPropPath);
-                    if (derivedPropertyInfo?.DerivedExpression != null)
-                    {
-                        return derivedPropertyInfo.DerivedExpression;
-                    }
-                    
-                    if(config?.AllowUnknownProperties == true)
-                    {
-                        return Expression.Constant(true, typeof(bool));
-                    }
-
-                    throw new UnknownFilterPropertyException(actualPropertyName);
-                }
-            });
-
-            var propertyConfig = config?.PropertyMappings?.GetPropertyInfo(fullPropPath);
-            if (propertyConfig != null && !propertyConfig.CanFilter)
-            {
-                return Expression.Constant(true, typeof(bool));
+                throw new UnknownFilterPropertyException(reference.UnknownSegment!);
             }
 
-            // Check if this property uses HasConversion
-            var currentPropertyConfig = config?.PropertyMappings?.GetPropertyInfo(fullPropPath);
-            if (currentPropertyConfig?.UsesConversion == true)
-            {
-                // For HasConversion properties, return the property expression as-is
-                // EF Core will handle the type conversion automatically when it translates the expression to SQL
-                // The key is that the right-side value will be converted to match the property's conversion target type
-                return propertyExpression;
-            }
-            
-            // Also check if this is a nested property where the parent has HasConversion configured
-            if (propertyExpression is MemberExpression nestedMemberExpression &&
-                nestedMemberExpression.Expression is MemberExpression parentExpression)
-            {
-                var parentPropertyPath = GetPropertyPath(parentExpression, parameter);
-                var parentPropertyConfig = config?.PropertyMappings?.GetPropertyInfo(parentPropertyPath);
-                
-                if (parentPropertyConfig?.UsesConversion == true)
-                {
-                    // Use the parent expression instead of the nested property
-                    return parentExpression;
-                }
-            }
-
-            return propertyExpression;
+            return reference;
         });
+    }
+
+    private static Expression CreateLeftExpr(ParameterExpression parameter, PropertyReference reference, IQueryKitConfiguration? config)
+    {
+        var propertyExpression = reference.Kind == PropertyReferenceKind.DerivedProperty
+            ? reference.Mapping!.DerivedExpression!
+            : CreateMemberExpression(parameter, reference.Path);
+
+        var propertyConfig = config?.PropertyMappings?.GetPropertyInfo(reference.Text);
+        if (propertyConfig != null && !propertyConfig.CanFilter)
+        {
+            return Expression.Constant(true, typeof(bool));
+        }
+
+        // Check if this property uses HasConversion
+        if (propertyConfig?.UsesConversion == true)
+        {
+            // For HasConversion properties, return the property expression as-is
+            // EF Core will handle the type conversion automatically when it translates the expression to SQL
+            // The key is that the right-side value will be converted to match the property's conversion target type
+            return propertyExpression;
+        }
+        
+        // Also check if this is a nested property where the parent has HasConversion configured
+        if (propertyExpression is MemberExpression nestedMemberExpression &&
+            nestedMemberExpression.Expression is MemberExpression parentExpression)
+        {
+            var parentPropertyPath = GetPropertyPath(parentExpression, parameter);
+            var parentPropertyConfig = config?.PropertyMappings?.GetPropertyInfo(parentPropertyPath);
+            
+            if (parentPropertyConfig?.UsesConversion == true)
+            {
+                // Use the parent expression instead of the nested property
+                return parentExpression;
+            }
+        }
+
+        return propertyExpression;
     }
     
     private static string GetPropertyPath(MemberExpression memberExpression, ParameterExpression parameter)
@@ -1001,107 +899,69 @@ public static class FilterParser
         return string.Join(".", parts);
     }
 
-    private static Expression CreatePropertyExpressionFromPath<T>(
-        ParameterExpression parameter,
-        List<string> propertyPath,
-        IQueryKitConfiguration? config)
+    // Builds the access expression for a resolved member path. A member of a collection element becomes a Select, or a SelectMany when the member is a collection too.
+    private static Expression CreateMemberExpression(ParameterExpression parameter, string memberPath)
     {
-        var fullPropPath = string.Join(".", propertyPath);
-
-        // Validate property depth before processing
-        config?.ValidatePropertyDepth(fullPropPath);
-
-        return propertyPath.Aggregate((Expression)parameter, (expr, propName) =>
+        return memberPath.Split('.').Aggregate((Expression)parameter, (expr, memberName) =>
         {
-            if (expr is MemberExpression member)
+            if (expr is MemberExpression member && IsEnumerable(member.Type))
             {
-                if (IsEnumerable(member.Type))
+                var genericArgType = member.Type.GetGenericArguments()[0];
+                var innerParameter = Expression.Parameter(genericArgType, "y");
+                Expression lambdaBody = Expression.PropertyOrField(innerParameter, memberName);
+                var propertyType = lambdaBody.Type;
+
+                if (IsEnumerable(propertyType))
                 {
-                    var genericArgType = member.Type.GetGenericArguments()[0];
-                    var propertyType = genericArgType.GetProperty(propName)!.PropertyType;
+                    propertyType = propertyType.GetGenericArguments()[0];
 
-                    if (IsEnumerable(propertyType))
+                    var selectManyMethod = typeof(Enumerable).GetMethods()
+                        .First(m => m.Name == "SelectMany" && m.GetParameters().Length == 2)
+                        .MakeGenericMethod(genericArgType, propertyType);
+
+                    // Ensure the lambda body returns IEnumerable<T> for SelectMany
+                    var expectedType = typeof(IEnumerable<>).MakeGenericType(propertyType);
+                    if (lambdaBody.Type != expectedType && !expectedType.IsAssignableFrom(lambdaBody.Type))
                     {
-                        propertyType = propertyType.GetGenericArguments()[0];
-
-                        var linqMethod = "SelectMany";
-                        var selectMethod = typeof(Enumerable).GetMethods()
-                            .First(m => m.Name ==  linqMethod && m.GetParameters().Length == 2)
-                            .MakeGenericMethod(genericArgType, propertyType);
-
-                        var innerParameter = Expression.Parameter(genericArgType, "y");
-                        var propertyInfoForMethod = GetPropertyInfo(genericArgType, propName);
-                        Expression lambdaBody = Expression.PropertyOrField(innerParameter, propertyInfoForMethod!.Name);
-
-                        var expectedType = typeof(IEnumerable<>).MakeGenericType(propertyType);
-                        if (lambdaBody.Type != expectedType && !expectedType.IsAssignableFrom(lambdaBody.Type))
-                        {
-                            lambdaBody = Expression.Convert(lambdaBody, expectedType);
-                        }
-
-                        var lambdaType = typeof(Func<,>).MakeGenericType(genericArgType, expectedType);
-                        lambdaBody = Expression.Lambda(lambdaType, lambdaBody, innerParameter);
-
-                        return Expression.Call(selectMethod, member, lambdaBody);
+                        // Convert to IEnumerable<T> if needed (e.g., List<T> to IEnumerable<T>)
+                        lambdaBody = Expression.Convert(lambdaBody, expectedType);
                     }
-                    else
-                    {
-                        var selectMethod = typeof(Enumerable).GetMethods()
-                            .First(m => m.Name == "Select" && m.GetParameters().Length == 2)
-                            .MakeGenericMethod(genericArgType, genericArgType.GetProperty(propName)!.PropertyType);
 
-                        var innerParameter = Expression.Parameter(genericArgType, "y");
-                        var propertyInfoForMethod = GetPropertyInfo(genericArgType, propName);
-                        var lambdaBody = Expression.PropertyOrField(innerParameter, propertyInfoForMethod!.Name);
-                        var selectLambda = Expression.Lambda(lambdaBody, innerParameter);
-                        var selectResult = Expression.Call(null, selectMethod, member, selectLambda);
-
-                        return HandleGuidConversion(selectResult, propertyType, "Select");
-                    }
+                    // Create lambda with the correct return type
+                    var lambdaType = typeof(Func<,>).MakeGenericType(genericArgType, expectedType);
+                    return Expression.Call(selectManyMethod, member, Expression.Lambda(lambdaType, lambdaBody, innerParameter));
                 }
+
+                var selectMethod = typeof(Enumerable).GetMethods()
+                    .First(m => m.Name == "Select" && m.GetParameters().Length == 2)
+                    .MakeGenericMethod(genericArgType, propertyType);
+
+                var selectLambda = Expression.Lambda(lambdaBody, innerParameter);
+                var selectResult = Expression.Call(null, selectMethod, member, selectLambda);
+
+                return HandleGuidConversion(selectResult, propertyType, "Select");
             }
 
             if (expr is MethodCallExpression call)
             {
-                var innerGenericType = GetInnerGenericType(call.Method.ReturnType);
-                var propertyInfoForMethod = GetPropertyInfo(innerGenericType!, propName);
+                var innerGenericType = GetInnerGenericType(call.Method.ReturnType)!;
+                var innerParameter = Expression.Parameter(innerGenericType, "y");
+                var lambdaBody = Expression.PropertyOrField(innerParameter, memberName);
 
-                var propertyType = propertyInfoForMethod!.PropertyType;
+                var propertyType = lambdaBody.Type;
                 var linqMethod = IsEnumerable(propertyType) ? "SelectMany" : "Select";
                 var resultType = IsEnumerable(propertyType) ? propertyType.GetGenericArguments()[0] : propertyType;
 
                 var selectMethod = typeof(Enumerable).GetMethods()
                     .First(m => m.Name == linqMethod && m.GetParameters().Length == 2)
-                    .MakeGenericMethod(innerGenericType!, resultType);
+                    .MakeGenericMethod(innerGenericType, resultType);
 
-                var innerParameter = Expression.Parameter(innerGenericType!, "y");
-                var lambdaBody = Expression.PropertyOrField(innerParameter, propertyInfoForMethod.Name);
                 var selectLambda = Expression.Lambda(lambdaBody, innerParameter);
 
                 return Expression.Call(selectMethod, expr, selectLambda);
             }
 
-            var propertyInfo = GetPropertyInfo(expr.Type, propName);
-            var actualPropertyName = propertyInfo?.Name ?? propName;
-            try
-            {
-                return Expression.PropertyOrField(expr, actualPropertyName);
-            }
-            catch(ArgumentException)
-            {
-                var derivedPropertyInfo = config?.PropertyMappings?.GetDerivedPropertyInfoByQueryName(fullPropPath);
-                if (derivedPropertyInfo?.DerivedExpression != null)
-                {
-                    return derivedPropertyInfo.DerivedExpression;
-                }
-
-                if(config?.AllowUnknownProperties == true)
-                {
-                    return Expression.Constant(true, typeof(bool));
-                }
-
-                throw new UnknownFilterPropertyException(actualPropertyName);
-            }
+            return Expression.PropertyOrField(expr, memberName);
         });
     }
 
@@ -1142,35 +1002,21 @@ public static class FilterParser
                         continue;
                     }
 
-                    // Build expression for each property
-                    var leftExpr = CreatePropertyExpressionFromPath<T>(
-                        parameter, propertyPathList, config);
-
-                    // Skip if it's a placeholder for unknown properties
-                    if (leftExpr.NodeType == ExpressionType.Constant &&
-                        ((ConstantExpression)leftExpr).Value!.Equals(true))
+                    // Build expression for each property. A property list does not support custom operations.
+                    var reference = PropertyResolver.Resolve(parameter.Type, fullPropPath, config);
+                    if (reference.Kind is PropertyReferenceKind.Unknown or PropertyReferenceKind.CustomOperation)
                     {
-                        continue;
-                    }
-
-                    // Handle custom operations
-                    if (leftExpr.NodeType == ExpressionType.Constant &&
-                        ((ConstantExpression)leftExpr).Value is string constantValue &&
-                        constantValue.StartsWith("CustomOperation:"))
-                    {
-                        var operationName = constantValue.Substring("CustomOperation:".Length);
-                        var customOperationInfo = config?.PropertyMappings?.GetCustomOperationInfoByQueryName(operationName);
-                        if (customOperationInfo?.CustomOperation != null)
+                        if (config?.AllowUnknownProperties == true)
                         {
-                            var customComparison = CreateCustomOperationExpression<T>(parameter, customOperationInfo, temp.op, temp.right);
-                            result = result == null
-                                ? customComparison
-                                : isNegativeOperator
-                                    ? Expression.AndAlso(result, customComparison)
-                                    : Expression.OrElse(result, customComparison);
                             continue;
                         }
+
+                        throw new UnknownFilterPropertyException(reference.UnknownSegment!);
                     }
+
+                    var leftExpr = reference.Kind == PropertyReferenceKind.DerivedProperty
+                        ? reference.Mapping!.DerivedExpression!
+                        : CreateMemberExpression(parameter, reference.Path);
 
                     // Use the resolved member path for HasConversion support, since the typed path can differ in casing
                     var resolvedPropPath = leftExpr is MemberExpression listMemberExpr
