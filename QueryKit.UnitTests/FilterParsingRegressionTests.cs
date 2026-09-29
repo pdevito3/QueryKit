@@ -187,6 +187,43 @@ public class FilterParsingRegressionTests
         result.Select(x => x.Title).Should().Equal(expectedTitle);
     }
 
+    [Theory]
+    [InlineData("""Title @= "am" """, new[] { "lamb" })]
+    [InlineData("""Title _= "la" """, new[] { "lamb" })]
+    [InlineData("""Title _-= "mb" """, new[] { "lamb" })]
+    [InlineData("""Title !@= "am" """, new[] { "null", "other" })]
+    [InlineData("""Title !_= "la" """, new[] { "null", "other" })]
+    [InlineData("""Title !_-= "mb" """, new[] { "null", "other" })]
+    public void case_sensitive_string_operator_handles_null_property(string input, string[] expectedFirstNames)
+    {
+        var people = new[]
+        {
+            new TestingPerson { Title = null, FirstName = "null" },
+            new TestingPerson { Title = "lamb", FirstName = "lamb" },
+            new TestingPerson { Title = "other", FirstName = "other" },
+        };
+
+        var result = people.AsQueryable().ApplyQueryKitFilter(input).ToList();
+
+        result.Select(x => x.FirstName).Should().Equal(expectedFirstNames);
+    }
+
+    [Theory]
+    [InlineData("Title @= null")]
+    [InlineData("Title _= null")]
+    [InlineData("Title _-= null")]
+    [InlineData("Title !@= null")]
+    [InlineData("Title !_= null")]
+    [InlineData("Title !_-= null")]
+    [InlineData("Title @=* null")]
+    [InlineData("Title !_-=* null")]
+    public void string_operator_with_null_value_throws_querykit_exception(string input)
+    {
+        var act = () => FilterParser.ParseFilter<TestingPerson>(input);
+
+        act.Should().Throw<QueryKitParsingException>();
+    }
+
     private static TResult WithCulture<TResult>(string cultureName, Func<TResult> action)
     {
         var originalCulture = CultureInfo.CurrentCulture;

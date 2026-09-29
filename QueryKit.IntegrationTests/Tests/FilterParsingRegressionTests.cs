@@ -2,6 +2,7 @@ namespace QueryKit.IntegrationTests.Tests;
 
 using System.Globalization;
 using Configuration;
+using Exceptions;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using SharedTestingHelper.Fakes;
@@ -234,5 +235,51 @@ public class FilterParsingRegressionTests : TestBase
 
         // Assert
         people.Select(x => x.Id).Should().Equal(expectEqualPerson ? fakePersonOne.Id : fakePersonTwo.Id);
+    }
+
+    [Theory]
+    [InlineData("""Title @= "am" """, false)]
+    [InlineData("""Title _= "la" """, false)]
+    [InlineData("""Title _-= "mb" """, false)]
+    [InlineData("""Title !@= "am" """, true)]
+    [InlineData("""Title !_= "la" """, true)]
+    [InlineData("""Title !_-= "mb" """, true)]
+    public async Task case_sensitive_string_operator_handles_null_property(string valueFilter, bool expectNullPerson)
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var firstName = $"null title {Guid.NewGuid()}";
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithFirstName(firstName)
+            .WithTitle(null)
+            .Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder()
+            .WithFirstName(firstName)
+            .WithTitle("lamb")
+            .Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+
+        var input = $"""{nameof(TestingPerson.FirstName)} == "{firstName}" && {valueFilter}""";
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var people = await queryablePeople.ApplyQueryKitFilter(input).ToListAsync();
+
+        // Assert
+        people.Select(x => x.Id).Should().Equal(expectNullPerson ? fakePersonOne.Id : fakePersonTwo.Id);
+    }
+
+    [Fact]
+    public void string_operator_with_null_value_throws_querykit_exception()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var queryablePeople = testingServiceScope.DbContext().People;
+
+        // Act
+        var act = () => queryablePeople.ApplyQueryKitFilter("Title @= null");
+
+        // Assert
+        act.Should().Throw<QueryKitParsingException>();
     }
 }
