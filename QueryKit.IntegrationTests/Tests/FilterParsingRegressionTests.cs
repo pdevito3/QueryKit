@@ -1,11 +1,16 @@
 namespace QueryKit.IntegrationTests.Tests;
 
 using System.Globalization;
+using System.Linq.Expressions;
 using Configuration;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using Operators;
 using SharedTestingHelper.Fakes;
+using SharedTestingHelper.Fakes.Ingredients;
+using SharedTestingHelper.Fakes.Recipes;
 using WebApiTestProject.Entities;
+using WebApiTestProject.Entities.Recipes;
 
 public class FilterParsingRegressionTests : TestBase
 {
@@ -230,5 +235,36 @@ public class FilterParsingRegressionTests : TestBase
 
         // Assert
         people.Select(x => x.Id).Should().Equal(expectNullPerson ? fakePersonOne.Id : fakePersonTwo.Id);
+    }
+
+    [Fact]
+    public async Task comparison_operator_factory_with_uses_all_matches_every_item()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var name = $"waffle {Guid.NewGuid()}";
+        var fakeRecipeOne = new FakeRecipeBuilder().Build();
+        fakeRecipeOne.AddIngredient(new FakeIngredientBuilder().WithName(name).Build());
+        fakeRecipeOne.AddIngredient(new FakeIngredientBuilder().WithName(name).Build());
+        var fakeRecipeTwo = new FakeRecipeBuilder().Build();
+        fakeRecipeTwo.AddIngredient(new FakeIngredientBuilder().WithName(name).Build());
+        fakeRecipeTwo.AddIngredient(new FakeIngredientBuilder().WithName($"other {Guid.NewGuid()}").Build());
+        await testingServiceScope.InsertAsync(fakeRecipeOne, fakeRecipeTwo);
+
+        Expression<Func<Recipe, IEnumerable<string>>> ingredientNames = x => x.Ingredients.Select(y => y.Name);
+        var body = ComparisonOperator.EqualsOperator(usesAll: true)
+            .GetExpression<Recipe>(ingredientNames.Body, Expression.Constant(name), null);
+        var filterExpression = Expression.Lambda<Func<Recipe, bool>>(body, ingredientNames.Parameters);
+        var recipeIds = new[] { fakeRecipeOne.Id, fakeRecipeTwo.Id };
+
+        // Act
+        var queryableRecipes = testingServiceScope.DbContext().Recipes;
+        var recipes = await queryableRecipes
+            .Where(x => recipeIds.Contains(x.Id))
+            .Where(filterExpression)
+            .ToListAsync();
+
+        // Assert
+        recipes.Select(x => x.Id).Should().Equal(fakeRecipeOne.Id);
     }
 }
