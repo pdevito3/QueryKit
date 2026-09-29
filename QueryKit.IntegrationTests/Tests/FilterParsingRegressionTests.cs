@@ -76,4 +76,33 @@ public class FilterParsingRegressionTests : TestBase
         people.Count.Should().Be(1);
         people[0].Id.Should().Be(fakePersonOne.Id);
     }
+
+    [Fact]
+    public async Task list_value_with_comma_is_one_item()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var suffix = Guid.NewGuid().ToString();
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithTitle($"Warm, with syrup {suffix}")
+            .WithFirstName(suffix)
+            .Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder()
+            .WithTitle("Warm")
+            .WithFirstName(suffix)
+            .Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+
+        var inInput = $"""{nameof(TestingPerson.FirstName)} == "{suffix}" && {nameof(TestingPerson.Title)} ^^ ["Warm, with syrup {suffix}"]""";
+        var notInInput = $"""{nameof(TestingPerson.FirstName)} == "{suffix}" && {nameof(TestingPerson.Title)} !^^ ["Warm, with syrup {suffix}"]""";
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var inPeople = await queryablePeople.ApplyQueryKitFilter(inInput).ToListAsync();
+        var notInPeople = await queryablePeople.ApplyQueryKitFilter(notInInput).ToListAsync();
+
+        // Assert
+        inPeople.Select(x => x.Id).Should().Equal(fakePersonOne.Id);
+        notInPeople.Select(x => x.Id).Should().Equal(fakePersonTwo.Id);
+    }
 }
