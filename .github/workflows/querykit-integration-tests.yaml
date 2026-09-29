@@ -20,4 +20,4 @@ jobs:
         run: dotnet build --configuration Release --no-restore
       - name: Test
         working-directory: QueryKit.IntegrationTests
-        run: dotnet test --no-restore --verbosity minimal
+        run: dotnet test --no-restore --configuration Release --verbosity minimal
