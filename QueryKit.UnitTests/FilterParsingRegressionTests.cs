@@ -6,6 +6,7 @@ using System.Reflection;
 using Exceptions;
 using FluentAssertions;
 using Operators;
+using SharedTestingHelper.Fakes.Recipes;
 using WebApiTestProject.Entities;
 using WebApiTestProject.Entities.Recipes;
 
@@ -264,6 +265,25 @@ public class FilterParsingRegressionTests
         var result = people.AsQueryable().ApplyQueryKitSort(input).ToList();
 
         result.Select(x => x.Title).Should().Equal("old", "young");
+    }
+
+    [Theory]
+    [InlineData("""Tags ^$ "sweet" """, new[] { "pancakes" })]
+    [InlineData("""Tags ^$* "WINNER" """, new[] { "bread" })]
+    [InlineData("""Tags %^$ "dinner" """, new[] { "stew", "water" })]
+    public void has_returns_matching_rows(string input, string[] expectedTitles)
+    {
+        var recipes = new[]
+        {
+            new FakeRecipeBuilder().WithTitle("pancakes").Build().SetTags(["breakfast", "sweet"]),
+            new FakeRecipeBuilder().WithTitle("stew").Build().SetTags(["dinner"]),
+            new FakeRecipeBuilder().WithTitle("bread").Build().SetTags(["bread", "Winner"]),
+            new FakeRecipeBuilder().WithTitle("water").Build().SetTags([]),
+        };
+
+        var result = recipes.AsQueryable().ApplyQueryKitFilter(input).ToList();
+
+        result.Select(x => x.Title).Should().BeEquivalentTo(expectedTitles);
     }
 
     private static TResult WithCulture<TResult>(string cultureName, Func<TResult> action)

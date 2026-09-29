@@ -311,6 +311,31 @@ public class DatabaseFilteringTests() : TestBase
         recipes.Count.Should().Be(1);
         recipes[0].Id.Should().Be(fakeRecipeOne.Id);
     }
+
+    [Fact]
+    public async Task can_filter_by_collection_count_less_than_or_equal()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var prefix = $"count {Guid.NewGuid()} ";
+        var recipeWithNone = new FakeRecipeBuilder().WithTitle($"{prefix}none").Build();
+        var recipeWithOne = new FakeRecipeBuilder().WithTitle($"{prefix}one").Build();
+        recipeWithOne.AddIngredient(new FakeIngredientBuilder().Build());
+        var recipeWithTwo = new FakeRecipeBuilder().WithTitle($"{prefix}two").Build();
+        recipeWithTwo.AddIngredient(new FakeIngredientBuilder().Build());
+        recipeWithTwo.AddIngredient(new FakeIngredientBuilder().Build());
+        await testingServiceScope.InsertAsync(recipeWithNone, recipeWithOne, recipeWithTwo);
+
+        // Act
+        var queryableRecipes = testingServiceScope.DbContext().Recipes;
+        var recipes = await queryableRecipes
+            .Where(x => x.Title.StartsWith(prefix))
+            .ApplyQueryKitFilter("Ingredients #<= 1")
+            .ToListAsync();
+
+        // Assert
+        recipes.Select(x => x.Id).Should().BeEquivalentTo(new[] { recipeWithNone.Id, recipeWithOne.Id });
+    }
     
     [Fact]
     public async Task can_filter_by_string_for_collection_contains()
@@ -4259,4 +4284,35 @@ public class DatabaseFilteringTests() : TestBase
         people.Should().ContainSingle(p => p.Id == fakePersonOne.Id);
     }
 
+    [Fact]
+    public async Task can_apply_query_kit_data()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var prefix = $"data {Guid.NewGuid()} ";
+        var low = new FakeRecipeBuilder().WithTitle($"{prefix}low").WithRating(1).Build();
+        var high = new FakeRecipeBuilder().WithTitle($"{prefix}high").WithRating(5).Build();
+        var middle = new FakeRecipeBuilder().WithTitle($"{prefix}middle").WithRating(3).Build();
+        await testingServiceScope.InsertAsync(low, high, middle);
+
+        var queryKitData = new QueryKitData
+        {
+            Filters = "score >= 3",
+            SortOrder = "score desc",
+            Configuration = new QueryKitConfiguration(config =>
+            {
+                config.Property<Recipe>(x => x.Rating).HasQueryName("score");
+            })
+        };
+
+        // Act
+        var queryableRecipes = testingServiceScope.DbContext().Recipes;
+        var recipes = await queryableRecipes
+            .Where(x => x.Title.StartsWith(prefix))
+            .ApplyQueryKit(queryKitData)
+            .ToListAsync();
+
+        // Assert
+        recipes.Select(x => x.Id).Should().Equal(high.Id, middle.Id);
+    }
 }
