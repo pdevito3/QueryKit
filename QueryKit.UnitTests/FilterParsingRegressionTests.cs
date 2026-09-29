@@ -3,6 +3,7 @@ namespace QueryKit.UnitTests;
 using System.Globalization;
 using System.Linq.Expressions;
 using System.Reflection;
+using Configuration;
 using Exceptions;
 using FluentAssertions;
 using Operators;
@@ -340,6 +341,51 @@ public class FilterParsingRegressionTests
 
         filterExpression.ToDisplayString().Should().Be(expectedExpression.ToDisplayString());
         result.Should().Equal(expectedResult);
+    }
+
+    [Theory]
+    [InlineData("""titleIs == "123" """, "123")]
+    [InlineData("""titleIs == "4.5" """, "4.5")]
+    [InlineData("""titleIs == "true" """, "true")]
+    [InlineData("""titleIs == "null" """, "null")]
+    [InlineData("""titleIs == "" """, "")]
+    public void custom_operation_keeps_quoted_value_as_string(string input, string expectedTitle)
+    {
+        var people = new[] { "123", "4.5", "true", "null", "", "other" }
+            .Select(title => new TestingPerson { Title = title })
+            .ToArray();
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.CustomOperation<TestingPerson>((x, op, value) => x.Title == (string)value)
+                .HasQueryName("titleIs");
+        });
+
+        var result = people.AsQueryable().ApplyQueryKitFilter(input, config).ToList();
+
+        result.Select(x => x.Title).Should().Equal(expectedTitle);
+    }
+
+    [Fact]
+    public void custom_operation_converts_unquoted_number_and_quoted_date()
+    {
+        var people = new[]
+        {
+            new TestingPerson { Title = "match", Age = 30, SpecificDateTime = new DateTime(2024, 1, 15, 8, 0, 0, DateTimeKind.Utc) },
+            new TestingPerson { Title = "other", Age = 31, SpecificDateTime = new DateTime(2024, 1, 15, 9, 0, 0, DateTimeKind.Utc) },
+        };
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.CustomOperation<TestingPerson>((x, op, value) => x.Age == (int)value)
+                .HasQueryName("ageIs");
+            config.CustomOperation<TestingPerson>((x, op, value) => x.SpecificDateTime == (DateTime)value)
+                .HasQueryName("createdAt");
+        });
+
+        var result = people.AsQueryable()
+            .ApplyQueryKitFilter("""ageIs == 30 && createdAt == "2024-01-15T08:00:00Z" """, config)
+            .ToList();
+
+        result.Select(x => x.Title).Should().Equal("match");
     }
 
     private static TResult WithCulture<TResult>(string cultureName, Func<TResult> action)
