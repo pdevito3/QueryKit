@@ -207,7 +207,7 @@ public static class FilterParser
 
     private static readonly Parser<string> NumberParser =
         from sign in Parse.Char('-').Optional().Select(x => x.IsDefined ? "-" : "")
-        from number in Parse.Decimal
+        from number in Parse.DecimalInvariant
         select sign + number;
 
     private static readonly Parser<string> GuidFormatParser = Parse.Regex(@"[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}").Text();
@@ -424,7 +424,7 @@ public static class FilterParser
         var targetType = leftExprType;
         if (isEnumerable)
         {
-            if (op.IsCountOperator() && int.TryParse(right, out var intVal))
+            if (op.IsCountOperator() && int.TryParse(right, NumberStyles.Integer, CultureInfo.InvariantCulture, out var intVal))
             {
                 return FilterValue.Parameter(intVal, typeof(int));
             }
@@ -1326,8 +1326,8 @@ public static class FilterParser
         if (value == "null" || 
             value.StartsWith("\"") || 
             value.StartsWith("[") ||
-            value.Contains("-") && DateTime.TryParse(value, out _) ||
-            decimal.TryParse(value, out _) ||
+            value.Contains("-") && DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.None, out _) ||
+            decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out _) ||
             bool.TryParse(value, out _) ||
             Guid.TryParse(value, out _))
         {
