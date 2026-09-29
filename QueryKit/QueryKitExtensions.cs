@@ -37,27 +37,22 @@ public static class QueryKitExtensions
     {
         var sortLambdas = SortParser.ParseSort<T>(sortExpression, config);
 
-        if (sortLambdas.Count == 0)
+        if (sortLambdas.Count == 0 || sortLambdas[0].Expression is null)
             return queryable.OrderBy(_ => 0);
 
         var firstSortInfo = sortLambdas[0];
-        if (firstSortInfo.Expression != null)
+        var orderedQueryable = firstSortInfo.IsAscending ? queryable.OrderBy(firstSortInfo.Expression!) : queryable.OrderByDescending(firstSortInfo.Expression!);
+
+        for (var i = 1; i < sortLambdas.Count; i++)
         {
-            var orderedQueryable = firstSortInfo.IsAscending ? queryable.OrderBy(firstSortInfo.Expression) : queryable.OrderByDescending(firstSortInfo.Expression);
-
-            for (var i = 1; i < sortLambdas.Count; i++)
-            {
-                var sortInfo = sortLambdas[i];
-                if (sortInfo.Expression != null)
-                    orderedQueryable = sortInfo.IsAscending
-                        ? orderedQueryable.ThenBy(sortInfo.Expression)
-                        : orderedQueryable.ThenByDescending(sortInfo.Expression);
-            }
-
-            return orderedQueryable;
+            var sortInfo = sortLambdas[i];
+            if (sortInfo.Expression != null)
+                orderedQueryable = sortInfo.IsAscending
+                    ? orderedQueryable.ThenBy(sortInfo.Expression)
+                    : orderedQueryable.ThenByDescending(sortInfo.Expression);
         }
-        
-        return queryable.OrderBy(x => x);
+
+        return orderedQueryable;
     }
     
     public static IEnumerable<TEntity> ApplyQueryKit<TEntity>(
