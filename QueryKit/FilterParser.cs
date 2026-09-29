@@ -3,6 +3,7 @@
 using System.Globalization;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Text;
 using Configuration;
 using Exceptions;
 using Operators;
@@ -255,7 +256,37 @@ public static class FilterParser
         from openingBracket in Parse.Char('[')
         from content in SquareBracketValuesParser
         from closingBracket in Parse.Char(']')
-        select "[" + string.Join(",", content) + "]";
+        select "[" + string.Join(",", content.Select(EscapeListItem)) + "]";
+
+    // List items are joined with ',' so quoted items that contain ',' or '\' are escaped and split back with SplitListItems, which trims each item
+    private static string EscapeListItem(string item)
+        => item.Replace(@"\", @"\\").Replace(",", @"\,");
+
+    private static List<string> SplitListItems(string list)
+    {
+        var items = new List<string>();
+        var current = new StringBuilder();
+        var content = list.Substring(1, list.Length - 2);
+        for (var i = 0; i < content.Length; i++)
+        {
+            if (content[i] == '\\' && i + 1 < content.Length)
+            {
+                current.Append(content[++i]);
+            }
+            else if (content[i] == ',')
+            {
+                items.Add(current.ToString().Trim());
+                current.Clear();
+            }
+            else
+            {
+                current.Append(content[i]);
+            }
+        }
+        items.Add(current.ToString().Trim());
+
+        return items;
+    }
 
     private static readonly Parser<RightSideValue> RightSideValueChoiceParser =
         Parse.String("null").Text().Select(v => new RightSideValue(v, false))
@@ -473,7 +504,7 @@ public static class FilterParser
                 {
                     targetType = typeof(string);
                 }
-                var values = right.Trim('[', ']').Split(',').Select(x => x.Trim()).ToList();
+                var values = SplitListItems(right);
                 var elementType = targetType.IsArray ? targetType.GetElementType()! : targetType;
 
                 var expressions = values.Select(x =>
@@ -574,7 +605,7 @@ public static class FilterParser
             
             if (right.StartsWith("[") && right.EndsWith("]"))
             {
-                var values = right.Trim('[', ']').Split(',').Select(x => x.Trim()).ToList();
+                var values = SplitListItems(right);
                 var elementType = targetType.IsArray ? targetType.GetElementType() : targetType;
             
                 var expressions = values.Select<string, Expression>(x =>
