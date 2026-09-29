@@ -599,14 +599,47 @@ public static class FilterParser
             .SelectMany(temp => parenthesizedArithmetic.Or(rightSideValueParser.Select(value => CreateArithmeticFromValue(value.Value))), (temp, rightSide) => new { temp.leftArithmetic, temp.op, rightSide })
             .Select(temp =>
             {
-                var leftExpr = temp.leftArithmetic.ToLinqExpression(parameter, typeof(T));
-                var rightExpr = temp.rightSide.ToLinqExpression(parameter, typeof(T));
+                var leftArithmetic = ResolveArithmeticProperties(temp.leftArithmetic, typeof(T), config);
+                var rightArithmetic = ResolveArithmeticProperties(temp.rightSide, typeof(T), config);
+                if (leftArithmetic == null || rightArithmetic == null)
+                {
+                    return RemovedClauseExpression.Instance;
+                }
+
+                var leftExpr = leftArithmetic.ToLinqExpression(parameter, typeof(T));
+                var rightExpr = rightArithmetic.ToLinqExpression(parameter, typeof(T));
                 
                 var (leftCompatible, rightCompatible) = EnsureCompatibleTypes(leftExpr, rightExpr);
                 return temp.op.GetExpression<T>(leftCompatible, rightCompatible, config?.DbContextType);
             });
     }
     
+    // Resolves each property in an arithmetic expression to its member path.
+    // Returns null when a property cannot be filtered, because then the parser removes the clause.
+    private static ArithmeticExpression? ResolveArithmeticProperties(ArithmeticExpression expr, Type entityType, IQueryKitConfiguration? config)
+    {
+        switch (expr)
+        {
+            case PropertyArithmeticExpression property:
+                var reference = PropertyResolver.Resolve(entityType, property.PropertyPath, config);
+                if (reference.Kind != PropertyReferenceKind.Member)
+                {
+                    return property;
+                }
+
+                return reference.CanFilter ? new PropertyArithmeticExpression(reference.Path) : null;
+            case BinaryArithmeticExpression binary:
+                var left = ResolveArithmeticProperties(binary.Left, entityType, config);
+                var right = ResolveArithmeticProperties(binary.Right, entityType, config);
+                return left == null || right == null ? null : new BinaryArithmeticExpression(left, binary.Operator, right);
+            case GroupedArithmeticExpression grouped:
+                var inner = ResolveArithmeticProperties(grouped.Inner, entityType, config);
+                return inner == null ? null : new GroupedArithmeticExpression(inner);
+            default:
+                return expr;
+        }
+    }
+
     private static bool ContainsArithmeticOperator(ArithmeticExpression expr)
     {
         return expr switch

@@ -63,4 +63,31 @@ public class PropertyResolverTests : TestBase
         // Assert
         people.Should().BeEmpty();
     }
+
+    [Fact]
+    public async Task prevented_property_in_arithmetic_is_not_filtered()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var title = new Faker().Lorem.Sentence();
+        var fakePerson = new FakeTestingPersonBuilder()
+            .WithTitle(title)
+            .WithAge(5)
+            .Build();
+        await testingServiceScope.InsertAsync(fakePerson);
+
+        var input = $"""Title == "{title}" && (Age + 0) > 10""";
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.Age).PreventFilter();
+        });
+
+        // Act
+        var people = await testingServiceScope.DbContext().People
+            .ApplyQueryKitFilter(input, config)
+            .ToListAsync();
+
+        // Assert
+        people.Should().ContainSingle(x => x.Id == fakePerson.Id);
+    }
 }
