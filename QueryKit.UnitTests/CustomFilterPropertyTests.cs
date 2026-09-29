@@ -261,8 +261,7 @@ public class CustomFilterPropertyTests
     [Fact]
     public void can_throw_error_when_property_has_space()
     {
-        var faker = new Faker();
-        var propertyName = faker.Lorem.Sentence();
+        var propertyName = "unknown property name";
         var firstWord = propertyName.Split(' ').First();
         var input = $"""{propertyName} == 25""";
 
@@ -278,8 +277,7 @@ public class CustomFilterPropertyTests
     [Fact]
     public void can_handle_nonexistent_property()
     {
-        var faker = new Faker();
-        var input = $"""{faker.Lorem.Word()} == 25""";
+        var input = """unknownProperty == 25""";
         
         var config = new QueryKitConfiguration(config =>
         {

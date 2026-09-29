@@ -398,6 +398,7 @@ public class DatabaseFilteringTests() : TestBase
         var testingServiceScope = new TestingServiceScope();
         var faker = new Faker();
         var preparationOne = new FakeIngredientPreparation().Generate();
+        preparationOne.Text = Guid.NewGuid().ToString();
         var preparationTwo = new FakeIngredientPreparation().Generate();
         var fakeIngredientOne = new FakeIngredientBuilder()
             .WithPreparation(preparationOne)
@@ -435,6 +436,7 @@ public class DatabaseFilteringTests() : TestBase
         var testingServiceScope = new TestingServiceScope();
         var faker = new Faker();
         var preparationOne = new FakeIngredientPreparation().Generate();
+        preparationOne.Text = Guid.NewGuid().ToString();
         var preparationTwo = new FakeIngredientPreparation().Generate();
         var fakeIngredientOne = new FakeIngredientBuilder()
             .WithPreparation(preparationOne)
@@ -885,7 +887,7 @@ public class DatabaseFilteringTests() : TestBase
             .WithPhysicalAddress(new Address(faker.Address.StreetAddress()
                 , faker.Address.SecondaryAddress()
                 , faker.Address.City()
-                , faker.Address.State()
+                , Guid.NewGuid().ToString()
                 , faker.Address.ZipCode()
                 , faker.Address.Country()))
             .Build();
