@@ -267,4 +267,31 @@ public class FilterParsingRegressionTests : TestBase
         // Assert
         recipes.Select(x => x.Id).Should().Equal(fakeRecipeOne.Id);
     }
+
+    [Fact]
+    public async Task sort_direction_after_double_space_is_read()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var title = $"sort {Guid.NewGuid()}";
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithTitle(title)
+            .WithAge(20)
+            .Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder()
+            .WithTitle(title)
+            .WithAge(40)
+            .Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var people = await queryablePeople
+            .Where(x => x.Title == title)
+            .ApplyQueryKitSort("Age  desc")
+            .ToListAsync();
+
+        // Assert
+        people.Select(x => x.Id).Should().Equal(fakePersonTwo.Id, fakePersonOne.Id);
+    }
 }

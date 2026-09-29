@@ -249,6 +249,23 @@ public class FilterParsingRegressionTests
             .Be(FilterParser.ParseFilter<Recipe>("""Ingredients.Name %== "waffle" """).ToDisplayString());
     }
 
+    [Theory]
+    [InlineData("Age  desc")]
+    [InlineData("Age   desc")]
+    [InlineData("Age\tdesc")]
+    public void sort_direction_after_extra_white_space_is_read(string input)
+    {
+        var people = new[]
+        {
+            new TestingPerson { Title = "young", Age = 20 },
+            new TestingPerson { Title = "old", Age = 40 },
+        };
+
+        var result = people.AsQueryable().ApplyQueryKitSort(input).ToList();
+
+        result.Select(x => x.Title).Should().Equal("old", "young");
+    }
+
     private static TResult WithCulture<TResult>(string cultureName, Func<TResult> action)
     {
         var originalCulture = CultureInfo.CurrentCulture;

@@ -40,9 +40,9 @@ public static class SortParser
 
     private static SortExpressionInfo<T> CreateSortExpression<T>(string sortClause, IQueryKitConfiguration? config = null)
     {
-        var parts = sortClause.Split();
+        var parts = sortClause.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
 
-        var propertyName = parts[0];
+        var propertyName = parts.Length > 0 ? parts[0] : sortClause;
         var direction = parts.Length > 1 ? parts[1].ToLowerInvariant() : Ascending;
         if (sortClause.StartsWith("-"))
         {
