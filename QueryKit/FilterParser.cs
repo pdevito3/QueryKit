@@ -709,6 +709,11 @@ public static class FilterParser
             {
                 if (temp.reference.Kind == PropertyReferenceKind.CustomOperation)
                 {
+                    if (!temp.reference.CanFilter)
+                    {
+                        return RemovedClauseExpression.Instance;
+                    }
+
                     return CreateCustomOperationExpression<T>(parameter, temp.reference.Mapping!, temp.op, temp.right);
                 }
 
@@ -894,7 +899,7 @@ public static class FilterParser
             ? reference.Mapping!.DerivedExpression!
             : CreateMemberExpression(parameter, reference.Path);
 
-        var propertyConfig = reference.Kind == PropertyReferenceKind.Member ? reference.Mapping : null;
+        var propertyConfig = reference.Mapping;
         if (propertyConfig != null && !propertyConfig.CanFilter)
         {
             return RemovedClauseExpression.Instance;
@@ -1042,7 +1047,7 @@ public static class FilterParser
 
                     // Build expression for each property. A property list does not support custom operations.
                     var reference = PropertyResolver.Resolve(parameter.Type, fullPropPath, config);
-                    if (reference.Kind == PropertyReferenceKind.Member && !reference.CanFilter)
+                    if (!reference.CanFilter)
                     {
                         continue;
                     }

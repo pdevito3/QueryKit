@@ -233,4 +233,61 @@ public class PropertyResolverTests
 
         sortExpressions.Should().BeEmpty();
     }
+
+    [Fact]
+    public void prevented_derived_property_removes_the_clause()
+    {
+        var input = """full == "x" || Age > 100""";
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.DerivedProperty<TestingPerson>(x => x.FirstName + " " + x.LastName).HasQueryName("full").PreventFilter();
+        });
+
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+
+        filterExpression.ToDisplayString().Should().Be("x => (x.Age > 100)");
+    }
+
+    [Fact]
+    public void prevented_derived_property_in_a_list_is_skipped()
+    {
+        var input = """(full, FirstName) == "x" """;
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.DerivedProperty<TestingPerson>(x => x.FirstName + " " + x.LastName).HasQueryName("full").PreventFilter();
+        });
+
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+
+        filterExpression.ToDisplayString().Should().Be("""x => (x.FirstName == "x")""");
+    }
+
+    [Fact]
+    public void prevented_custom_operation_removes_the_clause()
+    {
+        var input = """adult == true || Age > 100""";
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.CustomOperation<TestingPerson>((x, op, value) => x.Age > 17).HasQueryName("adult").PreventFilter();
+        });
+
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+
+        filterExpression.ToDisplayString().Should().Be("x => (x.Age > 100)");
+    }
+
+    [Fact]
+    public void prevented_derived_sort_property_is_skipped()
+    {
+        var input = "full desc, Age";
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.DerivedProperty<TestingPerson>(x => x.FirstName + " " + x.LastName).HasQueryName("full").PreventSort();
+        });
+
+        var sortExpressions = SortParser.ParseSort<TestingPerson>(input, config);
+
+        sortExpressions.Should().ContainSingle();
+        sortExpressions[0].Expression!.ToString().Should().Be("x => Convert(x.Age, Object)");
+    }
 }
