@@ -458,6 +458,14 @@ public static class FilterParser
                 select LogicalOperator.GetByOperatorString(match.Operator)));
     }
 
+    // A date or time value without an offset is read as UTC so the result does not depend on the server time zone.
+    private static DateTime ParseDateTime(string value)
+        => DateTime.Parse(value, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal);
+
+    // Npgsql only accepts a DateTimeOffset parameter with offset 0. The UTC value is the same instant.
+    private static DateTimeOffset ParseDateTimeOffset(string value)
+        => DateTimeOffset.Parse(value, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal).ToUniversalTime();
+
     private static readonly Dictionary<Type, Func<string, object>> TypeConversionFunctions = new()
     {
         { typeof(string), value => value },
@@ -471,8 +479,8 @@ public static class FilterParser
         { typeof(long), value => long.Parse(value, CultureInfo.InvariantCulture) },
         { typeof(short), value => short.Parse(value, CultureInfo.InvariantCulture) },
         { typeof(byte), value => byte.Parse(value, CultureInfo.InvariantCulture) },
-        { typeof(DateTime), value => DateTime.Parse(value, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal) },
-        { typeof(DateTimeOffset), value => DateTimeOffset.Parse(value, CultureInfo.InvariantCulture).ToUniversalTime() },
+        { typeof(DateTime), value => ParseDateTime(value) },
+        { typeof(DateTimeOffset), value => ParseDateTimeOffset(value) },
         { typeof(DateOnly), value => DateOnly.Parse(value, CultureInfo.InvariantCulture) },
         { typeof(TimeOnly), value => TimeOnly.Parse(value, CultureInfo.InvariantCulture) },
         { typeof(TimeSpan), value => TimeSpan.Parse(value) },
@@ -662,22 +670,16 @@ public static class FilterParser
             
             if (targetType == typeof(DateTime))
             {
-                var dtStyle = right.EndsWith("Z") ? DateTimeStyles.AdjustToUniversal : DateTimeStyles.AssumeLocal;
-                var dt = DateTime.Parse(right, CultureInfo.InvariantCulture, dtStyle);
-                if (right.EndsWith("Z"))
-                {
-                    dt = DateTime.SpecifyKind(dt, DateTimeKind.Utc);
-                }
+                var dt = ParseDateTime(right);
 
                 return FilterValue.Create(dt, rawType);
             }
 
             if (targetType == typeof(DateTimeOffset))
             {
-                var dtStyle = right.EndsWith("Z") ? DateTimeStyles.AdjustToUniversal : DateTimeStyles.AssumeLocal;
-                var dto = DateTimeOffset.Parse(right, CultureInfo.InvariantCulture, dtStyle);
-                // Npgsql only accepts a DateTimeOffset parameter with offset 0. The UTC value is the same instant.
-                return FilterValue.Create(dto.ToUniversalTime(), rawType);
+                var dto = ParseDateTimeOffset(right);
+
+                return FilterValue.Create(dto, rawType);
             }
 
             if (targetType == typeof(DateOnly))
@@ -1723,7 +1725,7 @@ public static class FilterParser
             return doubleValue;
 
         // Try DateTime
-        if (DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal, out var dateTimeValue))
+        if (DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var dateTimeValue))
             return dateTimeValue;
 
         // Try Guid
