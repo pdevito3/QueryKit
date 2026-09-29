@@ -335,19 +335,17 @@ public class PropertyResolverTests
     }
 
     [Fact]
-    public void property_prevented_for_filter_and_sort_is_rejected_by_its_query_name()
+    public void property_prevented_for_filter_and_sort_is_removed_by_its_query_name()
     {
-        var input = """name == "x" """;
+        var input = """name == "x" || Age > 100""";
         var config = new QueryKitConfiguration(config =>
         {
             config.Property<TestingPerson>(x => x.Title).HasQueryName("name").PreventFilter().PreventSort();
         });
 
-        var act = () => FilterParser.ParseFilter<TestingPerson>(input, config);
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
 
-        act.Should().Throw<ParsingException>()
-            .WithInnerException<InvalidOperationException>()
-            .WithMessage("'Title' is not allowed for filtering or sorting.");
+        filterExpression.ToDisplayString().Should().Be("x => (x.Age > 100)");
     }
 
     [Fact]

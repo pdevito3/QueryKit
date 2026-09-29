@@ -899,14 +899,6 @@ public static class FilterParser
                 throw new UnknownFilterPropertyException(reference.UnknownSegment!);
             }
 
-            // A property that can not be filtered or sorted is rejected when the filter uses its query name
-            if (reference.Kind == PropertyReferenceKind.Member &&
-                reference.Mapping is { CanFilter: false, CanSort: false } &&
-                string.Equals(reference.Mapping.QueryName, reference.Text, StringComparison.InvariantCultureIgnoreCase))
-            {
-                throw new InvalidOperationException($"'{reference.Mapping.Name}' is not allowed for filtering or sorting.");
-            }
-
             return reference;
         });
     }
