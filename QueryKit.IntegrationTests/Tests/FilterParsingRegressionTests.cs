@@ -133,4 +133,38 @@ public class FilterParsingRegressionTests : TestBase
         // Assert
         people.Select(x => x.Id).Should().Equal(fakePersonOne.Id);
     }
+
+    [Theory]
+    [InlineData("SpecificDateTime == 2024-01-15T08:00:00.500Z")]
+    [InlineData("SpecificDate == 2024-01-15T10:00:00.5+02:00")]
+    [InlineData("Time == 08:30:00.5")]
+    [InlineData("Time == \"08:30:00.5\"")]
+    public async Task fractional_seconds_are_kept(string valueFilter)
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var title = $"fraction {Guid.NewGuid()}";
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithTitle(title)
+            .WithSpecificDateTime(new DateTime(2024, 1, 15, 8, 0, 0, 500, DateTimeKind.Utc))
+            .WithSpecificDate(new DateTimeOffset(2024, 1, 15, 8, 0, 0, 500, TimeSpan.Zero))
+            .WithTime(new TimeOnly(8, 30, 0, 500))
+            .Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder()
+            .WithTitle(title)
+            .WithSpecificDateTime(new DateTime(2024, 1, 15, 8, 0, 0, DateTimeKind.Utc))
+            .WithSpecificDate(new DateTimeOffset(2024, 1, 15, 8, 0, 0, TimeSpan.Zero))
+            .WithTime(new TimeOnly(8, 30, 0))
+            .Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+
+        var input = $"""{nameof(TestingPerson.Title)} == "{title}" && {valueFilter}""";
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var people = await queryablePeople.ApplyQueryKitFilter(input).ToListAsync();
+
+        // Assert
+        people.Select(x => x.Id).Should().Equal(fakePersonOne.Id);
+    }
 }
