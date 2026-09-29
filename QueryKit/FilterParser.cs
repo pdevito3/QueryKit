@@ -790,7 +790,7 @@ public static class FilterParser
                         return RemovedClauseExpression.Instance;
                     }
 
-                    return CreateCustomOperationExpression<T>(parameter, temp.reference.Mapping!, temp.op, temp.right);
+                    return CreateCustomOperationExpression<T>(parameter, temp.reference.Mapping!, temp.op, temp.right, temp.rightIsQuotedLiteral);
                 }
 
                 if (temp.reference.Kind == PropertyReferenceKind.Unknown)
@@ -1468,14 +1468,14 @@ public static class FilterParser
         return rank1 >= rank2 ? type1 : type2;
     }
 
-    private static Expression CreateCustomOperationExpression<T>(ParameterExpression parameter, QueryKitPropertyInfo customOperationInfo, ComparisonOperator op, string rightValue)
+    private static Expression CreateCustomOperationExpression<T>(ParameterExpression parameter, QueryKitPropertyInfo customOperationInfo, ComparisonOperator op, string rightValue, bool rightIsQuotedLiteral)
     {
         if (customOperationInfo.CustomOperation == null)
             throw new ArgumentException("Custom operation expression is null");
 
         // For custom operations, we need to convert the string value to the appropriate basic type
         // instead of trying to match it to the entity type
-        object? convertedValue = ConvertStringToBasicType(rightValue);
+        object? convertedValue = ConvertStringToBasicType(rightValue, rightIsQuotedLiteral);
         
         // Create the parameter expressions for the custom operation
         var entityParameter = Expression.Convert(parameter, typeof(object));
@@ -1489,30 +1489,36 @@ public static class FilterParser
         return invocationExpression;
     }
 
-    private static object? ConvertStringToBasicType(string value)
+    private static object? ConvertStringToBasicType(string value, bool isQuotedLiteral)
     {
-        // Handle null
-        if (string.IsNullOrEmpty(value) || value.Equals("null", StringComparison.InvariantCultureIgnoreCase))
-            return null;
+        // A quoted value is text, so it never becomes null, a boolean, or a number.
+        // A quoted value in the date format of the grammar or a quoted guid still converts below.
+        if (!isQuotedLiteral)
+        {
+            // Handle null
+            if (string.IsNullOrEmpty(value) || value.Equals("null", StringComparison.InvariantCultureIgnoreCase))
+                return null;
 
-        // Try boolean
-        if (bool.TryParse(value, out var boolValue))
-            return boolValue;
+            // Try boolean
+            if (bool.TryParse(value, out var boolValue))
+                return boolValue;
 
-        // Try int
-        if (int.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var intValue))
-            return intValue;
+            // Try int
+            if (int.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var intValue))
+                return intValue;
 
-        // Try decimal
-        if (decimal.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var decimalValue))
-            return decimalValue;
+            // Try decimal
+            if (decimal.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var decimalValue))
+                return decimalValue;
 
-        // Try double
-        if (double.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var doubleValue))
-            return doubleValue;
+            // Try double
+            if (double.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var doubleValue))
+                return doubleValue;
+        }
 
         // Try DateTime
-        if (DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var dateTimeValue))
+        if ((!isQuotedLiteral || DateTimeFormatParser.End().TryParse(value).WasSuccessful) &&
+            DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var dateTimeValue))
             return dateTimeValue;
 
         // Try Guid

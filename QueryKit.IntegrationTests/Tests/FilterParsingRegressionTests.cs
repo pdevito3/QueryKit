@@ -270,6 +270,37 @@ public class FilterParsingRegressionTests : TestBase
     }
 
     [Fact]
+    public async Task custom_operation_keeps_quoted_value_as_string()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var firstName = $"custom op {Guid.NewGuid()}";
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithFirstName(firstName)
+            .WithTitle("001")
+            .Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder()
+            .WithFirstName(firstName)
+            .WithTitle("1")
+            .Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+
+        var input = $"""titleIs == "001" && {nameof(TestingPerson.FirstName)} == "{firstName}" """;
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.CustomOperation<TestingPerson>((x, op, value) => x.Title == (string)value)
+                .HasQueryName("titleIs");
+        });
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var people = await queryablePeople.ApplyQueryKitFilter(input, config).ToListAsync();
+
+        // Assert
+        people.Select(x => x.Id).Should().Equal(fakePersonOne.Id);
+    }
+
+    [Fact]
     public void string_operator_with_null_value_throws_querykit_exception()
     {
         // Arrange
