@@ -1,0 +1,180 @@
+#!/usr/bin/env bash
+# qk - verification harness for QueryKit. See SKILL.md in this directory for the full procedure.
+#
+#   qk up [--run <id>]        build the driver, start a private Postgres container, print `export QK_RUN=...`
+#   qk doctor                 read-only health check of the run in $QK_RUN
+#   qk rebuild                rebuild the driver after QueryKit source changes
+#   qk run <label> [args...]  run the driver, save evidence as <label>.*, print the JSON and the exit code
+#   qk psql <sql>             run a read-only SQL statement against this run's database
+#   qk configs                list the --config presets
+#   qk evidence               print the evidence directory of this run
+#   qk ls                     list every verification container on this machine (all runs)
+#   qk down                   remove this run's container and scratch state; evidence stays
+set -euo pipefail
+
+SELF="${BASH_SOURCE[0]}"
+while [[ -L "$SELF" ]]; do
+  link="$(readlink "$SELF")"
+  [[ "$link" == /* ]] && SELF="$link" || SELF="$(dirname "$SELF")/$link"
+done
+SKILL_DIR="$(cd "$(dirname "$SELF")" && pwd)"
+REPO="$(git -C "$SKILL_DIR" rev-parse --show-toplevel)"
+DRIVER_PROJ="$SKILL_DIR/harness/Driver/QueryKitVerify.Driver.csproj"
+STATE_ROOT="${TMPDIR:-/tmp}"
+STATE_ROOT="${STATE_ROOT%/}/querykit-verify"
+EVIDENCE_ROOT="$REPO/.verify-artifacts/querykit"
+LABEL_KEY="querykit-verify.run"
+PG_IMAGE="postgres:17-alpine"
+
+die() { echo "qk: $*" >&2; exit 1; }
+
+require_run() {
+  [[ -n "${QK_RUN:-}" ]] || die "QK_RUN is not set. Run 'qk up' and export the value it prints."
+  STATE_DIR="$STATE_ROOT/$QK_RUN"
+  [[ -f "$STATE_DIR/state.env" ]] || die "no state for run '$QK_RUN' at $STATE_DIR. Run 'qk up'."
+  # shellcheck disable=SC1091
+  source "$STATE_DIR/state.env"
+  EVIDENCE_DIR="$EVIDENCE_ROOT/$QK_RUN"
+}
+
+build_driver() {
+  echo "qk: building driver (QueryKit project reference, net10.0)..." >&2
+  dotnet build "$DRIVER_PROJ" -c Release --artifacts-path "$STATE_DIR/build" -nologo -v quiet >"$STATE_DIR/build.log" 2>&1 \
+    || { tail -30 "$STATE_DIR/build.log" >&2; die "driver build failed. Full log: $STATE_DIR/build.log"; }
+  [[ -f "$DRIVER_DLL" ]] || die "build succeeded but $DRIVER_DLL is missing."
+  git -C "$REPO" rev-parse --short HEAD >"$STATE_DIR/built-rev"
+  git -C "$REPO" status --porcelain -- QueryKit | wc -l | tr -d ' ' >"$STATE_DIR/built-dirty-files"
+}
+
+cmd_up() {
+  local run=""
+  if [[ "${1:-}" == "--run" ]]; then run="${2:?--run needs a value}"; fi
+  [[ -n "$run" ]] || run="qk-$(date +%Y%m%d-%H%M%S)-$$"
+  command -v dotnet >/dev/null || die "dotnet is not on PATH."
+  dotnet --list-sdks | grep -q '^10\.' || die "a .NET 10 SDK is required."
+  docker info >/dev/null 2>&1 || die "Docker is not running."
+
+  STATE_DIR="$STATE_ROOT/$run"
+  [[ ! -e "$STATE_DIR" ]] || die "run '$run' already exists at $STATE_DIR. Pick another id or 'qk down' it."
+  mkdir -p "$STATE_DIR"
+  DRIVER_DLL="$STATE_DIR/build/bin/QueryKitVerify.Driver/release/qk-driver.dll"
+  build_driver
+
+  local container="querykit-verify-$run"
+  docker run -d --name "$container" --label "$LABEL_KEY=$run" \
+    -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=querykit_verify \
+    -p 127.0.0.1::5432 "$PG_IMAGE" >/dev/null
+  local port
+  port="$(docker port "$container" 5432/tcp | head -1 | sed 's/.*://')"
+
+  # The image listens only on a unix socket during init, so a TCP query succeeds only when the server is really up.
+  local ready=""
+  for _ in $(seq 1 60); do
+    if docker exec "$container" psql -h 127.0.0.1 -U postgres -d querykit_verify -tAc 'select 1' >/dev/null 2>&1; then ready=1; break; fi
+    sleep 1
+  done
+  [[ -n "$ready" ]] || { docker logs "$container" | tail -20 >&2; die "Postgres did not become ready. Container $container is still up. Run 'QK_RUN=$run qk down'."; }
+
+  cat >"$STATE_DIR/state.env" <<EOF
+RUN=$run
+CONTAINER=$container
+PORT=$port
+DRIVER_DLL=$DRIVER_DLL
+QK_VERIFY_PG="Host=127.0.0.1;Port=$port;Database=querykit_verify;Username=postgres;Password=postgres"
+EOF
+  mkdir -p "$EVIDENCE_ROOT/$run"
+  [[ -f "$REPO/.verify-artifacts/.gitignore" ]] || echo '*' >"$REPO/.verify-artifacts/.gitignore"
+  echo "qk: run '$run' is up. Postgres on 127.0.0.1:$port. Evidence: $EVIDENCE_ROOT/$run" >&2
+  echo "export QK_RUN=$run"
+}
+
+cmd_doctor() {
+  require_run
+  local fail=0
+  ok() { echo "ok    $*"; }
+  bad() { echo "FAIL  $*"; fail=1; }
+
+  ok "run=$RUN state=$STATE_DIR evidence=$EVIDENCE_DIR"
+  local label status
+  label="$(docker inspect -f "{{ index .Config.Labels \"$LABEL_KEY\" }}" "$CONTAINER" 2>/dev/null || true)"
+  status="$(docker inspect -f '{{.State.Status}}' "$CONTAINER" 2>/dev/null || true)"
+  if [[ "$label" == "$RUN" ]]; then ok "container $CONTAINER belongs to this run"; else bad "container $CONTAINER missing or not labeled $LABEL_KEY=$RUN"; fi
+  if [[ "$status" == "running" ]]; then ok "container is running"; else bad "container status is '${status:-absent}'"; fi
+  local port
+  port="$(docker port "$CONTAINER" 5432/tcp 2>/dev/null | head -1 | sed 's/.*://' || true)"
+  if [[ "$port" == "$PORT" ]]; then ok "host port 127.0.0.1:$PORT maps to this container"; else bad "host port is '${port:-none}', state says $PORT"; fi
+  if docker exec "$CONTAINER" psql -h 127.0.0.1 -U postgres -d querykit_verify -tAc 'select 1' >/dev/null 2>&1; then ok "Postgres answers queries"; else bad "Postgres does not answer"; fi
+
+  if [[ -f "$DRIVER_DLL" ]]; then ok "driver built at $DRIVER_DLL"; else bad "driver dll missing. Run 'qk rebuild'."; fi
+  local stale
+  stale="$(find "$REPO/QueryKit" "$SKILL_DIR/harness/Driver" \( -name bin -o -name obj \) -prune -o \
+           \( -name '*.cs' -o -name '*.csproj' \) -newer "$DRIVER_DLL" -print 2>/dev/null | head -5)"
+  if [[ -z "$stale" ]]; then ok "driver is newer than every QueryKit and driver source file"
+  else bad "driver is stale. Changed since build: $(echo "$stale" | sed "s|$REPO/||" | tr '\n' ' '). Run 'qk rebuild'."; fi
+  ok "driver built from $(cat "$STATE_DIR/built-rev") with $(cat "$STATE_DIR/built-dirty-files") uncommitted QueryKit file(s). HEAD is now $(git -C "$REPO" rev-parse --short HEAD)"
+  return $fail
+}
+
+cmd_rebuild() {
+  require_run
+  build_driver
+  echo "qk: driver rebuilt." >&2
+}
+
+cmd_run() {
+  require_run
+  local label="${1:?usage: qk run <label> [driver args...]}"; shift
+  [[ "$label" =~ ^[A-Za-z0-9._-]+$ ]] || die "label '$label' may contain only letters, digits, '.', '_', '-'."
+  mkdir -p "$EVIDENCE_DIR"
+  local base="$EVIDENCE_DIR/$label"
+  { printf 'qk run %s' "$label"; printf ' %q' "$@"; printf '\n'; } >"$base.cmd"
+  local code=0
+  QK_VERIFY_PG="$QK_VERIFY_PG" dotnet "$DRIVER_DLL" "$@" >"$base.json" 2>"$base.stderr" || code=$?
+  echo "exit=$code" >>"$base.cmd"
+  cat "$base.json"
+  [[ -s "$base.stderr" ]] && { echo "--- stderr" ; cat "$base.stderr"; }
+  echo "exit=$code  evidence=$base.{cmd,json,stderr}"
+  return $code
+}
+
+cmd_psql() {
+  require_run
+  local sql="${1:?usage: qk psql <sql>}"
+  docker exec "$CONTAINER" psql -h 127.0.0.1 -U postgres -d querykit_verify \
+    -v ON_ERROR_STOP=1 -c "set default_transaction_read_only = on;" -c "$sql"
+}
+
+cmd_configs() {
+  require_run
+  dotnet "$DRIVER_DLL" --list-configs
+}
+
+cmd_evidence() { require_run; echo "$EVIDENCE_DIR"; }
+
+cmd_ls() {
+  docker ps -a --filter "label=$LABEL_KEY" --format "{{.Names}}\t{{.Status}}\t{{.Ports}}"
+}
+
+cmd_down() {
+  require_run
+  local label
+  label="$(docker inspect -f "{{ index .Config.Labels \"$LABEL_KEY\" }}" "$CONTAINER" 2>/dev/null || true)"
+  if [[ "$label" == "$RUN" ]]; then docker rm -f "$CONTAINER" >/dev/null && echo "qk: removed container $CONTAINER" >&2
+  elif [[ -n "$label" ]]; then die "container $CONTAINER has label '$label', not '$RUN'. Not removing it."
+  else echo "qk: container $CONTAINER is already gone" >&2; fi
+  rm -rf "$STATE_DIR"
+  echo "qk: removed scratch state $STATE_DIR. Evidence kept at $EVIDENCE_DIR" >&2
+}
+
+case "${1:-}" in
+  up) shift; cmd_up "$@" ;;
+  doctor) cmd_doctor ;;
+  rebuild) cmd_rebuild ;;
+  run) shift; cmd_run "$@" ;;
+  psql) shift; cmd_psql "$@" ;;
+  configs) cmd_configs ;;
+  evidence) cmd_evidence ;;
+  ls) cmd_ls ;;
+  down) cmd_down ;;
+  *) sed -n '2,13p' "$SELF" | sed 's/^# \{0,1\}//'; exit 1 ;;
+esac
