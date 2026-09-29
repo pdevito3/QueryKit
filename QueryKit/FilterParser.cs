@@ -21,9 +21,6 @@ public static class FilterParser
     public static Expression<Func<T, bool>> ParseFilter<T>(string input, IQueryKitConfiguration? config = null)
     {
         EnsureWithinParseLimits(input, config);
-
-        input = config?.ReplaceLogicalAliases(input) ?? input;
-        input = config?.ReplaceComparisonAliases(input) ?? input;
         
         var parameter = Expression.Parameter(typeof(T), "x");
         Expression expr;
@@ -136,12 +133,45 @@ public static class FilterParser
             .Or(Parse.String(ComparisonOperator.HasOperator().Operator()).Text())
             .Or(Parse.String(ComparisonOperator.DoesNotHaveOperator().Operator()).Text());
 
-    private static readonly Parser<ComparisonOperator> ComparisonOperatorParser =
-        Parse.Char(ComparisonOperator.AllPrefix).Optional().Select(opt => opt.IsDefined)
-            .Then(hasHash => 
-                ComparisonOperatorTextParser
-                    .SelectMany(op => Parse.Char(ComparisonOperator.CaseSensitiveAppendix).Optional(), (op, caseInsensitive) => new { op, caseInsensitive, hasHash })
-                    .Select(x => ComparisonOperator.GetByOperatorString(x.op, x.caseInsensitive.IsDefined, x.hasHash)));
+    private static readonly Parser<(string Operator, bool CaseInsensitive)> CanonicalComparisonOperatorParser =
+        ComparisonOperatorTextParser
+            .SelectMany(op => Parse.Char(ComparisonOperator.CaseSensitiveAppendix).Optional(), (op, caseInsensitive) => (op, caseInsensitive.IsDefined));
+
+    private static Parser<ComparisonOperator> ComparisonOperatorParser(IQueryKitConfiguration? config)
+    {
+        var operatorParser = ComparisonOperatorAliasParser(config).Or(CanonicalComparisonOperatorParser);
+        return Parse.Char(ComparisonOperator.AllPrefix).Optional().Select(opt => opt.IsDefined)
+            .Then(hasHash => operatorParser.Select(x => ComparisonOperator.GetByOperatorString(x.Operator, x.CaseInsensitive, hasHash)));
+    }
+
+    // Aliases are matched in the grammar (not by rewriting the input) so text inside quoted values is never changed.
+    // Longer aliases are tried first so an alias that starts with another alias (e.g. `@@$$` and `@@$`) still matches.
+    private static Parser<(string Operator, bool CaseInsensitive)> ComparisonOperatorAliasParser(IQueryKitConfiguration? config)
+    {
+        Parser<(string Operator, bool CaseInsensitive)> parser = i => Result.Failure<(string, bool)>(i, "no operator alias", Array.Empty<string>());
+        if (config == null)
+            return parser;
+
+        var caseInsensitiveSuffix = ComparisonOperator.CaseSensitiveAppendix.ToString();
+        foreach (var match in ComparisonOperator.GetAliasMatches(config).OrderByDescending(x => x.Alias.Length))
+        {
+            var caseInsensitive = match.Operator.EndsWith(caseInsensitiveSuffix);
+            var op = caseInsensitive ? match.Operator[..^caseInsensitiveSuffix.Length] : match.Operator;
+            parser = parser.Or(OperatorAlias(match.Alias).Return((op, caseInsensitive)));
+        }
+
+        return parser;
+    }
+
+    // An alias is a whole word: it must be followed by whitespace or the end of the input.
+    private static Parser<string> OperatorAlias(string alias) => input =>
+    {
+        var result = Parse.IgnoreCase(alias).Text()(input);
+        if (!result.WasSuccessful || result.Remainder.AtEnd || char.IsWhiteSpace(result.Remainder.Current))
+            return result;
+
+        return Result.Failure<string>(input, $"Operator alias '{alias}' must be followed by whitespace", new[] { alias });
+    };
 
     private static PropertyInfo? GetPropertyInfo(Type type, string propertyName)
         => type.GetProperty(propertyName, BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance);
@@ -268,6 +298,18 @@ public static class FilterParser
             ArithmeticOperatorParser.Where(op => op.Precedence == 1).Token(), // +, -
             ArithmeticFactorParser.Token(),
             (op, left, right) => new BinaryArithmeticExpression(left, op, right));
+
+    private static Parser<LogicalOperator> LogicalOperatorParserWithAliases(IQueryKitConfiguration? config)
+    {
+        var aliases = config == null ? new List<LogicalOperator.LogicalAliasMatch>() : LogicalOperator.GetAliasMatches(config);
+        return aliases.Aggregate(
+            LogicalOperatorParser,
+            (parser, match) => parser.Or(
+                from leadingSpaces in Parse.WhiteSpace.Many()
+                from op in OperatorAlias(match.Alias)
+                from trailingSpaces in Parse.WhiteSpace.Many()
+                select LogicalOperator.GetByOperatorString(match.Operator)));
+    }
 
     private static readonly Dictionary<Type, Func<string, object>> TypeConversionFunctions = new()
     {
@@ -584,7 +626,7 @@ public static class FilterParser
     // New arithmetic-aware comparison parser - only matches expressions in parentheses with arithmetic operators
     private static Parser<Expression> ArithmeticComparisonExprParser<T>(ParameterExpression parameter, IQueryKitConfiguration? config)
     {
-        var comparisonOperatorParser = ComparisonOperatorParser.Token();
+        var comparisonOperatorParser = ComparisonOperatorParser(config).Token();
         var rightSideValueParser = RightSideValueParser.Token();
         
         // Only parse arithmetic expressions that are in parentheses and contain arithmetic operators
@@ -703,7 +745,7 @@ public static class FilterParser
 
     private static Parser<Expression> ComparisonExprParser<T>(ParameterExpression parameter, IQueryKitConfiguration? config)
     {
-        var comparisonOperatorParser = ComparisonOperatorParser.Token();
+        var comparisonOperatorParser = ComparisonOperatorParser(config).Token();
         var rightSideValueParser = RightSideValueParser.Token();
 
         // Try property list comparison first (e.g., (firstName, lastName) @=* "paul")
@@ -1029,7 +1071,7 @@ public static class FilterParser
         ParameterExpression parameter,
         IQueryKitConfiguration? config)
     {
-        var comparisonOperatorParser = ComparisonOperatorParser.Token();
+        var comparisonOperatorParser = ComparisonOperatorParser(config).Token();
         var rightSideValueParser = RightSideValueParser.Token();
 
         return PropertyListParser
@@ -1124,14 +1166,14 @@ public static class FilterParser
     
     private static Parser<Expression> AndExprParser<T>(ParameterExpression parameter, IQueryKitConfiguration? config = null)
         => Parse.ChainOperator(
-            LogicalOperatorParser.Where(x => x.Name == LogicalOperator.AndOperator.Operator()),
+            LogicalOperatorParserWithAliases(config).Where(x => x.Name == LogicalOperator.AndOperator.Operator()),
             AtomicExprParser<T>(parameter, config),
             CombineClauses<T>
         );
 
     private static Parser<Expression> OrExprParser<T>(ParameterExpression parameter, IQueryKitConfiguration? config = null)
         => Parse.ChainOperator(
-            LogicalOperatorParser.Where(x => x.Name == LogicalOperator.OrOperator.Operator()),
+            LogicalOperatorParserWithAliases(config).Where(x => x.Name == LogicalOperator.OrOperator.Operator()),
             AndExprParser<T>(parameter, config),
             CombineClauses<T>
         );
