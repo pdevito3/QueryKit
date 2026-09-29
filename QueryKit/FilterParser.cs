@@ -195,15 +195,15 @@ public static class FilterParser
      * DateTime (no offset information): yyyy-MM-ddTHH:mm:ss.ffffff
      * DateTime (in UTC): yyyy-MM-ddTHH:mm:ss.ffffffZ
      */
-    private static readonly Parser<string> TimeFormatParser = Parse.Regex(@"\d{2}:\d{2}:\d{2}").Text();
+    private static readonly Parser<string> TimeFormatParser = Parse.Regex(@"\d{2}:\d{2}:\d{2}(\.\d{1,7})?").Text();
     private static readonly Parser<string> DateTimeTimeParser = Parse.Regex(@"T\d{2}:\d{2}:\d{2}").Text().Optional().Select(x => x.GetOrElse(""));
+    private static readonly Parser<string> DateTimeMicrosParser = Parse.Regex(@"\.\d{1,7}").Text().Optional().Select(x => x.GetOrElse(""));
     private static readonly Parser<string> DateTimeZoneParser = Parse.Regex(@"Z|[+-]\d{2}(:\d{2})?").Text().Optional().Select(x => x.GetOrElse(""));
-    private static readonly Parser<string> DateTimeMicrosParser = Parse.Regex(@"\.\d{1,6}").Text().Optional().Select(x => x.GetOrElse(""));
     private static readonly Parser<string> DateTimeFormatParser =
         from dateFormat in Parse.Regex(@"\d{4}-\d{2}-\d{2}").Text()
         from timeFormat in DateTimeTimeParser
-        from timeZone in DateTimeZoneParser
         from micros in DateTimeMicrosParser
+        from timeZone in DateTimeZoneParser
         select dateFormat + timeFormat + micros + timeZone;
 
     private static readonly Parser<string> NumberParser =
@@ -540,19 +540,9 @@ public static class FilterParser
             {
                 var time = TimeOnly.Parse(right, CultureInfo.InvariantCulture);
 
-                int millisecond = 0, microsecond = 0;
-                if (right.Contains('.'))
-                {
-                    var fractionalSeconds = right.Split('.')[1];
-                    if (fractionalSeconds.Length >= 3)
-                    {
-                        millisecond = int.Parse(fractionalSeconds.Substring(0, 3));
-                    }
-                    if (fractionalSeconds.Length >= 6)
-                    {
-                        microsecond = int.Parse(fractionalSeconds.Substring(3, 3));
-                    }
-                }
+                var fractionalTicks = time.Ticks % TimeSpan.TicksPerSecond;
+                var millisecond = (int)(fractionalTicks / TimeSpan.TicksPerMillisecond);
+                var microsecond = (int)(fractionalTicks % TimeSpan.TicksPerMillisecond / 10);
 
                 // One microsecond is 10 ticks. The TimeOnly constructor with microseconds needs .NET 7.
                 var value = new TimeOnly(time.Hour, time.Minute, time.Second, millisecond)

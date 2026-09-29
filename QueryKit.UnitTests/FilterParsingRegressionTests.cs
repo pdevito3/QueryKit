@@ -81,6 +81,50 @@ public class FilterParsingRegressionTests
         result.Select(x => x.Title).Should().BeEquivalentTo("jan", "mar");
     }
 
+    [Theory]
+    [InlineData("SpecificDateTime == 2024-01-15T08:00:00.500Z")]
+    [InlineData("SpecificDateTime == 2024-01-15T08:00:00.5Z")]
+    [InlineData("SpecificDateTime == \"2024-01-15T08:00:00.5Z\"")]
+    [InlineData("SpecificDateTime ^^ [2024-01-15T08:00:00.5Z]")]
+    [InlineData("SpecificDate == 2024-01-15T10:00:00.5+02:00")]
+    [InlineData("SpecificDate == 2024-01-15T08:00:00.5000000Z")]
+    [InlineData("Time == 08:30:00.5")]
+    [InlineData("Time == \"08:30:00.5\"")]
+    [InlineData("Time == \"08:30:00.50\"")]
+    [InlineData("Time ^^ [08:30:00.5]")]
+    public void fractional_seconds_are_kept(string input)
+    {
+        var people = new[]
+        {
+            new TestingPerson
+            {
+                Title = "match",
+                SpecificDateTime = new DateTime(2024, 1, 15, 8, 0, 0, 500, DateTimeKind.Utc),
+                SpecificDate = new DateTimeOffset(2024, 1, 15, 8, 0, 0, 500, TimeSpan.Zero),
+                Time = new TimeOnly(8, 30, 0, 500),
+            },
+            new TestingPerson
+            {
+                Title = "whole second",
+                SpecificDateTime = new DateTime(2024, 1, 15, 8, 0, 0, DateTimeKind.Utc),
+                SpecificDate = new DateTimeOffset(2024, 1, 15, 8, 0, 0, TimeSpan.Zero),
+                Time = new TimeOnly(8, 30, 0),
+            },
+        };
+
+        var result = people.AsQueryable().ApplyQueryKitFilter(input).ToList();
+
+        result.Select(x => x.Title).Should().Equal("match");
+    }
+
+    [Fact]
+    public void time_fraction_keeps_microseconds()
+    {
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>("Time == 08:30:00.123456");
+
+        filterExpression.ToDisplayString().Should().Be("x => (x.Time == new Nullable`1(new TimeOnly(8, 30, 0, 123, 456)))");
+    }
+
     private static TResult WithCulture<TResult>(string cultureName, Func<TResult> action)
     {
         var originalCulture = CultureInfo.CurrentCulture;
