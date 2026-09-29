@@ -5,6 +5,8 @@ using Configuration;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using SharedTestingHelper.Fakes;
+using SharedTestingHelper.Fakes.Author;
+using SharedTestingHelper.Fakes.Recipes;
 using WebApiTestProject.Entities;
 
 public class PropertyResolverTests : TestBase
@@ -324,5 +326,32 @@ public class PropertyResolverTests : TestBase
 
         // Assert
         people.Should().ContainSingle(x => x.Id == fakePerson.Id);
+    }
+
+    [Fact]
+    public async Task property_path_on_the_right_side_is_compared()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var name = Guid.NewGuid().ToString();
+        var matchingRecipe = new FakeRecipeBuilder()
+            .WithTitle(name)
+            .Build();
+        matchingRecipe.SetAuthor(new FakeAuthorBuilder().WithName(name).Build());
+        var otherRecipe = new FakeRecipeBuilder()
+            .WithTitle(name)
+            .Build();
+        otherRecipe.SetAuthor(new FakeAuthorBuilder().WithName(Guid.NewGuid().ToString()).Build());
+        await testingServiceScope.InsertAsync(matchingRecipe, otherRecipe);
+
+        var input = $"""Title == "{name}" && Title == Author.Name""";
+
+        // Act
+        var recipes = await testingServiceScope.DbContext().Recipes
+            .ApplyQueryKitFilter(input)
+            .ToListAsync();
+
+        // Assert
+        recipes.Should().ContainSingle(x => x.Id == matchingRecipe.Id);
     }
 }
