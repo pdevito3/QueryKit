@@ -413,11 +413,12 @@ public class QueryKitPropertyMappings
         if (string.IsNullOrEmpty(propertyPath))
             return null;
 
-        // Check if the property path starts with any configured property that has MaxDepth
+        // Check if the property path is, or is under, any configured property that has MaxDepth
         foreach (var mapping in _propertyMappings.Values)
         {
-            if (mapping.MaxDepth.HasValue &&
-                propertyPath.StartsWith(mapping.Name ?? "", StringComparison.OrdinalIgnoreCase))
+            if (mapping.MaxDepth.HasValue && !string.IsNullOrEmpty(mapping.Name) &&
+                (propertyPath.Equals(mapping.Name, StringComparison.OrdinalIgnoreCase) ||
+                 propertyPath.StartsWith(mapping.Name + ".", StringComparison.OrdinalIgnoreCase)))
             {
                 return mapping.MaxDepth;
             }
