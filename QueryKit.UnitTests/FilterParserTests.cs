@@ -537,6 +537,15 @@ public class FilterParserTests
     }
 
     [Fact]
+    public void child_collection_member_resolves_in_any_case()
+    {
+        var input = """ingredients.name == "flour" """;
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input);
+        filterExpression.ToDisplayString().Should()
+            .Be(""""x => x.Ingredients.Select(y => y.Name).Any(z => (z == "flour"))"""");
+    }
+
+    [Fact]
     public void simple_child_collection_for_string_case_insensitive_equal()
     {
         var input = """Ingredients.Name ==* "flour" """;
