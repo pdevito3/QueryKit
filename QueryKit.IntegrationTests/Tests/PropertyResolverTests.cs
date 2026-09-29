@@ -181,4 +181,93 @@ public class PropertyResolverTests : TestBase
         // Assert
         people.Select(x => x.Id).Should().Equal(firstPerson.Id, secondPerson.Id);
     }
+
+    [Fact]
+    public async Task prevented_custom_operation_is_not_filtered()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var title = new Faker().Lorem.Sentence();
+        var fakePerson = new FakeTestingPersonBuilder()
+            .WithTitle(title)
+            .WithAge(5)
+            .Build();
+        await testingServiceScope.InsertAsync(fakePerson);
+
+        var input = $"""Title == "{title}" && adult == true""";
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.CustomOperation<TestingPerson>((x, op, value) => x.Age > 17).HasQueryName("adult").PreventFilter();
+        });
+
+        // Act
+        var people = await testingServiceScope.DbContext().People
+            .ApplyQueryKitFilter(input, config)
+            .ToListAsync();
+
+        // Assert
+        people.Should().ContainSingle(x => x.Id == fakePerson.Id);
+    }
+
+    [Fact]
+    public async Task prevented_derived_property_is_not_filtered()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var title = new Faker().Lorem.Sentence();
+        var fakePerson = new FakeTestingPersonBuilder()
+            .WithTitle(title)
+            .WithFirstName("Paul")
+            .WithLastName("Other")
+            .Build();
+        await testingServiceScope.InsertAsync(fakePerson);
+
+        var input = $"""Title == "{title}" && full == "no match" """;
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.DerivedProperty<TestingPerson>(x => x.FirstName + " " + x.LastName).HasQueryName("full").PreventFilter();
+        });
+
+        // Act
+        var people = await testingServiceScope.DbContext().People
+            .ApplyQueryKitFilter(input, config)
+            .ToListAsync();
+
+        // Assert
+        people.Should().ContainSingle(x => x.Id == fakePerson.Id);
+    }
+
+    [Fact]
+    public async Task prevented_derived_sort_property_is_not_sorted()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var title = new Faker().Lorem.Sentence();
+        var firstPerson = new FakeTestingPersonBuilder()
+            .WithTitle(title)
+            .WithFirstName("A")
+            .WithAge(1)
+            .Build();
+        var secondPerson = new FakeTestingPersonBuilder()
+            .WithTitle(title)
+            .WithFirstName("B")
+            .WithAge(2)
+            .Build();
+        await testingServiceScope.InsertAsync(firstPerson, secondPerson);
+
+        var input = "full desc, Age";
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.DerivedProperty<TestingPerson>(x => x.FirstName + " " + x.LastName).HasQueryName("full").PreventSort();
+        });
+
+        // Act
+        var people = await testingServiceScope.DbContext().People
+            .Where(x => x.Title == title)
+            .ApplyQueryKitSort(input, config)
+            .ToListAsync();
+
+        // Assert
+        people.Select(x => x.Id).Should().Equal(firstPerson.Id, secondPerson.Id);
+    }
 }
