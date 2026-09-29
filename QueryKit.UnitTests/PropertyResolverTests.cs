@@ -1,8 +1,10 @@
 namespace QueryKit.UnitTests;
 
 using Configuration;
+using Exceptions;
 using FluentAssertions;
 using WebApiTestProject.Entities;
+using WebApiTestProject.Entities.Ingredients;
 
 public class PropertyResolverTests
 {
@@ -75,5 +77,47 @@ public class PropertyResolverTests
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
 
         filterExpression.ToDisplayString().Should().Be("x => (x.Age > 100)");
+    }
+
+    [Fact]
+    public void prevented_property_in_arithmetic_removes_the_clause()
+    {
+        var input = """(Age + 0) > 10 || Title == "a" """;
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.Age).PreventFilter();
+        });
+
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+
+        filterExpression.ToDisplayString().Should().Be("""x => (x.Title == "a")""");
+    }
+
+    [Fact]
+    public void prevented_property_on_the_right_side_of_arithmetic_removes_the_clause()
+    {
+        var input = """(Age + 0) > (Rating * 2)""";
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.Rating).PreventFilter();
+        });
+
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+
+        filterExpression.ToDisplayString().Should().Be("x => True");
+    }
+
+    [Fact]
+    public void arithmetic_property_obeys_max_property_depth()
+    {
+        var input = """(Recipe.Rating + 0) > 1""";
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.MaxPropertyDepth = 0;
+        });
+
+        var act = () => FilterParser.ParseFilter<Ingredient>(input, config);
+
+        act.Should().Throw<QueryKitPropertyDepthExceededException>();
     }
 }

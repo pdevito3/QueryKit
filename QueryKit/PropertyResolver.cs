@@ -33,14 +33,16 @@ internal sealed class PropertyReference
     /// <summary>For a member, the real member names joined with '.'. For other kinds, the reference text.</summary>
     public string Path { get; }
 
-    /// <summary>The configuration of a derived property or a custom operation.</summary>
+    /// <summary>The configuration of the member, the derived property, or the custom operation, if there is one.</summary>
     public QueryKitPropertyInfo? Mapping { get; }
+
+    public bool CanFilter => Mapping?.CanFilter ?? true;
 
     /// <summary>When the reference is not a member, the first path segment that did not resolve to a member.</summary>
     public string? UnknownSegment { get; }
 
-    internal static PropertyReference Member(string text, string path)
-        => new(PropertyReferenceKind.Member, text, path, null, null);
+    internal static PropertyReference Member(string text, string path, QueryKitPropertyInfo? mapping)
+        => new(PropertyReferenceKind.Member, text, path, mapping, null);
 
     internal static PropertyReference NotMember(PropertyReferenceKind kind, string text, QueryKitPropertyInfo? mapping, string unknownSegment)
         => new(kind, text, text, mapping, unknownSegment);
@@ -58,7 +60,7 @@ internal static class PropertyResolver
         var memberPath = ResolveMemberPath(rootType, reference, out var unknownSegment);
         if (memberPath != null)
         {
-            return PropertyReference.Member(reference, memberPath);
+            return PropertyReference.Member(reference, memberPath, config?.PropertyMappings?.GetPropertyInfo(memberPath));
         }
 
         var customOperationInfo = config?.PropertyMappings?.GetCustomOperationInfoByQueryName(reference);
