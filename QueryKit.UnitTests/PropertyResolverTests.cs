@@ -148,4 +148,60 @@ public class PropertyResolverTests
 
         filterExpression.ToDisplayString().Should().Be("x => (x.Age > 100)");
     }
+
+    [Fact]
+    public void prevented_property_in_a_list_is_skipped_in_any_case()
+    {
+        var input = """(title, FirstName) == "x" """;
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.Title).PreventFilter();
+        });
+
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+
+        filterExpression.ToDisplayString().Should().Be("""x => (x.FirstName == "x")""");
+    }
+
+    [Fact]
+    public void prevented_property_removes_the_clause_in_any_case()
+    {
+        var input = """title == "x" || Age > 100""";
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.Title).PreventFilter();
+        });
+
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+
+        filterExpression.ToDisplayString().Should().Be("x => (x.Age > 100)");
+    }
+
+    [Fact]
+    public void prevented_property_with_a_query_name_removes_the_clause_when_written_by_its_member_name_in_any_case()
+    {
+        var input = """title == "x" || Age > 100""";
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.Title).HasQueryName("t").PreventFilter();
+        });
+
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+
+        filterExpression.ToDisplayString().Should().Be("x => (x.Age > 100)");
+    }
+
+    [Fact]
+    public void property_in_a_list_uses_its_case_insensitive_mode_in_any_case()
+    {
+        var input = """(title) @=* "x" """;
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.Title).HasCaseInsensitiveMode(CaseInsensitiveMode.Upper);
+        });
+
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+
+        filterExpression.ToDisplayString().Should().Contain("ToUpper()");
+    }
 }

@@ -894,7 +894,7 @@ public static class FilterParser
             ? reference.Mapping!.DerivedExpression!
             : CreateMemberExpression(parameter, reference.Path);
 
-        var propertyConfig = config?.PropertyMappings?.GetPropertyInfo(reference.Text);
+        var propertyConfig = reference.Kind == PropertyReferenceKind.Member ? reference.Mapping : null;
         if (propertyConfig != null && !propertyConfig.CanFilter)
         {
             return RemovedClauseExpression.Instance;
@@ -1040,15 +1040,13 @@ public static class FilterParser
                     var propertyPathList = propertyPath.ToList();
                     var fullPropPath = string.Join(".", propertyPathList);
 
-                    // Check if property can be filtered
-                    var propertyConfig = config?.PropertyMappings?.GetPropertyInfo(fullPropPath);
-                    if (propertyConfig != null && !propertyConfig.CanFilter)
+                    // Build expression for each property. A property list does not support custom operations.
+                    var reference = PropertyResolver.Resolve(parameter.Type, fullPropPath, config);
+                    if (reference.Kind == PropertyReferenceKind.Member && !reference.CanFilter)
                     {
                         continue;
                     }
 
-                    // Build expression for each property. A property list does not support custom operations.
-                    var reference = PropertyResolver.Resolve(parameter.Type, fullPropPath, config);
                     if (reference.Kind is PropertyReferenceKind.Unknown or PropertyReferenceKind.CustomOperation)
                     {
                         if (config?.AllowUnknownProperties == true)
@@ -1076,7 +1074,7 @@ public static class FilterParser
                     }
 
                     var rightExpr = CreateRightExpr(leftExpr, temp.right, temp.op, config, resolvedPropPath);
-                    var comparison = temp.op.GetExpression<T>(leftExpr, rightExpr, config?.DbContextType, ResolveCaseMode(fullPropPath, config));
+                    var comparison = temp.op.GetExpression<T>(leftExpr, rightExpr, config?.DbContextType, ResolveCaseMode(reference.Path, config));
 
                     // Combine with AND for negative operators, OR for positive operators
                     result = result == null
