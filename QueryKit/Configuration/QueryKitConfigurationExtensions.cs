@@ -37,11 +37,6 @@ internal static class QueryKitConfigurationExtensions
         return configuration.PropertyMappings.GetPropertyPathByQueryName(queryName);
     }
 
-    internal static bool IsPropertySortable(this IQueryKitConfiguration configuration, string? propertyName)
-    {
-        return configuration.PropertyMappings.GetPropertyInfo(propertyName)?.CanSort ?? true;
-    }
-
     internal static void ValidatePropertyDepth(this IQueryKitConfiguration? configuration, string? propertyPath)
     {
         if (configuration == null || string.IsNullOrEmpty(propertyPath))

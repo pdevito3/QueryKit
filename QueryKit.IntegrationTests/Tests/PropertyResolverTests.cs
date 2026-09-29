@@ -147,4 +147,38 @@ public class PropertyResolverTests : TestBase
         // Assert
         people.Should().BeEmpty();
     }
+
+    [Fact]
+    public async Task prevented_sort_property_with_a_query_name_is_not_sorted_when_written_by_its_member_name()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var title = new Faker().Lorem.Sentence();
+        var firstPerson = new FakeTestingPersonBuilder()
+            .WithTitle(title)
+            .WithFirstName("A")
+            .WithAge(1)
+            .Build();
+        var secondPerson = new FakeTestingPersonBuilder()
+            .WithTitle(title)
+            .WithFirstName("B")
+            .WithAge(2)
+            .Build();
+        await testingServiceScope.InsertAsync(firstPerson, secondPerson);
+
+        var input = "firstname desc, Age";
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.FirstName).HasQueryName("first").PreventSort();
+        });
+
+        // Act
+        var people = await testingServiceScope.DbContext().People
+            .Where(x => x.Title == title)
+            .ApplyQueryKitSort(input, config)
+            .ToListAsync();
+
+        // Assert
+        people.Select(x => x.Id).Should().Equal(firstPerson.Id, secondPerson.Id);
+    }
 }
