@@ -16,7 +16,7 @@ public class OperatorAliasTests
             config.EqualsOperator = "ti";
         });
         var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
-        filterExpression.ToString().Should().Be($"""x => (x.Title == "titilating")""");
+        filterExpression.ToDisplayString().Should().Be($"""x => (x.Title == "titilating")""");
     }
 
     [Fact]
@@ -29,7 +29,7 @@ public class OperatorAliasTests
             config.EqualsOperator = "ti";
         });
         var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
-        filterExpression.ToString().Should().Be($"""x => ((x.Title == "titilating ties a ti") OrElse (x.Title == "titilater"))""");
+        filterExpression.ToDisplayString().Should().Be($"""x => ((x.Title == "titilating ties a ti") OrElse (x.Title == "titilater"))""");
     }
 
     [Fact]
@@ -42,7 +42,7 @@ public class OperatorAliasTests
             config.EqualsOperator = "@";
         });
         var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
-        filterExpression.ToString().Should().Be($"""x => (x.Title == "titilating")""");
+        filterExpression.ToDisplayString().Should().Be($"""x => (x.Title == "titilating")""");
     }
 
     [Fact]
@@ -56,7 +56,7 @@ public class OperatorAliasTests
             config.OrOperator = "or";
         });
         var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
-        filterExpression.ToString().Should().Be($"""x => ((x.Title == "titilating") OrElse (x.Rating > 3))""");
+        filterExpression.ToDisplayString().Should().Be($"""x => ((x.Title == "titilating") OrElse (x.Rating > 3))""");
     }
 
     [Fact]
@@ -70,7 +70,7 @@ public class OperatorAliasTests
             config.AndOperator = "and";
         });
         var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
-        filterExpression.ToString().Should().Be($"""x => ((x.Title == "titilating") AndAlso (x.Rating > 3))""");
+        filterExpression.ToDisplayString().Should().Be($"""x => ((x.Title == "titilating") AndAlso (x.Rating > 3))""");
     }
 
     [Fact]
@@ -84,7 +84,7 @@ public class OperatorAliasTests
             config.OrOperator = "or";
         });
         var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
-        filterExpression.ToString().Should().Be($"""x => ((x.Title == "titilating or") OrElse (x.Rating > 3))""");
+        filterExpression.ToDisplayString().Should().Be($"""x => ((x.Title == "titilating or") OrElse (x.Rating > 3))""");
     }
 
     [Fact]
@@ -97,7 +97,7 @@ public class OperatorAliasTests
             config.EqualsOperator = "@@$";
         });
         var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
-        filterExpression.ToString().Should().Be($"""x => (x.Title == "titilating")""");
+        filterExpression.ToDisplayString().Should().Be($"""x => (x.Title == "titilating")""");
     }
 
     [Fact]
@@ -110,7 +110,7 @@ public class OperatorAliasTests
             config.EqualsOperator = "@@$";
         });
         var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
-        filterExpression.ToString().Should().Be($"""x => ((x.Title != null) AndAlso (x.Title.ToLower() == "titilating".ToLower()))""");
+        filterExpression.ToDisplayString().Should().Be($"""x => ((x.Title != null) AndAlso (x.Title.ToLower() == "titilating".ToLower()))""");
     }
 
     [Fact]
@@ -124,7 +124,7 @@ public class OperatorAliasTests
             config.CaseInsensitiveAppendix = "~";
         });
         var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
-        filterExpression.ToString().Should().Be($"""x => ((x.Title != null) AndAlso (x.Title.ToLower() == "titilating".ToLower()))""");
+        filterExpression.ToDisplayString().Should().Be($"""x => ((x.Title != null) AndAlso (x.Title.ToLower() == "titilating".ToLower()))""");
     }
 
     [Fact]
@@ -138,7 +138,7 @@ public class OperatorAliasTests
             config.CaseInsensitiveAppendix = "$";
         });
         var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
-        filterExpression.ToString().Should().Be($"""x => (x.Title == "titilating")""");
+        filterExpression.ToDisplayString().Should().Be($"""x => (x.Title == "titilating")""");
     }
 
     [Fact]
@@ -153,7 +153,7 @@ public class OperatorAliasTests
             config.CaseInsensitiveAppendix = "$";
         });
         var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
-        filterExpression.ToString().Should().Be($"""x => x.Title.Contains("titilating")""");
+        filterExpression.ToDisplayString().Should().Be($"""x => x.Title.Contains("titilating")""");
     }
 
     [Fact]
@@ -167,7 +167,7 @@ public class OperatorAliasTests
             config.CaseInsensitiveAppendix = "$";
         });
         var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
-        filterExpression.ToString().Should().Be($"""x => ((x.Title != null) AndAlso (x.Title.ToLower() == "titilating".ToLower()))""");
+        filterExpression.ToDisplayString().Should().Be($"""x => ((x.Title != null) AndAlso (x.Title.ToLower() == "titilating".ToLower()))""");
     }
 
     [Fact]
@@ -181,7 +181,7 @@ public class OperatorAliasTests
             config.CaseInsensitiveAppendix = "t";
         });
         var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
-        filterExpression.ToString().Should().Be($"""x => ((x.Title != null) AndAlso (x.Title.ToLower() == "titilating".ToLower()))""");
+        filterExpression.ToDisplayString().Should().Be($"""x => ((x.Title != null) AndAlso (x.Title.ToLower() == "titilating".ToLower()))""");
     }
 
     [Fact]
@@ -191,7 +191,7 @@ public class OperatorAliasTests
 
         var config = new CustomQueryKitConfiguration();
         var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
-        filterExpression.ToString().Should().Be($"""x => (x.Title == "titilating")""");
+        filterExpression.ToDisplayString().Should().Be($"""x => (x.Title == "titilating")""");
     }
 
     [Fact]
@@ -201,7 +201,7 @@ public class OperatorAliasTests
 
         var config = new CustomQueryKitConfiguration();
         var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
-        filterExpression.ToString().Should().Be($"""x => (x.Rating > 10)""");
+        filterExpression.ToDisplayString().Should().Be($"""x => (x.Rating > 10)""");
     }
 
     public class CustomQueryKitConfiguration : QueryKitConfiguration

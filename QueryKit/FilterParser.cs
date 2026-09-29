@@ -304,7 +304,7 @@ public static class FilterParser
                     var stringCtor = (underlyingType ?? leftExpr.Type).GetConstructor(new[] { typeof(string) });
                     if (stringCtor != null)
                     {
-                        Expression constructed = Expression.New(stringCtor, Expression.Constant(right, typeof(string)));
+                        Expression constructed = Expression.New(stringCtor, FilterValue.Parameter(right, typeof(string)));
                         return underlyingType == null ? constructed : Expression.Convert(constructed, leftExpr.Type);
                     }
                 }
@@ -325,7 +325,7 @@ public static class FilterParser
         {
             if (op.IsCountOperator() && int.TryParse(right, out var intVal))
             {
-                return Expression.Constant(intVal, typeof(int));
+                return FilterValue.Parameter(intVal, typeof(int));
             }
             targetType = targetType.GetGenericArguments()[0];
             return CreateRightExprFromType(targetType, right, op);
@@ -387,45 +387,20 @@ public static class FilterParser
                     dt = DateTime.SpecifyKind(dt, DateTimeKind.Utc);
                 }
 
-                var dtCtor = typeof(DateTime).GetConstructor(new[] { typeof(long), typeof(DateTimeKind) })!;
-                var newExpr = Expression.New(dtCtor, Expression.Constant(dt.Ticks), Expression.Constant(dt.Kind));
-
-                var isNullable = rawType == typeof(DateTime?);
-                if (!isNullable) return newExpr;
-
-                var nullableDtCtor = typeof(DateTime?).GetConstructor(new[] { typeof(DateTime) })!;
-                newExpr = Expression.New(nullableDtCtor, newExpr);
-                return newExpr;
+                return FilterValue.Parameter(dt, rawType);
             }
 
             if (targetType == typeof(DateTimeOffset))
             {
                 var dtStyle = right.EndsWith("Z") ? DateTimeStyles.AdjustToUniversal : DateTimeStyles.AssumeLocal;
                 var dto = DateTimeOffset.Parse(right, CultureInfo.InvariantCulture, dtStyle);
-
-                var dtoCtor = typeof(DateTimeOffset).GetConstructor(new[] { typeof(long), typeof(TimeSpan) })!;
-                var newExpr = Expression.New(dtoCtor, Expression.Constant(dto.Ticks), Expression.Constant(dto.Offset));
-
-                var isNullable = rawType == typeof(DateTimeOffset?);
-                if (!isNullable) return newExpr;
-
-                var nullableDtoCtor = typeof(DateTimeOffset?).GetConstructor(new[] { typeof(DateTimeOffset) })!;
-                newExpr = Expression.New(nullableDtoCtor, newExpr);
-                return newExpr;
+                return FilterValue.Parameter(dto, rawType);
             }
 
             if (targetType == typeof(DateOnly))
             {
                 var date = DateOnly.Parse(right, CultureInfo.InvariantCulture);
-                var dateCtor = typeof(DateOnly).GetConstructor(new[] { typeof(int), typeof(int), typeof(int) })!;
-                var newExpr = Expression.New(dateCtor, Expression.Constant(date.Year), Expression.Constant(date.Month), Expression.Constant(date.Day));
-
-                var isNullable = rawType == typeof(DateOnly?);
-                if (!isNullable) return newExpr;
-
-                var nullableDateCtor = typeof(DateOnly?).GetConstructor(new[] { typeof(DateOnly) })!;
-                newExpr = Expression.New(nullableDateCtor, newExpr);
-                return newExpr;
+                return FilterValue.Parameter(date, rawType);
             }
 
             if (targetType == typeof(TimeOnly))
@@ -446,15 +421,10 @@ public static class FilterParser
                     }
                 }
 
-                var timeCtor = typeof(TimeOnly).GetConstructor(new[] { typeof(int), typeof(int), typeof(int), typeof(int), typeof(int) })!;
-                var newExpr = Expression.New(timeCtor, Expression.Constant(time.Hour), Expression.Constant(time.Minute), Expression.Constant(time.Second), Expression.Constant(millisecond), Expression.Constant(microsecond));
-
-                var isNullable = rawType == typeof(TimeOnly?);
-                if (!isNullable) return newExpr;
-
-                var nullableTimeCtor = typeof(TimeOnly?).GetConstructor(new[] { typeof(TimeOnly) })!;
-                newExpr = Expression.New(nullableTimeCtor, newExpr);
-                return newExpr;
+                // One microsecond is 10 ticks. The TimeOnly constructor with microseconds needs .NET 7.
+                var value = new TimeOnly(time.Hour, time.Minute, time.Second, millisecond)
+                    .Add(TimeSpan.FromTicks(microsecond * 10));
+                return FilterValue.Parameter(value, rawType);
             }
 
             if (targetType == typeof(Guid))
@@ -463,16 +433,16 @@ public static class FilterParser
                 // For equality/comparison operators, we can compare GUIDs directly (more efficient and EF-friendly)
                 if (op.IsStringComparisonOperator())
                 {
-                    return Expression.Constant(right, typeof(string));
+                    return FilterValue.Parameter(right, typeof(string));
                 }
 
                 // Parse the GUID for direct comparison
                 var guidValue = Guid.Parse(right);
-                return Expression.Constant(guidValue, typeof(Guid));
+                return FilterValue.Parameter(guidValue, typeof(Guid));
             }
 
             var convertedValue = conversionFunction(right);
-            return Expression.Constant(convertedValue, leftExprType);
+            return FilterValue.Parameter(convertedValue, leftExprType);
         }
 
         if (rawType.IsEnum || (Nullable.GetUnderlyingType(rawType)?.IsEnum ?? false))
@@ -511,12 +481,7 @@ public static class FilterParser
             {
                 throw new InvalidOperationException($"Unsupported value '{right}' for type '{targetType.Name}'");
             }
-            var constant = Expression.Constant(enumValue, enumType);
-
-            if (rawType == enumType) return constant;
-
-            var nullableCtor = rawType.GetConstructor(new[] {enumType})!;
-            return Expression.New(nullableCtor, constant);
+            return FilterValue.Parameter(enumValue, rawType);
         }
         
         // for some complex derived expressions
@@ -529,7 +494,7 @@ public static class FilterParser
 
             if (bool.TryParse(right, out var boolVal))
             {
-                return Expression.Constant(boolVal, typeof(bool));
+                return FilterValue.Parameter(boolVal, typeof(bool));
             }
         }
 
