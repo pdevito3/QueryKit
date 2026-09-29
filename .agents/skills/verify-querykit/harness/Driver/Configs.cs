@@ -28,11 +28,13 @@ public static class Configs
                 s.DerivedProperty<Recipe>(x => x.Rating >= 4).HasQueryName("top_rated");
             })),
 
-        ["custom-operation"] = ("CustomOperation: total_stock_above = sum of Ingredients.Stock > value.",
+        ["custom-operation"] = ("CustomOperation: total_stock_above = sum of Ingredients.Stock > value. sku_is = Sku == (string)value.",
             () => new QueryKitConfiguration(s =>
             {
                 s.CustomOperation<Recipe>((x, op, value) => x.Ingredients.Sum(i => i.Stock) > (int)value)
                     .HasQueryName("total_stock_above");
+                s.CustomOperation<Recipe>((x, op, value) => x.Sku == (string)value)
+                    .HasQueryName("sku_is");
             })),
 
         ["word-operators"] = ("Custom operators: eq neq gt gte lt lte ct sw ew, and/or, case-insensitive appendix i.",
@@ -50,6 +52,12 @@ public static class Configs
                 s.AndOperator = "and";
                 s.OrOperator = "or";
                 s.CaseInsensitiveAppendix = "i";
+            })),
+
+        ["hidden-price"] = ("Price PreventFilter and PreventSort, with HasQueryName(\"cost\").",
+            () => new QueryKitConfiguration(s =>
+            {
+                s.Property<Recipe>(x => x.Price).HasQueryName("cost").PreventFilter().PreventSort();
             })),
 
         ["allow-unknown"] = ("AllowUnknownProperties = true.",

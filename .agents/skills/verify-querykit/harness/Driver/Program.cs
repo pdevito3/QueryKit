@@ -14,6 +14,7 @@ string? filter = null, sort = null;
 var target = "both";
 var configName = "none";
 var aggregate = false;
+string? culture = null;
 
 for (var i = 0; i < args.Length; i++)
 {
@@ -24,14 +25,22 @@ for (var i = 0; i < args.Length; i++)
         case "--target": target = args[++i]; break;
         case "--config": configName = args[++i]; break;
         case "--aggregate": aggregate = true; break;
+        case "--culture": culture = args[++i]; break;
         case "--list-configs":
             foreach (var (name, preset) in Configs.All) Console.WriteLine($"{name,-18} {preset.Description}");
             return 0;
         default:
             Console.Error.WriteLine($"Unknown argument '{args[i]}'.");
-            Console.Error.WriteLine("Usage: qk-driver [--filter <f>] [--sort <s>] [--target memory|postgres|both] [--config <preset>] [--aggregate] | --list-configs");
+            Console.Error.WriteLine("Usage: qk-driver [--filter <f>] [--sort <s>] [--target memory|postgres|both] [--config <preset>] [--aggregate] [--culture <name>] | --list-configs");
             return 1;
     }
+}
+
+if (culture is not null)
+{
+    // Simulates a consumer app whose thread culture is not en-US, for example de-DE.
+    System.Globalization.CultureInfo.CurrentCulture = new System.Globalization.CultureInfo(culture);
+    System.Globalization.CultureInfo.CurrentUICulture = System.Globalization.CultureInfo.CurrentCulture;
 }
 
 if (!Configs.All.TryGetValue(configName, out var configPreset))
@@ -72,7 +81,8 @@ if (target is "postgres" or "both")
 
 var doc = new JsonObject
 {
-    ["input"] = new JsonObject { ["filter"] = filter, ["sort"] = sort, ["config"] = configName, ["api"] = api },
+    ["input"] = new JsonObject { ["filter"] = filter, ["sort"] = sort, ["config"] = configName, ["api"] = api,
+        ["culture"] = System.Globalization.CultureInfo.CurrentCulture.Name, ["timeZone"] = TimeZoneInfo.Local.Id },
     ["expression"] = DescribeExpression(),
     ["results"] = results,
 };
@@ -162,6 +172,9 @@ void AddRows(JsonObject result, List<Recipe> recipes)
         ["visibility"] = r.Visibility.ToString(),
         ["createdAt"] = r.CreatedAt.ToString("O"),
         ["dateOfOrigin"] = r.DateOfOrigin?.ToString("O"),
+        ["sku"] = r.Sku,
+        ["serving"] = r.Serving,
+        ["serveTime"] = r.ServeTime?.ToString("O"),
         ["directions"] = r.Directions,
         ["tags"] = new JsonArray(r.Tags.Select(t => (JsonNode?)t).ToArray()),
         ["ingredients"] = new JsonArray(r.Ingredients.OrderBy(x => x.Name)

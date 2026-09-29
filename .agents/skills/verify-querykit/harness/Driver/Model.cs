@@ -33,6 +33,9 @@ public class Recipe
     public Visibility Visibility { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateOnly? DateOfOrigin { get; set; }
+    public string Sku { get; set; } = "";
+    public string? Serving { get; set; }
+    public TimeOnly? ServeTime { get; set; }
     public List<string> Tags { get; set; } = [];
     public Guid AuthorId { get; set; }
     public Author Author { get; set; } = null!;
@@ -61,25 +64,29 @@ public static class Seed
             Recipe(1, "Pancakes", julia, rating: 5, price: 4.50m, vegetarian: true, Visibility.Public,
                 created: new DateTime(2024, 1, 15, 8, 0, 0, DateTimeKind.Utc), origin: new DateOnly(1900, 1, 1),
                 directions: "Whisk and fry", tags: ["breakfast", "sweet"],
-                ingredients: [("flour", 10), ("egg", 0)]),
+                ingredients: [("flour", 10), ("egg", 0)],
+                sku: "001", serving: "Warm, with syrup", serveTime: new TimeOnly(8, 30, 0, 500)),
             Recipe(2, "Beef Stew", gordon, rating: 3, price: 12.00m, vegetarian: false, Visibility.Public,
                 created: new DateTime(2024, 3, 1, 18, 30, 0, DateTimeKind.Utc), origin: null,
                 directions: "Simmer for hours", tags: ["dinner"],
-                ingredients: [("beef", 2), ("salt", 50)]),
+                ingredients: [("beef", 2), ("salt", 50)],
+                sku: "002", serving: "Hot", serveTime: new TimeOnly(18, 0, 0)),
             Recipe(3, "Salt Bread", julia, rating: 4, price: 3.25m, vegetarian: true, Visibility.Private,
                 created: new DateTime(2024, 6, 10, 12, 0, 0, DateTimeKind.Utc), origin: new DateOnly(1950, 5, 20),
                 directions: "Knead and bake", tags: ["bread", "Winner"],
-                ingredients: [("salt", 5), ("flour", 3)]),
+                ingredients: [("salt", 5), ("flour", 3)],
+                sku: "003", serving: "Sliced", serveTime: new TimeOnly(12, 15, 30, 250)),
             Recipe(4, "Plain Water", anon, rating: 1, price: 0m, vegetarian: true, Visibility.Private,
                 created: new DateTime(2023, 12, 31, 23, 59, 0, DateTimeKind.Utc), origin: null,
                 directions: null, tags: [],
-                ingredients: []),
+                ingredients: [],
+                sku: "004", serving: null, serveTime: null),
         ];
     }
 
     private static Recipe Recipe(int n, string title, Author author, int rating, decimal price, bool vegetarian,
         Visibility visibility, DateTime created, DateOnly? origin, string? directions, List<string> tags,
-        (string Name, int Stock)[] ingredients)
+        (string Name, int Stock)[] ingredients, string sku, string? serving, TimeOnly? serveTime)
     {
         var id = G(n);
         return new Recipe
@@ -93,6 +100,9 @@ public static class Seed
             Visibility = visibility,
             CreatedAt = created,
             DateOfOrigin = origin,
+            Sku = sku,
+            Serving = serving,
+            ServeTime = serveTime,
             Tags = tags,
             AuthorId = author.Id,
             Author = author,

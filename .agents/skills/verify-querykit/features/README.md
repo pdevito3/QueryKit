@@ -14,12 +14,12 @@ In the commands below, `qk` means `.agents/skills/verify-querykit/qk`.
 
 The driver model is `Recipe`. Every recipe has one `Author` and zero or more `Ingredients`. The seed data is fixed in `harness/Driver/Model.cs`.
 
-| Title | Author.Name | Rating | Price | IsVegetarian | Visibility | CreatedAt (UTC) | DateOfOrigin | Directions | Tags | Ingredients (Name:Stock) |
-|---|---|---|---|---|---|---|---|---|---|---|
-| Pancakes | Julia Child | 5 | 4.50 | true | Public (1) | 2024-01-15 08:00 | 1900-01-01 | Whisk and fry | breakfast, sweet | flour:10, egg:0 |
-| Beef Stew | Gordon Ramsay | 3 | 12.00 | false | Public (1) | 2024-03-01 18:30 | null | Simmer for hours | dinner | beef:2, salt:50 |
-| Salt Bread | Julia Child | 4 | 3.25 | true | Private (2) | 2024-06-10 12:00 | 1950-05-20 | Knead and bake | bread, Winner | salt:5, flour:3 |
-| Plain Water | Anonymous | 1 | 0.00 | true | Private (2) | 2023-12-31 23:59 | null | null | (none) | (none) |
+| Title | Author.Name | Rating | Price | IsVegetarian | Visibility | CreatedAt (UTC) | DateOfOrigin | Sku | Serving | ServeTime | Directions | Tags | Ingredients (Name:Stock) |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Pancakes | Julia Child | 5 | 4.50 | true | Public (1) | 2024-01-15 08:00 | 1900-01-01 | 001 | Warm, with syrup | 08:30:00.5 | Whisk and fry | breakfast, sweet | flour:10, egg:0 |
+| Beef Stew | Gordon Ramsay | 3 | 12.00 | false | Public (1) | 2024-03-01 18:30 | null | 002 | Hot | 18:00:00 | Simmer for hours | dinner | beef:2, salt:50 |
+| Salt Bread | Julia Child | 4 | 3.25 | true | Private (2) | 2024-06-10 12:00 | 1950-05-20 | 003 | Sliced | 12:15:30.25 | Knead and bake | bread, Winner | salt:5, flour:3 |
+| Plain Water | Anonymous | 1 | 0.00 | true | Private (2) | 2023-12-31 23:59 | null | 004 | null | null | null | (none) | (none) |
 
 ## Driving conventions
 
