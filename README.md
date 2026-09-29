@@ -707,7 +707,7 @@ public class CustomQueryKitConfiguration : QueryKitConfiguration
 
 // ---
 
-var input = """Title eq$ "Pancakes" and Rating gt 10""";
+var input = """Title eqi "Pancakes" and Rating gt 10""";
 var config = new CustomQueryKitConfiguration();
 var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
 ```
