@@ -558,6 +558,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType, CaseInsensitiveMode caseMode = CaseInsensitiveMode.Lower)
         {
             var leftType = left.Type;
+            object? values = null;
 
             if (right is NewArrayExpression newArrayExpression)
             {
@@ -569,7 +570,8 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
                     listType.GetMethod("Add")!.Invoke(list, new[] { ((ConstantExpression)value).Value });
                 }
 
-                right = Expression.Constant(list, listType);
+                values = list;
+                right = FilterValue.Parameter(list, listType);
             }
 
             // Get the Contains method with the correct generic type
@@ -586,12 +588,12 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
                 var listType = typeof(List<string>);
                 var caseList = Activator.CreateInstance(listType);
 
-                var originalList = ((ConstantExpression)right).Value as IEnumerable<string>;
+                var originalList = values as IEnumerable<string>;
                 foreach (var value in originalList!)
                 {
                     listType.GetMethod("Add")!.Invoke(caseList, new[] { caseMode == CaseInsensitiveMode.Upper ? value.ToUpper() : value.ToLower() });
                 }
-                right = Expression.Constant(caseList, listType);
+                right = FilterValue.Parameter(caseList, listType);
                 var caseLeft = Expression.Call(left, typeof(string).GetMethod(caseMethodName, Type.EmptyTypes)!);
 
                 var containsCall = Expression.Call(right, containsMethod, caseLeft);
@@ -801,6 +803,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType, CaseInsensitiveMode caseMode = CaseInsensitiveMode.Lower)
         {
             var leftType = left.Type;
+            object? values = null;
 
             if (right is NewArrayExpression newArrayExpression)
             {
@@ -812,7 +815,8 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
                     listType.GetMethod("Add")!.Invoke(list, new[] { ((ConstantExpression)value).Value });
                 }
 
-                right = Expression.Constant(list, listType);
+                values = list;
+                right = FilterValue.Parameter(list, listType);
             }
 
             // Get the Contains method with the correct generic type
@@ -829,12 +833,12 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
                 var listType = typeof(List<string>);
                 var caseList = Activator.CreateInstance(listType);
 
-                var originalList = ((ConstantExpression)right).Value as IEnumerable<string>;
+                var originalList = values as IEnumerable<string>;
                 foreach (var value in originalList!)
                 {
                     listType.GetMethod("Add")!.Invoke(caseList, new[] { caseMode == CaseInsensitiveMode.Upper ? value.ToUpper() : value.ToLower() });
                 }
-                right = Expression.Constant(caseList, listType);
+                right = FilterValue.Parameter(caseList, listType);
                 var caseLeft = Expression.Call(left, typeof(string).GetMethod(caseMethodName, Type.EmptyTypes)!);
 
                 var containsExpression = Expression.Call(right, containsMethod, caseLeft);

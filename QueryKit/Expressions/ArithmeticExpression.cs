@@ -159,7 +159,7 @@ public class LiteralArithmeticExpression : ArithmeticExpression
 
     public override Expression ToLinqExpression(ParameterExpression parameter, Type entityType)
     {
-        return Expression.Constant(Value, ValueType);
+        return FilterValue.Parameter(Value, ValueType);
     }
 
     public override Type GetExpressionType(Type entityType)

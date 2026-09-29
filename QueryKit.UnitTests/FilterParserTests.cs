@@ -18,7 +18,7 @@ public class FilterParserTests
     {
         var input = """""""""Title == """"lamb is great on a "gee-ro" not a "gy-ro" sandwich"""" """"""""";
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        var asString = filterExpression.ToString();
+        var asString = filterExpression.ToDisplayString();
         asString.Should()
             .Be(""""x => (x.Title == "lamb is great on a "gee-ro" not a "gy-ro" sandwich")"""");
     }
@@ -29,7 +29,7 @@ public class FilterParserTests
         var input = """""Title == """lamb is great on a "gee-ro" not a "gy-ro" sandwich""" """"";
 
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        var asString = filterExpression.ToString();
+        var asString = filterExpression.ToDisplayString();
         asString.Should()
             .Be(""""x => (x.Title == "lamb is great on a "gee-ro" not a "gy-ro" sandwich")"""");
     }
@@ -41,8 +41,8 @@ public class FilterParserTests
             """""((Title @=* "waffle & chicken" && Age > 30) || Id == "aa648248-cb69-4217-ac95-d7484795afb2" || Title == "lamb" || Title == null) && (Age < 18 || (BirthMonth == 1 && Title _= "ally")) || Rating > 3.5 || SpecificDate == 2022-07-01T00:00:03Z && (Date == 2022-07-01 || Time == 00:00:03)""""";
 
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should()
-            .Be(""""x => (((((((((x.Title != null) AndAlso x.Title.ToLower().Contains("waffle & chicken".ToLower())) AndAlso (x.Age > 30)) OrElse (x.Id == aa648248-cb69-4217-ac95-d7484795afb2)) OrElse (x.Title == "lamb")) OrElse (x.Title == null)) AndAlso ((x.Age < 18) OrElse ((x.BirthMonth == new Nullable`1(January)) AndAlso x.Title.StartsWith("ally")))) OrElse (x.Rating > 3.5)) OrElse ((x.SpecificDate == new Nullable`1(new DateTimeOffset(637922304030000000, 00:00:00))) AndAlso ((x.Date == new Nullable`1(new DateOnly(2022, 7, 1))) OrElse (x.Time == new Nullable`1(new TimeOnly(0, 0, 3, 0, 0))))))"""");
+        filterExpression.ToDisplayString().Should()
+            .Be(""""x => (((((((((x.Title != null) AndAlso x.Title.ToLower().Contains("waffle & chicken".ToLower())) AndAlso (x.Age > 30)) OrElse (x.Id == aa648248-cb69-4217-ac95-d7484795afb2)) OrElse (x.Title == "lamb")) OrElse (x.Title == null)) AndAlso ((x.Age < 18) OrElse ((x.BirthMonth == January) AndAlso x.Title.StartsWith("ally")))) OrElse (x.Rating > 3.5)) OrElse ((x.SpecificDate == new Nullable`1(new DateTimeOffset(637922304030000000, 00:00:00))) AndAlso ((x.Date == new Nullable`1(new DateOnly(2022, 7, 1))) OrElse (x.Time == new Nullable`1(new TimeOnly(0, 0, 3, 0, 0))))))"""");
     }
 
     [Fact]
@@ -50,7 +50,7 @@ public class FilterParserTests
     {
         var input = """(Title @=* "waffle" || Age > 30) || Age < 18""";
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should()
+        filterExpression.ToDisplayString().Should()
             .Be(""""x => ((((x.Title != null) AndAlso x.Title.ToLower().Contains("waffle".ToLower())) OrElse (x.Age > 30)) OrElse (x.Age < 18))"""");
     }
 
@@ -59,7 +59,7 @@ public class FilterParserTests
     {
         var input = """"Title @=* "waffle" """";
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be(""""x => ((x.Title != null) AndAlso x.Title.ToLower().Contains("waffle".ToLower()))"""");
+        filterExpression.ToDisplayString().Should().Be(""""x => ((x.Title != null) AndAlso x.Title.ToLower().Contains("waffle".ToLower()))"""");
     }
 
     [Fact]
@@ -67,7 +67,7 @@ public class FilterParserTests
     {
         var input = "Title == null";
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be("x => (x.Title == null)");
+        filterExpression.ToDisplayString().Should().Be("x => (x.Title == null)");
     }
 
     [Fact]
@@ -76,7 +76,7 @@ public class FilterParserTests
         var guid = Guid.NewGuid();
         var input = $"""Id == "{guid}" """;
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be($"x => (x.Id == {guid})");
+        filterExpression.ToDisplayString().Should().Be($"x => (x.Id == {guid})");
     }
 
     [Fact]
@@ -85,7 +85,7 @@ public class FilterParserTests
         var guid = Guid.NewGuid();
         var input = $"""Id == {guid} """;
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be($"x => (x.Id == {guid})");
+        filterExpression.ToDisplayString().Should().Be($"x => (x.Id == {guid})");
     }
 
     [Fact]
@@ -93,7 +93,7 @@ public class FilterParserTests
     {
         var input = $"""SecondaryId == null """;
         var filterExpression = FilterParser.ParseFilter<Recipe>(input);
-        filterExpression.ToString().Should().Be($"x => (x.SecondaryId == null)");
+        filterExpression.ToDisplayString().Should().Be($"x => (x.SecondaryId == null)");
     }
 
     [Fact]
@@ -101,7 +101,7 @@ public class FilterParserTests
     {
         var input = """Title == "lamb" """;
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be("x => (x.Title == \"lamb\")");
+        filterExpression.ToDisplayString().Should().Be("x => (x.Title == \"lamb\")");
     }
 
     [Fact]
@@ -109,7 +109,7 @@ public class FilterParserTests
     {
         var input = """Title != "lamb" """;
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be("x => (x.Title != \"lamb\")");
+        filterExpression.ToDisplayString().Should().Be("x => (x.Title != \"lamb\")");
     }
 
     [Fact]
@@ -117,7 +117,7 @@ public class FilterParserTests
     {
         var input = """Age > 30""";
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be("x => (x.Age > 30)");
+        filterExpression.ToDisplayString().Should().Be("x => (x.Age > 30)");
     }
 
     [Fact]
@@ -125,7 +125,7 @@ public class FilterParserTests
     {
         var input = """Age >= 30""";
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be("x => (x.Age >= 30)");
+        filterExpression.ToDisplayString().Should().Be("x => (x.Age >= 30)");
     }
 
     [Fact]
@@ -133,7 +133,7 @@ public class FilterParserTests
     {
         var input = """Age < 30""";
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be("x => (x.Age < 30)");
+        filterExpression.ToDisplayString().Should().Be("x => (x.Age < 30)");
     }
 
     [Fact]
@@ -141,7 +141,7 @@ public class FilterParserTests
     {
         var input = """Age <= 30""";
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be("x => (x.Age <= 30)");
+        filterExpression.ToDisplayString().Should().Be("x => (x.Age <= 30)");
     }
 
     [Fact]
@@ -149,7 +149,7 @@ public class FilterParserTests
     {
         var input = """Title == "lamb" && Age > 30""";
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be("x => ((x.Title == \"lamb\") AndAlso (x.Age > 30))");
+        filterExpression.ToDisplayString().Should().Be("x => ((x.Title == \"lamb\") AndAlso (x.Age > 30))");
     }
 
     [Fact]
@@ -157,7 +157,7 @@ public class FilterParserTests
     {
         var input = """Title == "lamb" || Age > 30""";
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be("x => ((x.Title == \"lamb\") OrElse (x.Age > 30))");
+        filterExpression.ToDisplayString().Should().Be("x => ((x.Title == \"lamb\") OrElse (x.Age > 30))");
     }
 
     [Fact]
@@ -165,7 +165,7 @@ public class FilterParserTests
     {
         var input = """Title @=* "waffle" """;
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be("x => ((x.Title != null) AndAlso x.Title.ToLower().Contains(\"waffle\".ToLower()))");
+        filterExpression.ToDisplayString().Should().Be("x => ((x.Title != null) AndAlso x.Title.ToLower().Contains(\"waffle\".ToLower()))");
     }
 
     [Fact]
@@ -173,7 +173,7 @@ public class FilterParserTests
     {
         var input = """Title _= "lam" """;
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be("x => x.Title.StartsWith(\"lam\")");
+        filterExpression.ToDisplayString().Should().Be("x => x.Title.StartsWith(\"lam\")");
     }
 
     [Fact]
@@ -181,7 +181,7 @@ public class FilterParserTests
     {
         var input = """Title _-=* "b" """;
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be("x => ((x.Title != null) AndAlso x.Title.ToLower().EndsWith(\"b\".ToLower()))");
+        filterExpression.ToDisplayString().Should().Be("x => ((x.Title != null) AndAlso x.Title.ToLower().EndsWith(\"b\".ToLower()))");
     }
 
     [Fact]
@@ -189,7 +189,7 @@ public class FilterParserTests
     {
         var input = """Title _-= "b" """;
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be("x => x.Title.EndsWith(\"b\")");
+        filterExpression.ToDisplayString().Should().Be("x => x.Title.EndsWith(\"b\")");
     }
 
     [Fact]
@@ -197,7 +197,7 @@ public class FilterParserTests
     {
         var input = """(Age == 35) && (Favorite == true) || (Age < 18)""";
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should()
+        filterExpression.ToDisplayString().Should()
             .Be(""""x => (((x.Age == 35) AndAlso (x.Favorite == True)) OrElse (x.Age < 18))"""");
     }
 
@@ -206,7 +206,7 @@ public class FilterParserTests
     {
         var input = """(age == 35) && (favorite == true) || (age < 18)""";
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should()
+        filterExpression.ToDisplayString().Should()
             .Be(""""x => (((x.Age == 35) AndAlso (x.Favorite == True)) OrElse (x.Age < 18))"""");
     }
 
@@ -215,7 +215,7 @@ public class FilterParserTests
     {
         var input = """Age ^^ [20, 30, 40]""";
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should()
+        filterExpression.ToDisplayString().Should()
             .Be(""""x => value(System.Collections.Generic.List`1[System.Nullable`1[System.Int32]]).Contains(x.Age)"""");
     }
 
@@ -224,7 +224,7 @@ public class FilterParserTests
     {
         var input = """Id ^^ ["6d623e92-d2cf-4496-a2df-f49fa77328ee"]""";
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should()
+        filterExpression.ToDisplayString().Should()
             .Be(""""x => value(System.Collections.Generic.List`1[System.Guid]).Contains(x.Id)"""");
     }
 
@@ -233,7 +233,7 @@ public class FilterParserTests
     {
         var input = """(Title == "lamb") && (Age > 30) || (Title == "chicken") && (Age < 18)""";
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be("x => (((x.Title == \"lamb\") AndAlso (x.Age > 30)) OrElse ((x.Title == \"chicken\") AndAlso (x.Age < 18)))");
+        filterExpression.ToDisplayString().Should().Be("x => (((x.Title == \"lamb\") AndAlso (x.Age > 30)) OrElse ((x.Title == \"chicken\") AndAlso (x.Age < 18)))");
     }
 
     [Fact]
@@ -241,7 +241,7 @@ public class FilterParserTests
     {
         var input = """Rating >= 3.5""";
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be("x => (x.Rating >= 3.5)");
+        filterExpression.ToDisplayString().Should().Be("x => (x.Rating >= 3.5)");
     }
 
     [Fact]
@@ -249,7 +249,7 @@ public class FilterParserTests
     {
         var input = """Date == 2022-07-01""";
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be(""""x => (x.Date == new Nullable`1(new DateOnly(2022, 7, 1)))"""");
+        filterExpression.ToDisplayString().Should().Be(""""x => (x.Date == new Nullable`1(new DateOnly(2022, 7, 1)))"""");
     }
 
     [Fact]
@@ -257,7 +257,7 @@ public class FilterParserTests
     {
         var input = """SpecificDate == 2022-07-01T00:00:03Z""";
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be(""""x => (x.SpecificDate == new Nullable`1(new DateTimeOffset(637922304030000000, 00:00:00)))"""");
+        filterExpression.ToDisplayString().Should().Be(""""x => (x.SpecificDate == new Nullable`1(new DateTimeOffset(637922304030000000, 00:00:00)))"""");
     }
 
     [Fact]
@@ -265,7 +265,7 @@ public class FilterParserTests
     {
         var input = """SpecificDateTime == 2022-07-01T00:00:03""";
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be(""""x => (x.SpecificDateTime == new DateTime(637922304030000000, Local))"""");
+        filterExpression.ToDisplayString().Should().Be(""""x => (x.SpecificDateTime == new DateTime(637922304030000000, Local))"""");
     }
 
     [Fact]
@@ -273,7 +273,7 @@ public class FilterParserTests
     {
         var input = """SpecificDate == 2022-07-01T00:00:03+01:00""";
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be("x => (x.SpecificDate == new Nullable`1(new DateTimeOffset(637922304030000000, 01:00:00)))");
+        filterExpression.ToDisplayString().Should().Be("x => (x.SpecificDate == new Nullable`1(new DateTimeOffset(637922304030000000, 01:00:00)))");
     }
 
     [Theory]
@@ -284,7 +284,7 @@ public class FilterParserTests
         var dateTimeOffset = DateTimeOffset.Parse("2022-07-01T00:00:03Z").ToString(format);
         var input = $"""SpecificDate == "{dateTimeOffset}" """;
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be(""""x => (x.SpecificDate == new Nullable`1(new DateTimeOffset(637922304030000000, 00:00:00)))"""");
+        filterExpression.ToDisplayString().Should().Be(""""x => (x.SpecificDate == new Nullable`1(new DateTimeOffset(637922304030000000, 00:00:00)))"""");
     }
 
     [Fact]
@@ -292,7 +292,7 @@ public class FilterParserTests
     {
         var input = """SpecificDateTime == "2022-07-01T00:00:03" """;
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be(""""x => (x.SpecificDateTime == new DateTime(637922304030000000, Local))"""");
+        filterExpression.ToDisplayString().Should().Be(""""x => (x.SpecificDateTime == new DateTime(637922304030000000, Local))"""");
     }
 
     [Fact]
@@ -300,7 +300,7 @@ public class FilterParserTests
     {
         var input = """SpecificDateTime == "2022-07-01T00:00:03Z" """;
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be(""""x => (x.SpecificDateTime == new DateTime(637922304030000000, Utc))"""");
+        filterExpression.ToDisplayString().Should().Be(""""x => (x.SpecificDateTime == new DateTime(637922304030000000, Utc))"""");
     }
 
     [Fact]
@@ -308,7 +308,7 @@ public class FilterParserTests
     {
         var input = """SpecificDate == "2022-07-01T00:00:03+01:00" """;
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be("x => (x.SpecificDate == new Nullable`1(new DateTimeOffset(637922304030000000, 01:00:00)))");
+        filterExpression.ToDisplayString().Should().Be("x => (x.SpecificDate == new Nullable`1(new DateTimeOffset(637922304030000000, 01:00:00)))");
     }
 
     [Fact]
@@ -316,7 +316,7 @@ public class FilterParserTests
     {
         var input = "Time == 12:30:00";
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be("x => (x.Time == new Nullable`1(new TimeOnly(12, 30, 0, 0, 0)))");
+        filterExpression.ToDisplayString().Should().Be("x => (x.Time == new Nullable`1(new TimeOnly(12, 30, 0, 0, 0)))");
     }
 
     [Fact]
@@ -324,7 +324,7 @@ public class FilterParserTests
     {
         var input = """SpecificDate == 2022-07-01T00:00:03-02:00""";
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be("x => (x.SpecificDate == new Nullable`1(new DateTimeOffset(637922304030000000, -02:00:00)))");
+        filterExpression.ToDisplayString().Should().Be("x => (x.SpecificDate == new Nullable`1(new DateTimeOffset(637922304030000000, -02:00:00)))");
     }
 
     [Fact]
@@ -332,7 +332,7 @@ public class FilterParserTests
     {
         var input = """SpecificDate == 2022-07-01T00:00:03+02""";
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be("x => (x.SpecificDate == new Nullable`1(new DateTimeOffset(637922304030000000, 02:00:00)))");
+        filterExpression.ToDisplayString().Should().Be("x => (x.SpecificDate == new Nullable`1(new DateTimeOffset(637922304030000000, 02:00:00)))");
     }
 
     [Fact]
@@ -340,7 +340,7 @@ public class FilterParserTests
     {
         var input = """SpecificDateTime == 2022-07-01T00:00:03.123""";
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be("x => (x.SpecificDateTime == new DateTime(637922304031230000, Local))");
+        filterExpression.ToDisplayString().Should().Be("x => (x.SpecificDateTime == new DateTime(637922304031230000, Local))");
     }
 
     [Fact]
@@ -348,7 +348,7 @@ public class FilterParserTests
     {
         var input = """Email.Value == "john@example.com" """;
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be("x => (x.Email.Value == \"john@example.com\")");
+        filterExpression.ToDisplayString().Should().Be("x => (x.Email.Value == \"john@example.com\")");
     }
 
     [Fact]
@@ -356,7 +356,7 @@ public class FilterParserTests
     {
         var input = """Email.Value @=* "example" """;
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be("x => ((x.Email.Value != null) AndAlso x.Email.Value.ToLower().Contains(\"example\".ToLower()))");
+        filterExpression.ToDisplayString().Should().Be("x => ((x.Email.Value != null) AndAlso x.Email.Value.ToLower().Contains(\"example\".ToLower()))");
     }
 
     [Fact]
@@ -364,7 +364,7 @@ public class FilterParserTests
     {
         var input = """Time == 00:00:03""";
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be("x => (x.Time == new Nullable`1(new TimeOnly(0, 0, 3, 0, 0)))");
+        filterExpression.ToDisplayString().Should().Be("x => (x.Time == new Nullable`1(new TimeOnly(0, 0, 3, 0, 0)))");
     }
 
     [Fact]
@@ -372,7 +372,7 @@ public class FilterParserTests
     {
         var input = """Title _= "lamb" && Age >= 25 && Rating < 4.5 && SpecificDate <= 2022-07-01T00:00:03Z && Time == 00:00:03""";
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be("x => ((((x.Title.StartsWith(\"lamb\") AndAlso (x.Age >= 25)) AndAlso (x.Rating < 4.5)) AndAlso (x.SpecificDate <= new Nullable`1(new DateTimeOffset(637922304030000000, 00:00:00)))) AndAlso (x.Time == new Nullable`1(new TimeOnly(0, 0, 3, 0, 0))))");
+        filterExpression.ToDisplayString().Should().Be("x => ((((x.Title.StartsWith(\"lamb\") AndAlso (x.Age >= 25)) AndAlso (x.Rating < 4.5)) AndAlso (x.SpecificDate <= new Nullable`1(new DateTimeOffset(637922304030000000, 00:00:00)))) AndAlso (x.Time == new Nullable`1(new TimeOnly(0, 0, 3, 0, 0))))");
     }
 
     [Fact]
@@ -380,7 +380,7 @@ public class FilterParserTests
     {
         var input = """(Title == "lamb" && ((Age >= 25 && Rating < 4.5) || (SpecificDate <= 2022-07-01T00:00:03Z && Time == 00:00:03)) && (Favorite == true || Email.Value _= "example"))""";
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be("""x => (((x.Title == "lamb") AndAlso (((x.Age >= 25) AndAlso (x.Rating < 4.5)) OrElse ((x.SpecificDate <= new Nullable`1(new DateTimeOffset(637922304030000000, 00:00:00))) AndAlso (x.Time == new Nullable`1(new TimeOnly(0, 0, 3, 0, 0)))))) AndAlso ((x.Favorite == True) OrElse x.Email.Value.StartsWith("example")))""");
+        filterExpression.ToDisplayString().Should().Be("""x => (((x.Title == "lamb") AndAlso (((x.Age >= 25) AndAlso (x.Rating < 4.5)) OrElse ((x.SpecificDate <= new Nullable`1(new DateTimeOffset(637922304030000000, 00:00:00))) AndAlso (x.Time == new Nullable`1(new TimeOnly(0, 0, 3, 0, 0)))))) AndAlso ((x.Favorite == True) OrElse x.Email.Value.StartsWith("example")))""");
     }
 
     [Fact]
@@ -388,7 +388,7 @@ public class FilterParserTests
     {
         var input = """Email.Value == null""";
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be("x => (x.Email.Value == null)");
+        filterExpression.ToDisplayString().Should().Be("x => (x.Email.Value == null)");
     }
 
     [Fact]
@@ -396,7 +396,7 @@ public class FilterParserTests
     {
         var input = """Title @=* "lamb" """;
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be("x => ((x.Title != null) AndAlso x.Title.ToLower().Contains(\"lamb\".ToLower()))");
+        filterExpression.ToDisplayString().Should().Be("x => ((x.Title != null) AndAlso x.Title.ToLower().Contains(\"lamb\".ToLower()))");
     }
 
     [Fact]
@@ -404,7 +404,7 @@ public class FilterParserTests
     {
         var input = """Title !=* "lamb" """;
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be("x => ((x.Title == null) OrElse (x.Title.ToLower() != \"lamb\".ToLower()))");
+        filterExpression.ToDisplayString().Should().Be("x => ((x.Title == null) OrElse (x.Title.ToLower() != \"lamb\".ToLower()))");
     }
 
     [Fact]
@@ -412,7 +412,7 @@ public class FilterParserTests
     {
         var input = """Title _-= "lamb" """;
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be("x => x.Title.EndsWith(\"lamb\")");
+        filterExpression.ToDisplayString().Should().Be("x => x.Title.EndsWith(\"lamb\")");
     }
 
     [Fact]
@@ -420,7 +420,7 @@ public class FilterParserTests
     {
         var input = """Title _-=* "lamb" """;
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be("x => ((x.Title != null) AndAlso x.Title.ToLower().EndsWith(\"lamb\".ToLower()))");
+        filterExpression.ToDisplayString().Should().Be("x => ((x.Title != null) AndAlso x.Title.ToLower().EndsWith(\"lamb\".ToLower()))");
     }
 
     [Fact]
@@ -428,7 +428,7 @@ public class FilterParserTests
     {
         var input = """Title @= "lamb" """;
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be("x => x.Title.Contains(\"lamb\")");
+        filterExpression.ToDisplayString().Should().Be("x => x.Title.Contains(\"lamb\")");
     }
 
     [Fact]
@@ -436,7 +436,7 @@ public class FilterParserTests
     {
         var input = """Title !@= "lamb" """;
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be("x => Not(x.Title.Contains(\"lamb\"))");
+        filterExpression.ToDisplayString().Should().Be("x => Not(x.Title.Contains(\"lamb\"))");
     }
 
     [Fact]
@@ -444,7 +444,7 @@ public class FilterParserTests
     {
         var input = """Favorite == true""";
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be("x => (x.Favorite == True)");
+        filterExpression.ToDisplayString().Should().Be("x => (x.Favorite == True)");
     }
 
     [Fact]
@@ -452,7 +452,7 @@ public class FilterParserTests
     {
         var input = """Age >= 25""";
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be("x => (x.Age >= 25)");
+        filterExpression.ToDisplayString().Should().Be("x => (x.Age >= 25)");
     }
 
     [Fact]
@@ -460,7 +460,7 @@ public class FilterParserTests
     {
         var input = """Age != 25""";
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be("x => (x.Age != 25)");
+        filterExpression.ToDisplayString().Should().Be("x => (x.Age != 25)");
     }
 
     [Fact]
@@ -468,7 +468,7 @@ public class FilterParserTests
     {
         var input = """Title == "lamb, lamb" """;
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be("x => (x.Title == \"lamb, lamb\")");
+        filterExpression.ToDisplayString().Should().Be("x => (x.Title == \"lamb, lamb\")");
     }
 
     [Fact]
@@ -476,7 +476,7 @@ public class FilterParserTests
     {
         var input = """Age == 25""";
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be("x => (x.Age == 25)");
+        filterExpression.ToDisplayString().Should().Be("x => (x.Age == 25)");
     }
 
     [Fact]
@@ -534,7 +534,7 @@ public class FilterParserTests
     {
         var input = """Ingredients.Name == "flour" """;
         var filterExpression = FilterParser.ParseFilter<Recipe>(input);
-        filterExpression.ToString().Should()
+        filterExpression.ToDisplayString().Should()
             .Be(""""x => x.Ingredients.Select(y => y.Name).Any(z => (z == "flour"))"""");
     }
 
@@ -543,7 +543,7 @@ public class FilterParserTests
     {
         var input = """Ingredients.Name ==* "flour" """;
         var filterExpression = FilterParser.ParseFilter<Recipe>(input);
-        filterExpression.ToString().Should()
+        filterExpression.ToDisplayString().Should()
             .Be(""""x => x.Ingredients.Select(y => y.Name).Any(z => (z.ToLower() == "flour".ToLower()))"""");
     }
 
@@ -552,7 +552,7 @@ public class FilterParserTests
     {
         var input = """Ingredients.Name != "flour" """;
         var filterExpression = FilterParser.ParseFilter<Recipe>(input);
-        filterExpression.ToString().Should()
+        filterExpression.ToDisplayString().Should()
             .Be(""""x => x.Ingredients.Select(y => y.Name).Any(z => (z != "flour"))"""");
     }
 
@@ -561,7 +561,7 @@ public class FilterParserTests
     {
         var input = """Ingredients.Name !=* "flour" """;
         var filterExpression = FilterParser.ParseFilter<Recipe>(input);
-        filterExpression.ToString().Should()
+        filterExpression.ToDisplayString().Should()
             .Be(""""x => x.Ingredients.Select(y => y.Name).Any(z => (z.ToLower() != "flour".ToLower()))"""");
     }
 
@@ -570,7 +570,7 @@ public class FilterParserTests
     {
         var input = """Ingredients.MinimumQuality == 5""";
         var filterExpression = FilterParser.ParseFilter<Recipe>(input);
-        filterExpression.ToString().Should()
+        filterExpression.ToDisplayString().Should()
             .Be(""""x => x.Ingredients.Select(y => y.MinimumQuality).Any(z => (z == 5))"""");
     }
 
@@ -579,7 +579,7 @@ public class FilterParserTests
     {
         var input = """Ingredients.MinimumQuality > 5""";
         var filterExpression = FilterParser.ParseFilter<Recipe>(input);
-        filterExpression.ToString().Should()
+        filterExpression.ToDisplayString().Should()
             .Be(""""x => x.Ingredients.Select(y => y.MinimumQuality).Any(z => (z > 5))"""");
     }
 
@@ -588,7 +588,7 @@ public class FilterParserTests
     {
         var input = """Ingredients.MinimumQuality < 5""";
         var filterExpression = FilterParser.ParseFilter<Recipe>(input);
-        filterExpression.ToString().Should()
+        filterExpression.ToDisplayString().Should()
             .Be(""""x => x.Ingredients.Select(y => y.MinimumQuality).Any(z => (z < 5))"""");
     }
 
@@ -597,7 +597,7 @@ public class FilterParserTests
     {
         var input = """Ingredients.MinimumQuality >= 5""";
         var filterExpression = FilterParser.ParseFilter<Recipe>(input);
-        filterExpression.ToString().Should()
+        filterExpression.ToDisplayString().Should()
             .Be(""""x => x.Ingredients.Select(y => y.MinimumQuality).Any(z => (z >= 5))"""");
     }
 
@@ -606,7 +606,7 @@ public class FilterParserTests
     {
         var input = """Ingredients.MinimumQuality <= 5""";
         var filterExpression = FilterParser.ParseFilter<Recipe>(input);
-        filterExpression.ToString().Should()
+        filterExpression.ToDisplayString().Should()
             .Be(""""x => x.Ingredients.Select(y => y.MinimumQuality).Any(z => (z <= 5))"""");
     }
 
@@ -615,7 +615,7 @@ public class FilterParserTests
     {
         var input = """"Ingredients.Name @=* "waffle" """";
         var filterExpression = FilterParser.ParseFilter<Recipe>(input);
-        filterExpression.ToString().Should()
+        filterExpression.ToDisplayString().Should()
             .Be(""""x => x.Ingredients.Select(y => y.Name).Any(z => z.ToLower().Contains("waffle".ToLower()))"""");
     }
 
@@ -624,7 +624,7 @@ public class FilterParserTests
     {
         var input = """"Ingredients.Name @= "waffle" """";
         var filterExpression = FilterParser.ParseFilter<Recipe>(input);
-        filterExpression.ToString().Should()
+        filterExpression.ToDisplayString().Should()
             .Be(""""x => x.Ingredients.Select(y => y.Name).Any(z => z.Contains("waffle"))"""");
     }
 
@@ -633,7 +633,7 @@ public class FilterParserTests
     {
         var input = """"Ingredients.Name _= "waffle" """";
         var filterExpression = FilterParser.ParseFilter<Recipe>(input);
-        filterExpression.ToString().Should()
+        filterExpression.ToDisplayString().Should()
             .Be(""""x => x.Ingredients.Select(y => y.Name).Any(z => z.StartsWith("waffle"))"""");
     }
 
@@ -642,7 +642,7 @@ public class FilterParserTests
     {
         var input = """"Ingredients.Name _-= "waffle" """";
         var filterExpression = FilterParser.ParseFilter<Recipe>(input);
-        filterExpression.ToString().Should()
+        filterExpression.ToDisplayString().Should()
             .Be(""""x => x.Ingredients.Select(y => y.Name).Any(z => z.EndsWith("waffle"))"""");
     }
 
@@ -651,7 +651,7 @@ public class FilterParserTests
     {
         var input = """"Ingredients.Name !@= "waffle" """";
         var filterExpression = FilterParser.ParseFilter<Recipe>(input);
-        filterExpression.ToString().Should()
+        filterExpression.ToDisplayString().Should()
             .Be(""""x => Not(x.Ingredients.Select(y => y.Name).Any(z => z.Contains("waffle")))"""");
     }
 
@@ -660,7 +660,7 @@ public class FilterParserTests
     {
         var input = """"Ingredients.Name !_= "waffle" """";
         var filterExpression = FilterParser.ParseFilter<Recipe>(input);
-        filterExpression.ToString().Should()
+        filterExpression.ToDisplayString().Should()
             .Be(""""x => Not(x.Ingredients.Select(y => y.Name).Any(z => z.StartsWith("waffle")))"""");
     }
 
@@ -669,7 +669,7 @@ public class FilterParserTests
     {
         var input = """"Ingredients.Name !_-= "waffle" """";
         var filterExpression = FilterParser.ParseFilter<Recipe>(input);
-        filterExpression.ToString().Should()
+        filterExpression.ToDisplayString().Should()
             .Be(""""x => Not(x.Ingredients.Select(y => y.Name).Any(z => z.EndsWith("waffle")))"""");
     }
 
@@ -678,7 +678,7 @@ public class FilterParserTests
     {
         var input = """"Ingredients.Name %== "waffle" """";
         var filterExpression = FilterParser.ParseFilter<Recipe>(input);
-        filterExpression.ToString().Should()
+        filterExpression.ToDisplayString().Should()
             .Be(""""x => x.Ingredients.Select(y => y.Name).All(z => (z == "waffle"))"""");
     }
 
@@ -687,7 +687,7 @@ public class FilterParserTests
     {
         var input = """"Ingredients #> 0"""";
         var filterExpression = FilterParser.ParseFilter<Recipe>(input);
-        filterExpression.ToString().Should()
+        filterExpression.ToDisplayString().Should()
             .Be(""""x => (x.Ingredients.Count() > 0)"""");
     }
 
@@ -696,7 +696,7 @@ public class FilterParserTests
     {
         var input = """"Ingredients #== 0"""";
         var filterExpression = FilterParser.ParseFilter<Recipe>(input);
-        filterExpression.ToString().Should()
+        filterExpression.ToDisplayString().Should()
             .Be(""""x => (x.Ingredients.Count() == 0)"""");
     }
 
@@ -705,7 +705,7 @@ public class FilterParserTests
     {
         var input = """"Ingredients #!= 3"""";
         var filterExpression = FilterParser.ParseFilter<Recipe>(input);
-        filterExpression.ToString().Should()
+        filterExpression.ToDisplayString().Should()
             .Be(""""x => (x.Ingredients.Count() != 3)"""");
     }
 
@@ -714,7 +714,7 @@ public class FilterParserTests
     {
         var input = """"Ingredients #>= 0"""";
         var filterExpression = FilterParser.ParseFilter<Recipe>(input);
-        filterExpression.ToString().Should()
+        filterExpression.ToDisplayString().Should()
             .Be(""""x => (x.Ingredients.Count() >= 0)"""");
     }
 
@@ -723,7 +723,7 @@ public class FilterParserTests
     {
         var input = """Tags ^$ "winner" """;
         var filterExpression = FilterParser.ParseFilter<Recipe>(input);
-        filterExpression.ToString().Should()
+        filterExpression.ToDisplayString().Should()
             .Be(""""x => x.Tags.Any(z => (z == "winner"))"""");
     }
 
@@ -732,7 +732,7 @@ public class FilterParserTests
     {
         var input = """Tags !^$ "winner" """;
         var filterExpression = FilterParser.ParseFilter<Recipe>(input);
-        filterExpression.ToString().Should()
+        filterExpression.ToDisplayString().Should()
             .Be(""""x => x.Tags.Any(z => (z != "winner"))"""");
     }
 
@@ -741,7 +741,7 @@ public class FilterParserTests
     {
         var input = """Tags ^$* "winner" """;
         var filterExpression = FilterParser.ParseFilter<Recipe>(input);
-        filterExpression.ToString().Should()
+        filterExpression.ToDisplayString().Should()
             .Be(""""x => x.Tags.Any(z => (z.ToLower() == "winner".ToLower()))"""");
     }
 
@@ -750,7 +750,7 @@ public class FilterParserTests
     {
         var input = """Tags !^$* "winner" """;
         var filterExpression = FilterParser.ParseFilter<Recipe>(input);
-        filterExpression.ToString().Should()
+        filterExpression.ToDisplayString().Should()
             .Be(""""x => x.Tags.Any(z => (z.ToLower() != "winner".ToLower()))"""");
     }
 
@@ -786,7 +786,7 @@ public class FilterParserTests
         filterExpression.Should().NotBeNull();
         
         // Let's see what the actual expression looks like
-        var expressionString = filterExpression.ToString();
+        var expressionString = filterExpression.ToDisplayString();
         
         // Debug output - this should show us the actual expression
         Console.WriteLine($"Generated expression: {expressionString}");
@@ -807,7 +807,7 @@ public class FilterParserTests
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
 
         // Assert
-        filterExpression.ToString().Should()
+        filterExpression.ToDisplayString().Should()
             .Be("""x => ((x.Title != null) AndAlso x.Title.ToLower().Contains("waffle".ToLower()))""");
     }
 
@@ -825,7 +825,7 @@ public class FilterParserTests
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
 
         // Assert - should use ToUpper instead of ToLower
-        filterExpression.ToString().Should()
+        filterExpression.ToDisplayString().Should()
             .Be("""x => ((x.Title != null) AndAlso x.Title.ToUpper().Contains("waffle".ToUpper()))""");
     }
 
@@ -844,7 +844,7 @@ public class FilterParserTests
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
 
         // Assert - Title should use ToUpper because of per-property override
-        filterExpression.ToString().Should()
+        filterExpression.ToDisplayString().Should()
             .Be("""x => ((x.Title != null) AndAlso x.Title.ToUpper().Contains("waffle".ToUpper()))""");
     }
 
@@ -862,9 +862,9 @@ public class FilterParserTests
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
 
         // Assert
-        filterExpression.ToString().Should()
+        filterExpression.ToDisplayString().Should()
             .Contain("ToUpper");
-        filterExpression.ToString().Should()
+        filterExpression.ToDisplayString().Should()
             .NotContain("ToLower");
     }
 
@@ -879,7 +879,7 @@ public class FilterParserTests
 
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
 
-        filterExpression.ToString().Should()
+        filterExpression.ToDisplayString().Should()
             .Be("x => ((x.Title == null) OrElse (x.Title.ToUpper() != \"lamb\".ToUpper()))");
     }
 
@@ -894,7 +894,7 @@ public class FilterParserTests
 
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
 
-        filterExpression.ToString().Should()
+        filterExpression.ToDisplayString().Should()
             .Be("x => ((x.Title != null) AndAlso x.Title.ToUpper().StartsWith(\"lamb\".ToUpper()))");
     }
 
@@ -909,7 +909,7 @@ public class FilterParserTests
 
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
 
-        filterExpression.ToString().Should()
+        filterExpression.ToDisplayString().Should()
             .Be("x => ((x.Title != null) AndAlso x.Title.ToUpper().EndsWith(\"lamb\".ToUpper()))");
     }
 
@@ -924,7 +924,7 @@ public class FilterParserTests
 
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
 
-        filterExpression.ToString().Should()
+        filterExpression.ToDisplayString().Should()
             .Be("x => ((x.Title == null) OrElse Not(x.Title.ToUpper().Contains(\"lamb\".ToUpper())))");
     }
 
@@ -939,7 +939,7 @@ public class FilterParserTests
 
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
 
-        filterExpression.ToString().Should()
+        filterExpression.ToDisplayString().Should()
             .Be("x => ((x.Title == null) OrElse Not(x.Title.ToUpper().StartsWith(\"lamb\".ToUpper())))");
     }
 
@@ -954,7 +954,7 @@ public class FilterParserTests
 
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
 
-        filterExpression.ToString().Should()
+        filterExpression.ToDisplayString().Should()
             .Be("x => ((x.Title == null) OrElse Not(x.Title.ToUpper().EndsWith(\"lamb\".ToUpper())))");
     }
 
@@ -968,7 +968,7 @@ public class FilterParserTests
         });
 
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
-        var asString = filterExpression.ToString();
+        var asString = filterExpression.ToDisplayString();
 
         asString.Should().Contain("ToUpper");
         asString.Should().NotContain("ToLower");
@@ -988,7 +988,7 @@ public class FilterParserTests
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
 
         // Title should use ToLower because per-property overrides global Upper
-        filterExpression.ToString().Should()
+        filterExpression.ToDisplayString().Should()
             .Be("""x => ((x.Title != null) AndAlso x.Title.ToLower().Contains("waffle".ToLower()))""");
     }
 }

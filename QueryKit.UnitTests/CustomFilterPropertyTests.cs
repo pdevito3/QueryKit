@@ -17,7 +17,7 @@ public class CustomFilterPropertyTests
         var value = faker.Lorem.Word();
         var input = $"""PhysicalAddress.State == "{value}" """;
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be($"""x => (x.PhysicalAddress.State == "{value}")""");
+        filterExpression.ToDisplayString().Should().Be($"""x => (x.PhysicalAddress.State == "{value}")""");
     }
 
     [Fact]
@@ -32,7 +32,7 @@ public class CustomFilterPropertyTests
             config.Property<TestingPerson>(x => x.PhysicalAddress.State).HasQueryName("state");
         });
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
-        filterExpression.ToString().Should().Be($"""x => (x.PhysicalAddress.State == "{value}")""");
+        filterExpression.ToDisplayString().Should().Be($"""x => (x.PhysicalAddress.State == "{value}")""");
     }
     
     [Fact(Skip = "Will need something like this if i want to support HasConversion in efcore.")]
@@ -42,7 +42,7 @@ public class CustomFilterPropertyTests
         var value = faker.Lorem.Word();
         var input = $"""Email.Value == "{value}" """;
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToString().Should().Be($"""x => (x.Email == "{value}")""");
+        filterExpression.ToDisplayString().Should().Be($"""x => (x.Email == "{value}")""");
     }
     
     [Fact(Skip = "Will need something like this if i want to support HasConversion in efcore.")]
@@ -57,7 +57,7 @@ public class CustomFilterPropertyTests
             config.Property<TestingPerson>(x => x.Email).HasQueryName("email");
         });
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
-        filterExpression.ToString().Should().Be($"""x => (x.Email == "{value}")""");
+        filterExpression.ToDisplayString().Should().Be($"""x => (x.Email == "{value}")""");
     }
     
     [Fact]
@@ -72,7 +72,7 @@ public class CustomFilterPropertyTests
             config.Property<TestingPerson>(x => x.Title!).HasQueryName("special_title");
         });
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
-        filterExpression.ToString().Should().Be($"""x => (x.Title == "{value}")""");
+        filterExpression.ToDisplayString().Should().Be($"""x => (x.Title == "{value}")""");
     }
     
     [Fact]
@@ -87,7 +87,7 @@ public class CustomFilterPropertyTests
             config.Property<TestingPerson>(x => x.Title!).HasQueryName("special_title");
         });
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
-        filterExpression.ToString().Should().Be($"""x => (x.Title == "{value} with special_value")""");
+        filterExpression.ToDisplayString().Should().Be($"""x => (x.Title == "{value} with special_value")""");
     }
     
     [Fact]
@@ -102,7 +102,7 @@ public class CustomFilterPropertyTests
             config.Property<TestingPerson>(x => x.Title!).HasQueryName("special_title");
         });
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
-        filterExpression.ToString().Should().Be($"""x => (x.Title == "{value} with special_value @=* a thing")""");
+        filterExpression.ToDisplayString().Should().Be($"""x => (x.Title == "{value} with special_value @=* a thing")""");
     }
     
     [Fact]
@@ -119,7 +119,7 @@ public class CustomFilterPropertyTests
             config.Property<TestingPerson>(x => x.Id).HasQueryName("identifier");
         });
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
-        filterExpression.ToString().Should().Be($"""x => ((x.Title == "{stringValue}") OrElse (x.Id == {guidValue}))""");
+        filterExpression.ToDisplayString().Should().Be($"""x => ((x.Title == "{stringValue}") OrElse (x.Id == {guidValue}))""");
     }
 
     [Fact]
@@ -135,7 +135,7 @@ public class CustomFilterPropertyTests
             config.Property<TestingPerson>(x => x.Title!).HasQueryName("special_title");
         });
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
-        filterExpression.ToString().Should().Be($"""x => ((x.Title == "{stringValue}") OrElse (x.Id == {guidValue}))""");
+        filterExpression.ToDisplayString().Should().Be($"""x => ((x.Title == "{stringValue}") OrElse (x.Id == {guidValue}))""");
     }
     
     [Fact]
@@ -150,7 +150,7 @@ public class CustomFilterPropertyTests
             config.Property<TestingPerson>(x => x.Title!).HasQueryName("specialtitle");
         });
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
-        filterExpression.ToString().Should().Be($"""x => (x.Title == "{value}")""");
+        filterExpression.ToDisplayString().Should().Be($"""x => (x.Title == "{value}")""");
     }
     
     [Fact]
@@ -167,7 +167,7 @@ public class CustomFilterPropertyTests
             config.Property<TestingPerson>(x => x.Id).PreventFilter();
         });
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
-        filterExpression.ToString().Should().Be($"""x => ((x.Title == "{stringValue}") OrElse (True == True))""");
+        filterExpression.ToDisplayString().Should().Be($"""x => ((x.Title == "{stringValue}") OrElse (True == True))""");
     }
     
     [Fact]
@@ -184,7 +184,7 @@ public class CustomFilterPropertyTests
             config.Property<TestingPerson>(x => x.Id).HasQueryName("identifier").PreventFilter();
         });
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
-        filterExpression.ToString().Should().Be($"""x => ((x.Title == "{stringValue}") OrElse (True == True))""");
+        filterExpression.ToDisplayString().Should().Be($"""x => ((x.Title == "{stringValue}") OrElse (True == True))""");
     }
     
     [Fact]
@@ -197,7 +197,7 @@ public class CustomFilterPropertyTests
             config.Property<TestingPerson>(x => x.Title!).HasQueryName("special_title");
         });
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
-        filterExpression.ToString().Should()
+        filterExpression.ToDisplayString().Should()
             .Be("""x => value(System.Collections.Generic.List`1[System.String]).Contains(x.Title)""");
     }
 
@@ -215,7 +215,7 @@ public class CustomFilterPropertyTests
             config.Property<TestingPerson>(x => x.Title!).HasQueryName("special_title");
         });
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
-        filterExpression.ToString().Should().Contain("x.Title");
+        filterExpression.ToDisplayString().Should().Contain("x.Title");
     }
 
     [Theory]
@@ -232,7 +232,7 @@ public class CustomFilterPropertyTests
             config.Property<Recipe>(x => x.Tags).HasQueryName("special_tags");
         });
         var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
-        filterExpression.ToString().Should().Contain("x.Tags");
+        filterExpression.ToDisplayString().Should().Contain("x.Tags");
     }
 
     [Fact]
@@ -247,7 +247,7 @@ public class CustomFilterPropertyTests
             config.Property<Recipe>(x => x.Title).HasQueryName("special_title");
         });
         var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
-        filterExpression.ToString().Should().Be(
+        filterExpression.ToDisplayString().Should().Be(
             $"""x => ((x.Title == "{stringValue}") AndAlso x.Ingredients.Select(y => y.Name).Any(z => (z == "flour")))""");
     }
     
@@ -263,7 +263,7 @@ public class CustomFilterPropertyTests
             config.DerivedProperty<Recipe>(x => x.Title + x.Directions).HasQueryName("special_title_directions");
         });
         var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
-        filterExpression.ToString().Should().Be(
+        filterExpression.ToDisplayString().Should().Be(
             $"""x => (((x.Title + x.Directions) == "{stringValue}") AndAlso x.Ingredients.Select(y => y.Name).Any(z => (z == "flour")))""");
     }
     
@@ -280,7 +280,7 @@ public class CustomFilterPropertyTests
             config.Property<TestingPerson>(x => x.Id).PreventFilter();
         });
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
-        filterExpression.ToString().Should().Be($"""x => (True == True)""");
+        filterExpression.ToDisplayString().Should().Be($"""x => (True == True)""");
     }
     
     [Fact]
@@ -311,6 +311,6 @@ public class CustomFilterPropertyTests
             config.AllowUnknownProperties = true;
         });
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
-        filterExpression.ToString().Should().Be("x => (True == True)");
+        filterExpression.ToDisplayString().Should().Be("x => (True == True)");
     }
 }

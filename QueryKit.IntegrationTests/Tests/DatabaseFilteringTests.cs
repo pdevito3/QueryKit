@@ -735,7 +735,7 @@ public class DatabaseFilteringTests() : TestBase
         var fakePersonTwo = new FakeTestingPersonBuilder().Build();
         await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
         
-        var input = $"""(id @=* "9edb")""";
+        var input = $"""(id @=* "9edb-a3ec")""";
 
         // Act
         var queryablePeople = testingServiceScope.DbContext().People;
@@ -1391,7 +1391,9 @@ public class DatabaseFilteringTests() : TestBase
     {
         // Arrange
         var testingServiceScope = new TestingServiceScope();
-        var fakeAuthorOne = new FakeAuthorBuilder().Build();
+        var fakeAuthorOne = new FakeAuthorBuilder()
+            .WithName(Guid.NewGuid().ToString())
+            .Build();
         var fakeRecipeOne = new FakeRecipeBuilder().Build();
         fakeRecipeOne.SetAuthor(fakeAuthorOne);
         
@@ -1472,7 +1474,9 @@ public class DatabaseFilteringTests() : TestBase
     {
         // Arrange
         var testingServiceScope = new TestingServiceScope();
-        var fakeAuthorOne = new FakeAuthorBuilder().Build();
+        var fakeAuthorOne = new FakeAuthorBuilder()
+            .WithName(Guid.NewGuid().ToString())
+            .Build();
         var fakeRecipeOne = new FakeRecipeBuilder().Build();
         fakeRecipeOne.SetAuthor(fakeAuthorOne);
         

@@ -185,8 +185,8 @@ public class HasConversionTests
         var filterWithoutQueryName = FilterParser.ParseFilter<TestingPerson>(input, configWithoutQueryName);
 
         // Assert
-        filterWithQueryName.ToString().Should().Be("""x => (x.Email == new EmailAddress("a@x.com"))""");
-        filterWithQueryName.ToString().Should().Be(filterWithoutQueryName.ToString());
+        filterWithQueryName.ToDisplayString().Should().Be("""x => (x.Email == new EmailAddress("a@x.com"))""");
+        filterWithQueryName.ToDisplayString().Should().Be(filterWithoutQueryName.ToDisplayString());
     }
 
     [Fact]
