@@ -1,6 +1,7 @@
 namespace QueryKit.UnitTests;
 
 using FluentAssertions;
+using QueryKit.Configuration;
 using QueryKit.WebApiTestProject.Entities.Recipes;
 using SharedTestingHelper.Fakes.Recipes;
 
@@ -230,6 +231,32 @@ public class EnumerableFilteringTests()
         // Assert
         result.Count.Should().Be(1);
         result[0].Id.Should().Be(1);
+    }
+
+    [Fact]
+    public void can_apply_query_kit_data_to_enumerable()
+    {
+        // Arrange
+        var low = new FakeRecipeBuilder().WithTitle("low").WithRating(1).Build();
+        var high = new FakeRecipeBuilder().WithTitle("high").WithRating(5).Build();
+        var middle = new FakeRecipeBuilder().WithTitle("middle").WithRating(3).Build();
+        var listOfRecipes = new List<Recipe> { low, high, middle };
+
+        var queryKitData = new QueryKitData
+        {
+            Filters = "score >= 3",
+            SortOrder = "score desc",
+            Configuration = new QueryKitConfiguration(config =>
+            {
+                config.Property<Recipe>(x => x.Rating).HasQueryName("score");
+            })
+        };
+
+        // Act
+        var result = listOfRecipes.ApplyQueryKit(queryKitData).ToList();
+
+        // Assert
+        result.Select(x => x.Title).Should().Equal("high", "middle");
     }
 
     private class PersonWithNullableEmail

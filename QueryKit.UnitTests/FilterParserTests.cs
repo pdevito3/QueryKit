@@ -726,6 +726,15 @@ public class FilterParserTests
     }
 
     [Fact]
+    public void collection_has_operator_less_than_equal()
+    {
+        var input = """"Ingredients #<= 1"""";
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input);
+        filterExpression.ToDisplayString().Should()
+            .Be(""""x => (x.Ingredients.Count() <= 1)"""");
+    }
+
+    [Fact]
     public void primitive_collection_has()
     {
         var input = """Tags ^$ "winner" """;
