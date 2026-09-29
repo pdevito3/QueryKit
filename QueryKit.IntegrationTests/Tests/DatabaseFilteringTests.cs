@@ -1391,7 +1391,9 @@ public class DatabaseFilteringTests() : TestBase
     {
         // Arrange
         var testingServiceScope = new TestingServiceScope();
-        var fakeAuthorOne = new FakeAuthorBuilder().Build();
+        var fakeAuthorOne = new FakeAuthorBuilder()
+            .WithName(Guid.NewGuid().ToString())
+            .Build();
         var fakeRecipeOne = new FakeRecipeBuilder().Build();
         fakeRecipeOne.SetAuthor(fakeAuthorOne);
         
@@ -1472,7 +1474,9 @@ public class DatabaseFilteringTests() : TestBase
     {
         // Arrange
         var testingServiceScope = new TestingServiceScope();
-        var fakeAuthorOne = new FakeAuthorBuilder().Build();
+        var fakeAuthorOne = new FakeAuthorBuilder()
+            .WithName(Guid.NewGuid().ToString())
+            .Build();
         var fakeRecipeOne = new FakeRecipeBuilder().Build();
         fakeRecipeOne.SetAuthor(fakeAuthorOne);
         
