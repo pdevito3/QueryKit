@@ -841,7 +841,7 @@ public class FilterParserTests
         var config = new QueryKitConfiguration(settings =>
         {
             settings.CaseInsensitiveComparison = CaseInsensitiveMode.Lower;
-            settings.Property<TestingPerson>(x => x.Title).HasCaseInsensitiveMode(CaseInsensitiveMode.Upper);
+            settings.Property<TestingPerson>(x => x.Title!).HasCaseInsensitiveMode(CaseInsensitiveMode.Upper);
         });
 
         // Act
@@ -986,7 +986,7 @@ public class FilterParserTests
         var config = new QueryKitConfiguration(settings =>
         {
             settings.CaseInsensitiveComparison = CaseInsensitiveMode.Upper;
-            settings.Property<TestingPerson>(x => x.Title).HasCaseInsensitiveMode(CaseInsensitiveMode.Lower);
+            settings.Property<TestingPerson>(x => x.Title!).HasCaseInsensitiveMode(CaseInsensitiveMode.Lower);
         });
 
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);

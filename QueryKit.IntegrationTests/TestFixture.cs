@@ -31,7 +31,7 @@ public class TestFixture : IAsyncLifetime
             EnvironmentName = Consts.Testing.IntegrationTestingEnvName
         });
 
-        _dbContainer = new PostgreSqlBuilder().Build();
+        _dbContainer = new PostgreSqlBuilder("postgres:15.1").Build();
         await _dbContainer.StartAsync();
         builder.Configuration.GetSection(ConnectionStringOptions.SectionName)[ConnectionStringOptions.RecipeManagementKey] = _dbContainer.GetConnectionString();
         await RunMigration(_dbContainer.GetConnectionString());
