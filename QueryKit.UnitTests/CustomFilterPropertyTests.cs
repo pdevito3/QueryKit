@@ -142,7 +142,7 @@ public class CustomFilterPropertyTests
             config.Property<TestingPerson>(x => x.Id).PreventFilter();
         });
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
-        filterExpression.ToDisplayString().Should().Be($"""x => ((x.Title == "{stringValue}") OrElse (True == True))""");
+        filterExpression.ToDisplayString().Should().Be($"""x => (x.Title == "{stringValue}")""");
     }
     
     [Fact]
@@ -159,7 +159,7 @@ public class CustomFilterPropertyTests
             config.Property<TestingPerson>(x => x.Id).HasQueryName("identifier").PreventFilter();
         });
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
-        filterExpression.ToDisplayString().Should().Be($"""x => ((x.Title == "{stringValue}") OrElse (True == True))""");
+        filterExpression.ToDisplayString().Should().Be($"""x => (x.Title == "{stringValue}")""");
     }
     
     [Fact]
@@ -243,7 +243,7 @@ public class CustomFilterPropertyTests
     }
     
     [Fact]
-    public void filter_prevented_props_always_have_true_equals_true_regardless_of_comparison()
+    public void filter_prevented_props_are_removed_regardless_of_comparison()
     {
         var faker = new Faker();
         var filterOperator = faker.PickRandom(ComparisonOperator.List.Where(x => x != ComparisonOperator.EqualsOperator()).ToList());
@@ -255,7 +255,7 @@ public class CustomFilterPropertyTests
             config.Property<TestingPerson>(x => x.Id).PreventFilter();
         });
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
-        filterExpression.ToDisplayString().Should().Be($"""x => (True == True)""");
+        filterExpression.ToDisplayString().Should().Be("x => True");
     }
     
     [Fact]
@@ -284,6 +284,6 @@ public class CustomFilterPropertyTests
             config.AllowUnknownProperties = true;
         });
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
-        filterExpression.ToDisplayString().Should().Be("x => (True == True)");
+        filterExpression.ToDisplayString().Should().Be("x => True");
     }
 }

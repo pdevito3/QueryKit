@@ -31,6 +31,13 @@ public static class FilterParser
         try
         {
             expr = ExprParser<T>(parameter, config).End().Parse(input);
+
+            // When the parser removed every clause, no clause limits the result
+            if (expr is RemovedClauseExpression)
+            {
+                expr = Expression.Constant(true);
+            }
+
             expr = ReplaceDerivedProperties(expr, config, parameter);
         }
         catch (InvalidOperationException e)
@@ -674,13 +681,13 @@ public static class FilterParser
 
                 if (temp.reference.Kind == PropertyReferenceKind.Unknown)
                 {
-                    return Expression.Equal(Expression.Constant(true), Expression.Constant(true));
+                    return RemovedClauseExpression.Instance;
                 }
 
                 var leftExpr = CreateLeftExpr(parameter, temp.reference, config);
-                if (leftExpr.NodeType == ExpressionType.Constant && true.Equals(((ConstantExpression)leftExpr).Value))
+                if (leftExpr is RemovedClauseExpression)
                 {
-                    return Expression.Equal(Expression.Constant(true), Expression.Constant(true));
+                    return leftExpr;
                 }
 
                 if (leftExpr.Type == typeof(Guid) || leftExpr.Type == typeof(Guid?))
@@ -852,7 +859,7 @@ public static class FilterParser
         var propertyConfig = config?.PropertyMappings?.GetPropertyInfo(reference.Text);
         if (propertyConfig != null && !propertyConfig.CanFilter)
         {
-            return Expression.Constant(true, typeof(bool));
+            return RemovedClauseExpression.Instance;
         }
 
         // Check if this property uses HasConversion
@@ -1041,8 +1048,8 @@ public static class FilterParser
                             : Expression.OrElse(result, comparison);
                 }
 
-                // If all properties were filtered out, return true
-                return result ?? Expression.Constant(true, typeof(bool));
+                // If all properties were filtered out, remove the clause
+                return result ?? RemovedClauseExpression.Instance;
             });
     }
     
@@ -1068,15 +1075,31 @@ public static class FilterParser
         => Parse.ChainOperator(
             LogicalOperatorParser.Where(x => x.Name == LogicalOperator.AndOperator.Operator()),
             AtomicExprParser<T>(parameter, config),
-            (op, left, right) => op.GetExpression<T>(left, right)
+            CombineClauses<T>
         );
 
     private static Parser<Expression> OrExprParser<T>(ParameterExpression parameter, IQueryKitConfiguration? config = null)
         => Parse.ChainOperator(
             LogicalOperatorParser.Where(x => x.Name == LogicalOperator.OrOperator.Operator()),
             AndExprParser<T>(parameter, config),
-            (op, left, right) => op.GetExpression<T>(left, right)
+            CombineClauses<T>
         );
+
+    // A removed clause has no effect, so the operator keeps only the other side
+    private static Expression CombineClauses<T>(LogicalOperator op, Expression left, Expression right)
+    {
+        if (left is RemovedClauseExpression)
+        {
+            return right;
+        }
+
+        if (right is RemovedClauseExpression)
+        {
+            return left;
+        }
+
+        return op.GetExpression<T>(left, right);
+    }
     
     private static Expression GetGuidToStringExpression(Expression leftExpr)
     {

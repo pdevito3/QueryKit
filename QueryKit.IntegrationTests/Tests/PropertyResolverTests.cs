@@ -1,0 +1,66 @@
+namespace QueryKit.IntegrationTests.Tests;
+
+using Bogus;
+using Configuration;
+using FluentAssertions;
+using Microsoft.EntityFrameworkCore;
+using SharedTestingHelper.Fakes;
+using WebApiTestProject.Entities;
+
+public class PropertyResolverTests : TestBase
+{
+    [Fact]
+    public async Task unknown_property_clause_under_or_does_not_return_every_row()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var title = new Faker().Lorem.Sentence();
+        var fakePerson = new FakeTestingPersonBuilder()
+            .WithTitle(title)
+            .WithAge(30)
+            .Build();
+        await testingServiceScope.InsertAsync(fakePerson);
+
+        var input = $"""Title == "{title}" && (Nope == "x" || Age > 100)""";
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.AllowUnknownProperties = true;
+        });
+
+        // Act
+        var people = await testingServiceScope.DbContext().People
+            .ApplyQueryKitFilter(input, config)
+            .ToListAsync();
+
+        // Assert
+        people.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task prevented_property_clause_under_or_does_not_return_every_row()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var title = new Faker().Lorem.Sentence();
+        var fakePerson = new FakeTestingPersonBuilder()
+            .WithTitle(title)
+            .WithAge(30)
+            .WithRating(1)
+            .Build();
+        await testingServiceScope.InsertAsync(fakePerson);
+
+        var input = $"""Title == "{title}" && (Rating == 1 || Age > 100)""";
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.Rating).PreventFilter();
+        });
+
+        // Act
+        var people = await testingServiceScope.DbContext().People
+            .ApplyQueryKitFilter(input, config)
+            .ToListAsync();
+
+        // Assert
+        people.Should().BeEmpty();
+    }
+}
