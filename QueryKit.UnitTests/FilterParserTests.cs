@@ -793,12 +793,8 @@ public class FilterParserTests
         // The expression should be created successfully (not throw an exception)
         filterExpression.Should().NotBeNull();
         
-        // Let's see what the actual expression looks like
         var expressionString = filterExpression.ToDisplayString();
-        
-        // Debug output - this should show us the actual expression
-        Console.WriteLine($"Generated expression: {expressionString}");
-        
+
         // The expression should be created and contain the key elements
         expressionString.Should().NotBeNullOrEmpty();
         expressionString.Should().Contain("x.Email");
