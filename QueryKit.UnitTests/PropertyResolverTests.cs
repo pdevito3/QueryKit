@@ -204,4 +204,33 @@ public class PropertyResolverTests
 
         filterExpression.ToDisplayString().Should().Contain("ToUpper()");
     }
+
+    [Fact]
+    public void prevented_sort_property_is_skipped_in_any_case()
+    {
+        var input = "title, Age desc";
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.Title).PreventSort();
+        });
+
+        var sortExpressions = SortParser.ParseSort<TestingPerson>(input, config);
+
+        sortExpressions.Should().ContainSingle();
+        sortExpressions[0].Expression!.ToString().Should().Be("x => Convert(x.Age, Object)");
+    }
+
+    [Fact]
+    public void prevented_sort_property_with_a_query_name_is_skipped_when_written_by_its_member_name()
+    {
+        var input = "title desc";
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.Title).HasQueryName("t").PreventSort();
+        });
+
+        var sortExpressions = SortParser.ParseSort<TestingPerson>(input, config);
+
+        sortExpressions.Should().BeEmpty();
+    }
 }

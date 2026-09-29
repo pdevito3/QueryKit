@@ -38,6 +38,8 @@ internal sealed class PropertyReference
 
     public bool CanFilter => Mapping?.CanFilter ?? true;
 
+    public bool CanSort => Mapping?.CanSort ?? true;
+
     /// <summary>When the reference is not a member, the first path segment that did not resolve to a member.</summary>
     public string? UnknownSegment { get; }
 
