@@ -482,8 +482,7 @@ public class FilterParserTests
     [Fact]
     public void can_throw_error_when_property_not_recognized()
     {
-        var faker = new Faker();
-        var propertyName = faker.Lorem.Word();
+        var propertyName = "NotARealProperty";
         var input = $"""{propertyName} == 25""";
         var act = () => FilterParser.ParseFilter<TestingPerson>(input);
         act.Should().Throw<UnknownFilterPropertyException>()

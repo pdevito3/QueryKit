@@ -1,7 +1,6 @@
 namespace QueryKit.UnitTests;
 
 using System.Linq.Expressions;
-using Bogus;
 using Configuration;
 using Exceptions;
 using FluentAssertions;
@@ -265,8 +264,7 @@ public class SortParserTests
     [Fact]
     public void can_throw_error_when_property_not_recognized()
     {
-        var faker = new Faker();
-        var propertyName = faker.Lorem.Word();
+        var propertyName = "NotARealProperty";
         var input = $"""Title, {propertyName}, Age desc""";
         var act = () => SortParser.ParseSort<TestingPerson>(input);
         act.Should().Throw<SortParsingException>()
