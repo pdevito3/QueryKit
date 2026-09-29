@@ -222,8 +222,8 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
                 return Expression.AndAlso(nullCheck, caseComparison);
             }
 
-            // for some complex derived expressions
-            if (left.NodeType == ExpressionType.Convert)
+            // A derived property boxes its value to object. Unbox it to bool for a derived bool comparison.
+            if (left.NodeType == ExpressionType.Convert && left.Type == typeof(object))
             {
                 left = Expression.Convert(left, typeof(bool));
             }
@@ -261,8 +261,8 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
                 return Expression.OrElse(nullCheck, caseComparison);
             }
 
-            // for some complex derived expressions
-            if (left.NodeType == ExpressionType.Convert)
+            // A derived property boxes its value to object. Unbox it to bool for a derived bool comparison.
+            if (left.NodeType == ExpressionType.Convert && left.Type == typeof(object))
             {
                 left = Expression.Convert(left, typeof(bool));
             }

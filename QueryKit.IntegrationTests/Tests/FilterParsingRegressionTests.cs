@@ -203,4 +203,36 @@ public class FilterParsingRegressionTests : TestBase
         // Assert
         people.Select(x => x.Id).Should().Equal(fakePersonOne.Id);
     }
+
+    [Theory]
+    [InlineData("Age == Rating", true)]
+    [InlineData("Rating == Age", true)]
+    [InlineData("Age != Rating", false)]
+    [InlineData("Rating != Age", false)]
+    public async Task int_property_compares_to_decimal_property(string valueFilter, bool expectEqualPerson)
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var title = $"numeric {Guid.NewGuid()}";
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithTitle(title)
+            .WithAge(4)
+            .WithRating(4m)
+            .Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder()
+            .WithTitle(title)
+            .WithAge(4)
+            .WithRating(4.5m)
+            .Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+
+        var input = $"""{nameof(TestingPerson.Title)} == "{title}" && {valueFilter}""";
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var people = await queryablePeople.ApplyQueryKitFilter(input).ToListAsync();
+
+        // Assert
+        people.Select(x => x.Id).Should().Equal(expectEqualPerson ? fakePersonOne.Id : fakePersonTwo.Id);
+    }
 }

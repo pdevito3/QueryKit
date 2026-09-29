@@ -169,6 +169,24 @@ public class FilterParsingRegressionTests
         scalarResult.Select(x => x.Title).Should().Equal("match");
     }
 
+    [Theory]
+    [InlineData("Age == Rating", "equal")]
+    [InlineData("Rating == Age", "equal")]
+    [InlineData("Age != Rating", "different")]
+    [InlineData("Rating != Age", "different")]
+    public void int_property_compares_to_decimal_property(string input, string expectedTitle)
+    {
+        var people = new[]
+        {
+            new TestingPerson { Title = "equal", Age = 4, Rating = 4m },
+            new TestingPerson { Title = "different", Age = 4, Rating = 4.5m },
+        };
+
+        var result = people.AsQueryable().ApplyQueryKitFilter(input).ToList();
+
+        result.Select(x => x.Title).Should().Equal(expectedTitle);
+    }
+
     private static TResult WithCulture<TResult>(string cultureName, Func<TResult> action)
     {
         var originalCulture = CultureInfo.CurrentCulture;
