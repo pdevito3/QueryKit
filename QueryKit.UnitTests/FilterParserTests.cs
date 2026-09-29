@@ -273,7 +273,7 @@ public class FilterParserTests
     {
         var input = """SpecificDate == 2022-07-01T00:00:03+01:00""";
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToDisplayString().Should().Be("x => (x.SpecificDate == new Nullable`1(new DateTimeOffset(637922304030000000, 01:00:00)))");
+        filterExpression.ToDisplayString().Should().Be("x => (x.SpecificDate == new Nullable`1(new DateTimeOffset(637922268030000000, 00:00:00)))");
     }
 
     [Theory]
@@ -308,7 +308,7 @@ public class FilterParserTests
     {
         var input = """SpecificDate == "2022-07-01T00:00:03+01:00" """;
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToDisplayString().Should().Be("x => (x.SpecificDate == new Nullable`1(new DateTimeOffset(637922304030000000, 01:00:00)))");
+        filterExpression.ToDisplayString().Should().Be("x => (x.SpecificDate == new Nullable`1(new DateTimeOffset(637922268030000000, 00:00:00)))");
     }
 
     [Fact]
@@ -324,7 +324,7 @@ public class FilterParserTests
     {
         var input = """SpecificDate == 2022-07-01T00:00:03-02:00""";
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToDisplayString().Should().Be("x => (x.SpecificDate == new Nullable`1(new DateTimeOffset(637922304030000000, -02:00:00)))");
+        filterExpression.ToDisplayString().Should().Be("x => (x.SpecificDate == new Nullable`1(new DateTimeOffset(637922376030000000, 00:00:00)))");
     }
 
     [Fact]
@@ -332,7 +332,7 @@ public class FilterParserTests
     {
         var input = """SpecificDate == 2022-07-01T00:00:03+02""";
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToDisplayString().Should().Be("x => (x.SpecificDate == new Nullable`1(new DateTimeOffset(637922304030000000, 02:00:00)))");
+        filterExpression.ToDisplayString().Should().Be("x => (x.SpecificDate == new Nullable`1(new DateTimeOffset(637922232030000000, 00:00:00)))");
     }
 
     [Fact]
