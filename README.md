@@ -66,7 +66,7 @@ var config = new QueryKitConfiguration(config =>
       		.PreventSort();
 });
 var people = _dbContext.People
-  		.ApplyQueryKitFilter(@$"first == "Jane" && Age < 10", config)
+  		.ApplyQueryKitFilter("""first == "Jane" && Age < 10""", config)
   		.ToList();
 ```
 
@@ -707,7 +707,7 @@ public class CustomQueryKitConfiguration : QueryKitConfiguration
 
 // ---
 
-var input = """Title eq$ "Pancakes" and Rating gt 10""";
+var input = """Title eqi "Pancakes" and Rating gt 10""";
 var config = new CustomQueryKitConfiguration();
 var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
 ```
@@ -924,7 +924,7 @@ Sorting is set up to create an expression using the property names you have on y
 * `PreventSort()` to prevent filtering on a given property
 
 ```c#
-var input = $"""Age desc, first"";
+var input = "Age desc, first";
 var config = new QueryKitConfiguration(config =>
 {
     config.Property<SpecialPerson>(x => x.FirstName)
@@ -973,7 +973,7 @@ If you want to capture errors to easily throw a `400`, you can add error handlin
 
 * A `QueryKitException` is the base class for all of the exceptions listed below. This can be caught to catch
 any exception thrown by QueryKit.
-* A `ParsingException` will be thrown when there is an invalid operator or bad syntax is used (e.g. not using double quotes around a string or guid).
+* A `ParsingException` will be thrown when there is an invalid operator or bad syntax is used. Note that an unquoted string value, such as `Title == salt`, does not throw. QueryKit reads it as the literal text `salt`.
 * An `UnknownFilterPropertyException` will be thrown if a property is not recognized during filtering
 * A `SortParsingException` will be thrown if a property or operation is not recognized during sorting
 * A `QueryKitDbContextTypeException` will be thrown when trying to use a `DbContext` specific workflow without passing that context (e.g. SoundEx)

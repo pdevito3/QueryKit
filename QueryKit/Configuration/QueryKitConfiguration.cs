@@ -33,6 +33,8 @@ public interface IQueryKitConfiguration
     public string HasOperator { get; set; }
     public string DoesNotHaveOperator { get; set; }
     public int? MaxPropertyDepth { get; set; }
+    public int MaxNestingDepth { get; set; }
+    public int MaxInputLength { get; set; }
     public CaseInsensitiveMode CaseInsensitiveComparison { get; set; }
 }
 
@@ -69,6 +71,8 @@ public class QueryKitConfiguration : IQueryKitConfiguration
     public bool AllowUnknownProperties { get; set; } = false;
     public Type? DbContextType { get; set; }
     public int? MaxPropertyDepth { get; set; }
+    public int MaxNestingDepth { get; set; }
+    public int MaxInputLength { get; set; }
     public CaseInsensitiveMode CaseInsensitiveComparison { get; set; }
 
     public QueryKitConfiguration(Action<QueryKitSettings> configureSettings)
@@ -108,6 +112,8 @@ public class QueryKitConfiguration : IQueryKitConfiguration
         HasOperator = settings.HasOperator;
         DoesNotHaveOperator = settings.DoesNotHaveOperator;
         MaxPropertyDepth = settings.MaxPropertyDepth;
+        MaxNestingDepth = settings.MaxNestingDepth;
+        MaxInputLength = settings.MaxInputLength;
         CaseInsensitiveComparison = settings.CaseInsensitiveComparison;
     }
 }

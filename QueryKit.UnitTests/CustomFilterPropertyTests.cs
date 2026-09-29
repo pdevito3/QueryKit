@@ -35,31 +35,6 @@ public class CustomFilterPropertyTests
         filterExpression.ToDisplayString().Should().Be($"""x => (x.PhysicalAddress.State == "{value}")""");
     }
     
-    [Fact(Skip = "Will need something like this if i want to support HasConversion in efcore.")]
-    public void can_have_child_prop_name_for_efcore_HasConversion()
-    {
-        var faker = new Faker();
-        var value = faker.Lorem.Word();
-        var input = $"""Email.Value == "{value}" """;
-        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToDisplayString().Should().Be($"""x => (x.Email == "{value}")""");
-    }
-    
-    [Fact(Skip = "Will need something like this if i want to support HasConversion in efcore.")]
-    public void can_have_custom_child_prop_name_for_efcore_HasConversion()
-    {
-        var faker = new Faker();
-        var value = faker.Lorem.Word();
-        var input = $"""email == "{value}" """;
-    
-        var config = new QueryKitConfiguration(config =>
-        {
-            config.Property<TestingPerson>(x => x.Email).HasQueryName("email");
-        });
-        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
-        filterExpression.ToDisplayString().Should().Be($"""x => (x.Email == "{value}")""");
-    }
-    
     [Fact]
     public void can_have_custom_prop_name_for_string()
     {

@@ -5,6 +5,9 @@ using QueryKit.Operators;
 
 public class QueryKitSettings
 {
+    public const int DefaultMaxNestingDepth = 32;
+    public const int DefaultMaxInputLength = 5000;
+
     public QueryKitPropertyMappings PropertyMappings { get; set; } = new QueryKitPropertyMappings();
     public string EqualsOperator { get; set; } = ComparisonOperator.EqualsOperator().Operator();
     public string NotEqualsOperator { get; set; } = ComparisonOperator.NotEqualsOperator().Operator();
@@ -36,6 +39,8 @@ public class QueryKitSettings
     public bool AllowUnknownProperties { get; set; }
     public Type? DbContextType { get; set; }
     public int? MaxPropertyDepth { get; set; }
+    public int MaxNestingDepth { get; set; } = DefaultMaxNestingDepth;
+    public int MaxInputLength { get; set; } = DefaultMaxInputLength;
     public CaseInsensitiveMode CaseInsensitiveComparison { get; set; } = CaseInsensitiveMode.Lower;
 
     public QueryKitPropertyMapping<TModel> Property<TModel>(Expression<Func<TModel, object>>? propertySelector)

@@ -482,8 +482,7 @@ public class FilterParserTests
     [Fact]
     public void can_throw_error_when_property_not_recognized()
     {
-        var faker = new Faker();
-        var propertyName = faker.Lorem.Word();
+        var propertyName = "NotARealProperty";
         var input = $"""{propertyName} == 25""";
         var act = () => FilterParser.ParseFilter<TestingPerson>(input);
         act.Should().Throw<UnknownFilterPropertyException>()
@@ -755,6 +754,15 @@ public class FilterParserTests
     }
 
     [Fact]
+    public void has_type_throws_correct_message_on_non_collection_property()
+    {
+        var input = """Title ^$ "winner" """;
+        var act = () => FilterParser.ParseFilter<Recipe>(input);
+        act.Should().Throw<QueryKitParsingException>()
+            .WithMessage("HasType is only supported for collections");
+    }
+
+    [Fact]
     public void can_throw_exception_when_invalid_enum_value()
     {
         var input = $"""BirthMonth == invalid""";
@@ -785,12 +793,8 @@ public class FilterParserTests
         // The expression should be created successfully (not throw an exception)
         filterExpression.Should().NotBeNull();
         
-        // Let's see what the actual expression looks like
         var expressionString = filterExpression.ToDisplayString();
-        
-        // Debug output - this should show us the actual expression
-        Console.WriteLine($"Generated expression: {expressionString}");
-        
+
         // The expression should be created and contain the key elements
         expressionString.Should().NotBeNullOrEmpty();
         expressionString.Should().Contain("x.Email");
