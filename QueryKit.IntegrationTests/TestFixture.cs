@@ -28,7 +28,9 @@ public class TestFixture : IAsyncLifetime
     {
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions
         {
-            EnvironmentName = Consts.Testing.IntegrationTestingEnvName
+            EnvironmentName = Consts.Testing.IntegrationTestingEnvName,
+            // the file watcher for config reload can hang on start on macOS
+            Args = ["--hostBuilder:reloadConfigOnChange=false"]
         });
 
         _dbContainer = new PostgreSqlBuilder("postgres:15.1").Build();
