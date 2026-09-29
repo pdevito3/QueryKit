@@ -90,4 +90,33 @@ public class PropertyResolverTests : TestBase
         // Assert
         people.Should().ContainSingle(x => x.Id == fakePerson.Id);
     }
+
+    [Fact]
+    public async Task prevented_property_on_the_right_side_is_not_compared()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var title = new Faker().Lorem.Sentence();
+        var fakePerson = new FakeTestingPersonBuilder()
+            .WithTitle(title)
+            .WithFirstName("Same")
+            .WithLastName("Same")
+            .WithAge(30)
+            .Build();
+        await testingServiceScope.InsertAsync(fakePerson);
+
+        var input = $"""Title == "{title}" && (FirstName == LastName || Age > 100)""";
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.LastName).PreventFilter();
+        });
+
+        // Act
+        var people = await testingServiceScope.DbContext().People
+            .ApplyQueryKitFilter(input, config)
+            .ToListAsync();
+
+        // Assert
+        people.Should().BeEmpty();
+    }
 }

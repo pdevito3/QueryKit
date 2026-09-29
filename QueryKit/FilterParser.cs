@@ -750,6 +750,11 @@ public static class FilterParser
                 // A quoted string literal is always a value, even when its text matches a property name.
                 if (!temp.rightIsQuotedLiteral && IsPropertyPath(temp.right, parameter.Type))
                 {
+                    if (!PropertyResolver.Resolve(parameter.Type, temp.right, config).CanFilter)
+                    {
+                        return RemovedClauseExpression.Instance;
+                    }
+
                     var rightPropertyExpr = CreateRightPropertyExpr<T>(parameter, temp.right, config);
                     if (rightPropertyExpr != null)
                     {

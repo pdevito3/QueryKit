@@ -120,4 +120,32 @@ public class PropertyResolverTests
 
         act.Should().Throw<QueryKitPropertyDepthExceededException>();
     }
+
+    [Fact]
+    public void prevented_property_on_the_right_side_removes_the_clause()
+    {
+        var input = """FirstName == Title || Age > 100""";
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.Title).PreventFilter();
+        });
+
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+
+        filterExpression.ToDisplayString().Should().Be("x => (x.Age > 100)");
+    }
+
+    [Fact]
+    public void prevented_property_on_the_right_side_removes_the_clause_in_any_case()
+    {
+        var input = """FirstName == title || Age > 100""";
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.Title).PreventFilter();
+        });
+
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+
+        filterExpression.ToDisplayString().Should().Be("x => (x.Age > 100)");
+    }
 }
