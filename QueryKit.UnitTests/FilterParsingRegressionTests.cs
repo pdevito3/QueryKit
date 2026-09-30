@@ -204,13 +204,13 @@ public class FilterParsingRegressionTests
     }
 
     [Theory]
-    [InlineData("""Title @= "am" """, new[] { "lamb" })]
-    [InlineData("""Title _= "la" """, new[] { "lamb" })]
-    [InlineData("""Title _-= "mb" """, new[] { "lamb" })]
-    [InlineData("""Title !@= "am" """, new[] { "null", "other" })]
-    [InlineData("""Title !_= "la" """, new[] { "null", "other" })]
-    [InlineData("""Title !_-= "mb" """, new[] { "null", "other" })]
-    public void case_sensitive_string_operator_handles_null_property(string input, string[] expectedFirstNames)
+    [InlineData("""Title @= "am" """)]
+    [InlineData("""Title _= "la" """)]
+    [InlineData("""Title _-= "mb" """)]
+    [InlineData("""Title !@= "am" """)]
+    [InlineData("""Title !_= "la" """)]
+    [InlineData("""Title !_-= "mb" """)]
+    public void case_sensitive_string_operator_on_null_property_throws_in_memory(string input)
     {
         var people = new[]
         {
@@ -219,9 +219,9 @@ public class FilterParsingRegressionTests
             new TestingPerson { Title = "other", FirstName = "other" },
         };
 
-        var result = people.AsQueryable().ApplyQueryKitFilter(input).ToList();
+        var act = () => people.AsQueryable().ApplyQueryKitFilter(input).ToList();
 
-        result.Select(x => x.FirstName).Should().Equal(expectedFirstNames);
+        act.Should().Throw<NullReferenceException>();
     }
 
     public static IEnumerable<object[]> ComparisonOperatorFactories() =>

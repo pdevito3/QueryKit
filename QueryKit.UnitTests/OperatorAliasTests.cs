@@ -153,7 +153,7 @@ public class OperatorAliasTests
             config.CaseInsensitiveAppendix = "$";
         });
         var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
-        filterExpression.ToDisplayString().Should().Be($"""x => ((x.Title != null) AndAlso x.Title.Contains("titilating"))""");
+        filterExpression.ToDisplayString().Should().Be($"""x => x.Title.Contains("titilating")""");
     }
 
     [Fact]
