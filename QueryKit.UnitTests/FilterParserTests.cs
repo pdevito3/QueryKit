@@ -529,6 +529,9 @@ public class FilterParserTests
         exception.Message.Should().NotContain("Sprache.");
         exception.Message.Should().NotMatch("*InvalidOperationException*");
         exception.Message.Should().NotMatch("*ParseException*");
+        exception.Message.Should().NotContain("recently consumed");
+        exception.Message.Should().NotContain("Unsupported value");
+        exception.Message.Should().NotContain("Parsing failure");
         exception.InnerException.Should().NotBeNull();
     }
 
