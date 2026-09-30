@@ -365,7 +365,7 @@ public class PropertyResolverTests
     }
 
     [Fact]
-    public void query_name_in_a_property_list_resolves_to_its_property()
+    public void query_name_in_a_property_list_throws()
     {
         var input = """(name, FirstName) == "x" """;
         var config = new QueryKitConfiguration(config =>
@@ -373,13 +373,27 @@ public class PropertyResolverTests
             config.Property<TestingPerson>(x => x.Title).HasQueryName("name");
         });
 
-        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+        var act = () => FilterParser.ParseFilter<TestingPerson>(input, config);
 
-        filterExpression.ToDisplayString().Should().Be("""x => ((x.Title == "x") OrElse (x.FirstName == "x"))""");
+        act.Should().ThrowExactly<UnknownFilterPropertyException>().WithMessage("*'name'*");
     }
 
     [Fact]
-    public void query_name_in_arithmetic_resolves_to_its_property()
+    public void query_name_of_a_prevented_property_in_a_property_list_throws()
+    {
+        var input = """(hidden, Title) == "x" """;
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.FirstName).HasQueryName("hidden").PreventFilter().PreventSort();
+        });
+
+        var act = () => FilterParser.ParseFilter<TestingPerson>(input, config);
+
+        act.Should().ThrowExactly<UnknownFilterPropertyException>().WithMessage("*'hidden'*");
+    }
+
+    [Fact]
+    public void query_name_in_arithmetic_throws()
     {
         var input = """(stars + 0) > 3""";
         var config = new QueryKitConfiguration(config =>
@@ -387,9 +401,9 @@ public class PropertyResolverTests
             config.Property<TestingPerson>(x => x.Rating).HasQueryName("stars");
         });
 
-        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+        var act = () => FilterParser.ParseFilter<TestingPerson>(input, config);
 
-        filterExpression.ToDisplayString().Should().Contain("x.Rating");
+        act.Should().ThrowExactly<ArgumentException>();
     }
 
     [Theory]
@@ -514,7 +528,7 @@ public class PropertyResolverTests
     }
 
     [Fact]
-    public void query_name_with_a_hyphen_in_a_property_list_resolves_to_its_property()
+    public void query_name_with_a_hyphen_in_a_property_list_throws()
     {
         var input = """(first-name, Title) == "x" """;
         var config = new QueryKitConfiguration(config =>
@@ -522,13 +536,13 @@ public class PropertyResolverTests
             config.Property<TestingPerson>(x => x.FirstName).HasQueryName("first-name");
         });
 
-        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+        var act = () => FilterParser.ParseFilter<TestingPerson>(input, config);
 
-        filterExpression.ToDisplayString().Should().Be("""x => ((x.FirstName == "x") OrElse (x.Title == "x"))""");
+        act.Should().ThrowExactly<UnknownFilterPropertyException>().WithMessage("*'first'*");
     }
 
     [Fact]
-    public void derived_property_query_name_with_a_hyphen_resolves_to_its_expression()
+    public void derived_property_query_name_with_a_hyphen_throws()
     {
         var input = """full-name == "Ann Lee" """;
         var config = new QueryKitConfiguration(config =>
@@ -536,9 +550,9 @@ public class PropertyResolverTests
             config.DerivedProperty<TestingPerson>(x => x.FirstName + " " + x.LastName).HasQueryName("full-name");
         });
 
-        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+        var act = () => FilterParser.ParseFilter<TestingPerson>(input, config);
 
-        filterExpression.ToDisplayString().Should().Be("""x => (((x.FirstName + " ") + x.LastName) == "Ann Lee")""");
+        act.Should().ThrowExactly<UnknownFilterPropertyException>().WithMessage("*'full'*");
     }
 
     [Fact]

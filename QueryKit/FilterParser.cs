@@ -121,33 +121,6 @@ public static class FilterParser
     private static readonly Parser<string> IdentifierPathParser =
         Identifier.DelimitedBy(Parse.Char('.')).Select(parts => string.Join(".", parts));
 
-    // A property is a configured query name or a path of identifiers. Query names are matched in the grammar,
-    // so a query name can hold any text (e.g. `first-name`, `_first`, or `first name`) and text inside quoted values is never changed.
-    // Longer query names are tried first so a query name that starts with another query name (e.g. `first` and `first name`) still matches.
-    private static Parser<string> PropertyPathParser(IQueryKitConfiguration? config)
-    {
-        Parser<string> parser = i => Result.Failure<string>(i, "no query name", Array.Empty<string>());
-        var queryNames = config?.PropertyMappings?.QueryNames ?? Enumerable.Empty<string>();
-        foreach (var queryName in queryNames.OrderByDescending(x => x.Length))
-        {
-            parser = parser.Or(QueryName(queryName));
-        }
-
-        return parser.Or(IdentifierPathParser);
-    }
-
-    // A query name is a whole name: the next character can not continue a property path.
-    private static Parser<string> QueryName(string queryName) => input =>
-    {
-        var result = Parse.IgnoreCase(queryName).Text()(input);
-        if (!result.WasSuccessful || result.Remainder.AtEnd || !IsPropertyPathChar(result.Remainder.Current))
-            return result;
-
-        return Result.Failure<string>(input, $"Query name '{queryName}' must not be followed by '{result.Remainder.Current}'", new[] { queryName });
-    };
-
-    private static bool IsPropertyPathChar(char c) => char.IsLetterOrDigit(c) || c == '_' || c == '.';
-
     private static Parser<IEnumerable<string>> PropertyListParser(Parser<string> propertyPathParser)
     {
         var propertiesParser = propertyPathParser.Token().DelimitedBy(Parse.Char(',').Token());
@@ -991,7 +964,7 @@ public static class FilterParser
 
     private static Parser<PropertyReference> CreateLeftExprParser(Type entityType, IQueryKitConfiguration? config)
     {
-        var leftPropertyParser = PropertyPathParser(config).Token();
+        var leftPropertyParser = IdentifierPathParser.Token();
 
         return leftPropertyParser.Select(left =>
         {
@@ -1135,7 +1108,7 @@ public static class FilterParser
         var comparisonOperatorParser = ComparisonOperatorParser(config).Token();
         var rightSideValueParser = RightSideValueParser.Token();
 
-        return PropertyListParser(PropertyPathParser(config))
+        return PropertyListParser(IdentifierPathParser)
             .SelectMany(properties => comparisonOperatorParser,
                 (properties, op) => new { properties, op })
             .SelectMany(temp => rightSideValueParser,
