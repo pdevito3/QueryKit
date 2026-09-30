@@ -137,34 +137,45 @@ public class FilterParsingRegressionTests
     [InlineData("SpecificDateTime ^^ [2024-01-15T08:00:00.5Z]")]
     [InlineData("SpecificDate == 2024-01-15T10:00:00.5+02:00")]
     [InlineData("SpecificDate == 2024-01-15T08:00:00.5000000Z")]
+    [InlineData("SpecificDateTime == 2024-01-15T08:00:00Z.5")]
+    [InlineData("SpecificDate == 2024-01-15T10:00:00+02:00.500")]
     [InlineData("Time == 08:30:00.5")]
-    [InlineData("Time == \"08:30:00.5\"")]
-    [InlineData("Time == \"08:30:00.50\"")]
+    [InlineData("Time == \"08:30:00.500\"")]
     [InlineData("Time ^^ [08:30:00.5]")]
     public void fractional_seconds_are_kept(string input)
     {
-        var people = new[]
-        {
-            new TestingPerson
-            {
-                Title = "match",
-                SpecificDateTime = new DateTime(2024, 1, 15, 8, 0, 0, 500, DateTimeKind.Utc),
-                SpecificDate = new DateTimeOffset(2024, 1, 15, 8, 0, 0, 500, TimeSpan.Zero),
-                Time = new TimeOnly(8, 30, 0, 500),
-            },
-            new TestingPerson
-            {
-                Title = "whole second",
-                SpecificDateTime = new DateTime(2024, 1, 15, 8, 0, 0, DateTimeKind.Utc),
-                SpecificDate = new DateTimeOffset(2024, 1, 15, 8, 0, 0, TimeSpan.Zero),
-                Time = new TimeOnly(8, 30, 0),
-            },
-        };
-
-        var result = people.AsQueryable().ApplyQueryKitFilter(input).ToList();
+        var result = FractionalSecondPeople().AsQueryable().ApplyQueryKitFilter(input).ToList();
 
         result.Select(x => x.Title).Should().Equal("match");
     }
+
+    [Theory]
+    [InlineData("Time == \"08:30:00.5\"")]
+    [InlineData("Time == \"08:30:00.50\"")]
+    public void quoted_time_with_fewer_than_three_fraction_digits_drops_the_fraction(string input)
+    {
+        var result = FractionalSecondPeople().AsQueryable().ApplyQueryKitFilter(input).ToList();
+
+        result.Select(x => x.Title).Should().Equal("whole second");
+    }
+
+    private static TestingPerson[] FractionalSecondPeople() => new[]
+    {
+        new TestingPerson
+        {
+            Title = "match",
+            SpecificDateTime = new DateTime(2024, 1, 15, 8, 0, 0, 500, DateTimeKind.Utc),
+            SpecificDate = new DateTimeOffset(2024, 1, 15, 8, 0, 0, 500, TimeSpan.Zero),
+            Time = new TimeOnly(8, 30, 0, 500),
+        },
+        new TestingPerson
+        {
+            Title = "whole second",
+            SpecificDateTime = new DateTime(2024, 1, 15, 8, 0, 0, DateTimeKind.Utc),
+            SpecificDate = new DateTimeOffset(2024, 1, 15, 8, 0, 0, TimeSpan.Zero),
+            Time = new TimeOnly(8, 30, 0),
+        },
+    };
 
     [Fact]
     public void time_fraction_keeps_microseconds()
