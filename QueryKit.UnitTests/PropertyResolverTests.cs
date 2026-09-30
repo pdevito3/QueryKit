@@ -29,7 +29,7 @@ public class PropertyResolverTests
         var input = """FirstName == "Ann" || Title == "s" """;
         var config = new QueryKitConfiguration(config =>
         {
-            config.Property<TestingPerson>(x => x.Title).PreventFilter();
+            config.Property<TestingPerson>(x => x.Title!).PreventFilter();
         });
 
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
@@ -43,8 +43,8 @@ public class PropertyResolverTests
         var input = """(Title, FirstName) == "x" || Age > 100""";
         var config = new QueryKitConfiguration(config =>
         {
-            config.Property<TestingPerson>(x => x.Title).PreventFilter();
-            config.Property<TestingPerson>(x => x.FirstName).PreventFilter();
+            config.Property<TestingPerson>(x => x.Title!).PreventFilter();
+            config.Property<TestingPerson>(x => x.FirstName!).PreventFilter();
         });
 
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
@@ -120,7 +120,7 @@ public class PropertyResolverTests
         var config = new QueryKitConfiguration(config =>
         {
             config.IgnoredClauseBehavior = IgnoredClauseBehavior.Remove;
-            config.Property<TestingPerson>(x => x.Rating).PreventFilter();
+            config.Property<TestingPerson>(x => x.Rating!).PreventFilter();
         });
 
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
@@ -150,8 +150,8 @@ public class PropertyResolverTests
         var config = new QueryKitConfiguration(config =>
         {
             config.IgnoredClauseBehavior = IgnoredClauseBehavior.Remove;
-            config.Property<TestingPerson>(x => x.Title).PreventFilter();
-            config.Property<TestingPerson>(x => x.FirstName).PreventFilter();
+            config.Property<TestingPerson>(x => x.Title!).PreventFilter();
+            config.Property<TestingPerson>(x => x.FirstName!).PreventFilter();
         });
 
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
@@ -166,7 +166,7 @@ public class PropertyResolverTests
         var config = new QueryKitConfiguration(config =>
         {
             config.IgnoredClauseBehavior = IgnoredClauseBehavior.Remove;
-            config.Property<TestingPerson>(x => x.Age).PreventFilter();
+            config.Property<TestingPerson>(x => x.Age!).PreventFilter();
         });
 
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
@@ -181,7 +181,7 @@ public class PropertyResolverTests
         var config = new QueryKitConfiguration(config =>
         {
             config.IgnoredClauseBehavior = IgnoredClauseBehavior.Remove;
-            config.Property<TestingPerson>(x => x.Rating).PreventFilter();
+            config.Property<TestingPerson>(x => x.Rating!).PreventFilter();
         });
 
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
@@ -210,7 +210,7 @@ public class PropertyResolverTests
         var config = new QueryKitConfiguration(config =>
         {
             config.IgnoredClauseBehavior = IgnoredClauseBehavior.Remove;
-            config.Property<TestingPerson>(x => x.Title).PreventFilter();
+            config.Property<TestingPerson>(x => x.Title!).PreventFilter();
         });
 
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
@@ -224,7 +224,7 @@ public class PropertyResolverTests
         var input = """(title, FirstName) == "x" """;
         var config = new QueryKitConfiguration(config =>
         {
-            config.Property<TestingPerson>(x => x.Title).PreventFilter();
+            config.Property<TestingPerson>(x => x.Title!).PreventFilter();
         });
 
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
@@ -239,7 +239,7 @@ public class PropertyResolverTests
         var config = new QueryKitConfiguration(config =>
         {
             config.IgnoredClauseBehavior = IgnoredClauseBehavior.Remove;
-            config.Property<TestingPerson>(x => x.Title).PreventFilter();
+            config.Property<TestingPerson>(x => x.Title!).PreventFilter();
         });
 
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
@@ -254,7 +254,7 @@ public class PropertyResolverTests
         var config = new QueryKitConfiguration(config =>
         {
             config.IgnoredClauseBehavior = IgnoredClauseBehavior.Remove;
-            config.Property<TestingPerson>(x => x.Title).HasQueryName("t").PreventFilter();
+            config.Property<TestingPerson>(x => x.Title!).HasQueryName("t").PreventFilter();
         });
 
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
@@ -268,7 +268,7 @@ public class PropertyResolverTests
         var input = """(title) @=* "x" """;
         var config = new QueryKitConfiguration(config =>
         {
-            config.Property<TestingPerson>(x => x.Title).HasCaseInsensitiveMode(CaseInsensitiveMode.Upper);
+            config.Property<TestingPerson>(x => x.Title!).HasCaseInsensitiveMode(CaseInsensitiveMode.Upper);
         });
 
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
@@ -282,7 +282,7 @@ public class PropertyResolverTests
         var input = "title, Age desc";
         var config = new QueryKitConfiguration(config =>
         {
-            config.Property<TestingPerson>(x => x.Title).PreventSort();
+            config.Property<TestingPerson>(x => x.Title!).PreventSort();
         });
 
         var sortExpressions = SortParser.ParseSort<TestingPerson>(input, config);
@@ -297,7 +297,7 @@ public class PropertyResolverTests
         var input = "title desc";
         var config = new QueryKitConfiguration(config =>
         {
-            config.Property<TestingPerson>(x => x.Title).HasQueryName("t").PreventSort();
+            config.Property<TestingPerson>(x => x.Title!).HasQueryName("t").PreventSort();
         });
 
         var sortExpressions = SortParser.ParseSort<TestingPerson>(input, config);
@@ -370,7 +370,7 @@ public class PropertyResolverTests
         var input = """(name, FirstName) == "x" """;
         var config = new QueryKitConfiguration(config =>
         {
-            config.Property<TestingPerson>(x => x.Title).HasQueryName("name");
+            config.Property<TestingPerson>(x => x.Title!).HasQueryName("name");
         });
 
         var act = () => FilterParser.ParseFilter<TestingPerson>(input, config);
@@ -384,7 +384,7 @@ public class PropertyResolverTests
         var input = """(hidden, Title) == "x" """;
         var config = new QueryKitConfiguration(config =>
         {
-            config.Property<TestingPerson>(x => x.FirstName).HasQueryName("hidden").PreventFilter().PreventSort();
+            config.Property<TestingPerson>(x => x.FirstName!).HasQueryName("hidden").PreventFilter().PreventSort();
         });
 
         var act = () => FilterParser.ParseFilter<TestingPerson>(input, config);
@@ -398,7 +398,7 @@ public class PropertyResolverTests
         var input = """(stars + 0) > 3""";
         var config = new QueryKitConfiguration(config =>
         {
-            config.Property<TestingPerson>(x => x.Rating).HasQueryName("stars");
+            config.Property<TestingPerson>(x => x.Rating!).HasQueryName("stars");
         });
 
         var act = () => FilterParser.ParseFilter<TestingPerson>(input, config);
@@ -417,7 +417,7 @@ public class PropertyResolverTests
         var input = $"""{queryName} == "Ann" """;
         var config = new QueryKitConfiguration(config =>
         {
-            config.Property<TestingPerson>(x => x.FirstName).HasQueryName(queryName);
+            config.Property<TestingPerson>(x => x.FirstName!).HasQueryName(queryName);
         });
 
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
@@ -431,7 +431,7 @@ public class PropertyResolverTests
         var input = """FIRST-NAME == "Ann" """;
         var config = new QueryKitConfiguration(config =>
         {
-            config.Property<TestingPerson>(x => x.FirstName).HasQueryName("first-name");
+            config.Property<TestingPerson>(x => x.FirstName!).HasQueryName("first-name");
         });
 
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
@@ -445,7 +445,7 @@ public class PropertyResolverTests
         var input = """Title == "first-name == x" """;
         var config = new QueryKitConfiguration(config =>
         {
-            config.Property<TestingPerson>(x => x.FirstName).HasQueryName("first-name");
+            config.Property<TestingPerson>(x => x.FirstName!).HasQueryName("first-name");
         });
 
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
@@ -460,7 +460,7 @@ public class PropertyResolverTests
         var config = new QueryKitConfiguration(config =>
         {
             config.EqualsOperator = "eq";
-            config.Property<TestingPerson>(x => x.FirstName).HasQueryName("first-name");
+            config.Property<TestingPerson>(x => x.FirstName!).HasQueryName("first-name");
         });
 
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
@@ -474,7 +474,7 @@ public class PropertyResolverTests
         var input = """Title == first""";
         var config = new QueryKitConfiguration(config =>
         {
-            config.Property<TestingPerson>(x => x.FirstName).HasQueryName("first");
+            config.Property<TestingPerson>(x => x.FirstName!).HasQueryName("first");
         });
 
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
@@ -488,7 +488,7 @@ public class PropertyResolverTests
         var input = "first-name desc";
         var config = new QueryKitConfiguration(config =>
         {
-            config.Property<TestingPerson>(x => x.FirstName).HasQueryName("first-name");
+            config.Property<TestingPerson>(x => x.FirstName!).HasQueryName("first-name");
         });
 
         var sortExpressions = SortParser.ParseSort<TestingPerson>(input, config);
@@ -504,8 +504,8 @@ public class PropertyResolverTests
         var input = """first name == "Ann" && first == "Lee" """;
         var config = new QueryKitConfiguration(config =>
         {
-            config.Property<TestingPerson>(x => x.FirstName).HasQueryName("first name");
-            config.Property<TestingPerson>(x => x.LastName).HasQueryName("first");
+            config.Property<TestingPerson>(x => x.FirstName!).HasQueryName("first name");
+            config.Property<TestingPerson>(x => x.LastName!).HasQueryName("first");
         });
 
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
@@ -519,7 +519,7 @@ public class PropertyResolverTests
         var input = """FirstName == "Ann" """;
         var config = new QueryKitConfiguration(config =>
         {
-            config.Property<TestingPerson>(x => x.Title).HasQueryName("first");
+            config.Property<TestingPerson>(x => x.Title!).HasQueryName("first");
         });
 
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
@@ -533,7 +533,7 @@ public class PropertyResolverTests
         var input = """(first-name, Title) == "x" """;
         var config = new QueryKitConfiguration(config =>
         {
-            config.Property<TestingPerson>(x => x.FirstName).HasQueryName("first-name");
+            config.Property<TestingPerson>(x => x.FirstName!).HasQueryName("first-name");
         });
 
         var act = () => FilterParser.ParseFilter<TestingPerson>(input, config);
@@ -589,7 +589,7 @@ public class PropertyResolverTests
         var input = """FirstName == "name == x" """;
         var config = new QueryKitConfiguration(config =>
         {
-            config.Property<TestingPerson>(x => x.Title).HasQueryName("name");
+            config.Property<TestingPerson>(x => x.Title!).HasQueryName("name");
         });
 
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
@@ -604,7 +604,7 @@ public class PropertyResolverTests
         var config = new QueryKitConfiguration(config =>
         {
             config.IgnoredClauseBehavior = IgnoredClauseBehavior.Remove;
-            config.Property<TestingPerson>(x => x.Title).HasQueryName("name").PreventFilter().PreventSort();
+            config.Property<TestingPerson>(x => x.Title!).HasQueryName("name").PreventFilter().PreventSort();
         });
 
         var act = () => FilterParser.ParseFilter<TestingPerson>(input, config);
@@ -620,7 +620,7 @@ public class PropertyResolverTests
         var config = new QueryKitConfiguration(config =>
         {
             config.EqualsOperator = "eq";
-            config.Property<TestingPerson>(x => x.Title).HasQueryName("name").PreventFilter().PreventSort();
+            config.Property<TestingPerson>(x => x.Title!).HasQueryName("name").PreventFilter().PreventSort();
         });
 
         var act = () => FilterParser.ParseFilter<TestingPerson>(input, config);
@@ -636,7 +636,7 @@ public class PropertyResolverTests
         var config = new QueryKitConfiguration(config =>
         {
             config.IgnoredClauseBehavior = IgnoredClauseBehavior.Remove;
-            config.Property<TestingPerson>(x => x.Title).HasQueryName("name").PreventFilter().PreventSort();
+            config.Property<TestingPerson>(x => x.Title!).HasQueryName("name").PreventFilter().PreventSort();
         });
 
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);

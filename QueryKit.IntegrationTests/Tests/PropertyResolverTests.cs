@@ -81,7 +81,7 @@ public class PropertyResolverTests : TestBase
         var config = new QueryKitConfiguration(config =>
         {
             config.IgnoredClauseBehavior = IgnoredClauseBehavior.Remove;
-            config.Property<TestingPerson>(x => x.Rating).PreventFilter();
+            config.Property<TestingPerson>(x => x.Rating!).PreventFilter();
         });
 
         // Act
@@ -110,7 +110,7 @@ public class PropertyResolverTests : TestBase
         var input = $"""{queryName} == "{firstName}" """;
         var config = new QueryKitConfiguration(config =>
         {
-            config.Property<TestingPerson>(x => x.FirstName).HasQueryName(queryName);
+            config.Property<TestingPerson>(x => x.FirstName!).HasQueryName(queryName);
         });
 
         // Act

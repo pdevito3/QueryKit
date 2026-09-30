@@ -248,7 +248,7 @@ public class EnumerableFilteringTests()
             SortOrder = "score desc",
             Configuration = new QueryKitConfiguration(config =>
             {
-                config.Property<Recipe>(x => x.Rating).HasQueryName("score");
+                config.Property<Recipe>(x => x.Rating!).HasQueryName("score");
             })
         };
 
