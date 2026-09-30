@@ -365,6 +365,8 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         public override bool IsCountOperator() => false; 
         public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType, CaseInsensitiveMode caseMode = CaseInsensitiveMode.Lower)
         {
+            EnsureStringValueIsNotNull(right, Operator());
+
             if (left.Type.IsGenericType && left.Type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
             {
                 return GetCollectionExpression(left, right, "Contains", false, UsesAll);
@@ -400,6 +402,8 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         public override bool IsCountOperator() => false; 
         public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType, CaseInsensitiveMode caseMode = CaseInsensitiveMode.Lower)
         {
+            EnsureStringValueIsNotNull(right, Operator());
+
             if (left.Type.IsGenericType && left.Type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
             {
                 return GetCollectionExpression(left, right, "StartsWith", false, UsesAll);
@@ -435,6 +439,8 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         public override bool IsCountOperator() => false; 
         public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType, CaseInsensitiveMode caseMode = CaseInsensitiveMode.Lower)
         {
+            EnsureStringValueIsNotNull(right, Operator());
+
             if (left.Type.IsGenericType && left.Type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
             {
                 return GetCollectionExpression(left, right, "EndsWith", false, UsesAll);
@@ -470,6 +476,8 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         public override bool IsCountOperator() => false; 
         public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType, CaseInsensitiveMode caseMode = CaseInsensitiveMode.Lower)
         {
+            EnsureStringValueIsNotNull(right, Operator());
+
             if (left.Type.IsGenericType && left.Type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
             {
                 return GetCollectionExpression(left, right, "Contains", true, UsesAll);
@@ -505,6 +513,8 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         public override bool IsCountOperator() => false; 
         public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType, CaseInsensitiveMode caseMode = CaseInsensitiveMode.Lower)
         {
+            EnsureStringValueIsNotNull(right, Operator());
+
             if (left.Type.IsGenericType && left.Type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
             {
                 return GetCollectionExpression(left, right, "StartsWith", true, UsesAll);
@@ -540,6 +550,8 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         public override bool IsCountOperator() => false; 
         public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType, CaseInsensitiveMode caseMode = CaseInsensitiveMode.Lower)
         {
+            EnsureStringValueIsNotNull(right, Operator());
+
             if (left.Type.IsGenericType && left.Type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
             {
                 return GetCollectionExpression(left, right, "EndsWith", true, UsesAll);
@@ -1089,6 +1101,14 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         return (Expression)comparisonMethod.Invoke(null, new object[] { countExpression, right })!;
     }
     
+    private static void EnsureStringValueIsNotNull(Expression right, string op)
+    {
+        if (right is ConstantExpression { Value: null })
+        {
+            throw new QueryKitParsingException($"The '{op}' operator does not accept a null value. Use '==' or '!=' to compare with null.");
+        }
+    }
+
     private static (Expression left, Expression right) EnsureCompatibleExpressionTypes(Expression left, Expression right)
     {
         if (left.Type == right.Type)
