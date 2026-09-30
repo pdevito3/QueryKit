@@ -683,7 +683,7 @@ public class PropertyResolverTests
     }
 
     [Fact]
-    public void unknown_property_in_arithmetic_removes_the_clause_when_unknown_properties_are_allowed()
+    public void unknown_property_in_arithmetic_throws_when_unknown_properties_are_allowed()
     {
         var input = """(Nope + 1) > 3 || Age > 100""";
         var config = new QueryKitConfiguration(config =>
@@ -692,13 +692,14 @@ public class PropertyResolverTests
             config.AllowUnknownProperties = true;
         });
 
-        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+        var act = () => FilterParser.ParseFilter<TestingPerson>(input, config);
 
-        filterExpression.ToDisplayString().Should().Be("x => (x.Age > 100)");
+        act.Should().Throw<ArgumentException>()
+            .WithMessage("Property 'Nope' not found on type 'TestingPerson'");
     }
 
     [Fact]
-    public void unknown_property_on_the_right_side_of_arithmetic_removes_the_clause_when_unknown_properties_are_allowed()
+    public void unknown_property_on_the_right_side_of_arithmetic_throws_when_unknown_properties_are_allowed()
     {
         var input = """(Age + 0) > Nope || Title == "a" """;
         var config = new QueryKitConfiguration(config =>
@@ -707,19 +708,20 @@ public class PropertyResolverTests
             config.AllowUnknownProperties = true;
         });
 
-        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+        var act = () => FilterParser.ParseFilter<TestingPerson>(input, config);
 
-        filterExpression.ToDisplayString().Should().Be("""x => (x.Title == "a")""");
+        act.Should().Throw<ArgumentException>()
+            .WithMessage("Property 'Nope' not found on type 'TestingPerson'");
     }
 
     [Fact]
-    public void unknown_property_in_arithmetic_is_not_recognized()
+    public void unknown_property_in_arithmetic_throws_an_argument_exception()
     {
         var input = """(Nope + 1) > 3""";
 
         var act = () => FilterParser.ParseFilter<TestingPerson>(input);
 
-        act.Should().Throw<UnknownFilterPropertyException>()
-            .WithMessage("The filter property 'Nope' was not recognized.");
+        act.Should().Throw<ArgumentException>()
+            .WithMessage("Property 'Nope' not found on type 'TestingPerson'");
     }
 }
