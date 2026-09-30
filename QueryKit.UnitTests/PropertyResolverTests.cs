@@ -426,7 +426,7 @@ public class PropertyResolverTests
     }
 
     [Fact]
-    public void query_name_with_a_hyphen_in_a_value_is_not_replaced()
+    public void query_name_with_a_hyphen_in_a_value_is_replaced()
     {
         var input = """Title == "first-name == x" """;
         var config = new QueryKitConfiguration(config =>
@@ -436,7 +436,22 @@ public class PropertyResolverTests
 
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
 
-        filterExpression.ToDisplayString().Should().Be("""x => (x.Title == "first-name == x")""");
+        filterExpression.ToDisplayString().Should().Be("""x => (x.Title == "FirstName == x")""");
+    }
+
+    [Fact]
+    public void query_name_with_a_hyphen_before_an_operator_alias_filters_by_its_property()
+    {
+        var input = """first-name eq "Ann" """;
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.EqualsOperator = "eq";
+            config.Property<TestingPerson>(x => x.FirstName).HasQueryName("first-name");
+        });
+
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+
+        filterExpression.ToDisplayString().Should().Be("""x => (x.FirstName == "Ann")""");
     }
 
     [Fact]
@@ -527,7 +542,7 @@ public class PropertyResolverTests
     }
 
     [Fact]
-    public void query_name_in_a_value_is_not_replaced()
+    public void query_name_in_a_value_is_replaced()
     {
         var input = """FirstName == "name == x" """;
         var config = new QueryKitConfiguration(config =>
@@ -537,7 +552,7 @@ public class PropertyResolverTests
 
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
 
-        filterExpression.ToDisplayString().Should().Be("""x => (x.FirstName == "name == x")""");
+        filterExpression.ToDisplayString().Should().Be("""x => (x.FirstName == "Title == x")""");
     }
 
     [Fact]
