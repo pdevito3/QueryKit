@@ -589,7 +589,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
                 }
 
                 values = list;
-                right = FilterValue.Parameter(list, listType);
+                right = FilterValue.Create(list, listType);
             }
 
             // Get the Contains method with the correct generic type
@@ -611,7 +611,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
                 {
                     listType.GetMethod("Add")!.Invoke(caseList, new[] { caseMode == CaseInsensitiveMode.Upper ? value.ToUpper() : value.ToLower() });
                 }
-                right = FilterValue.Parameter(caseList, listType);
+                right = FilterValue.Create(caseList, listType);
                 var caseLeft = Expression.Call(left, typeof(string).GetMethod(caseMethodName, Type.EmptyTypes)!);
 
                 var containsCall = Expression.Call(right, containsMethod, caseLeft);
@@ -834,7 +834,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
                 }
 
                 values = list;
-                right = FilterValue.Parameter(list, listType);
+                right = FilterValue.Create(list, listType);
             }
 
             // Get the Contains method with the correct generic type
@@ -856,7 +856,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
                 {
                     listType.GetMethod("Add")!.Invoke(caseList, new[] { caseMode == CaseInsensitiveMode.Upper ? value.ToUpper() : value.ToLower() });
                 }
-                right = FilterValue.Parameter(caseList, listType);
+                right = FilterValue.Create(caseList, listType);
                 var caseLeft = Expression.Call(left, typeof(string).GetMethod(caseMethodName, Type.EmptyTypes)!);
 
                 var containsExpression = Expression.Call(right, containsMethod, caseLeft);

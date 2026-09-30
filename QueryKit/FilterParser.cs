@@ -25,6 +25,8 @@ public static class FilterParser
         
         var parameter = Expression.Parameter(typeof(T), "x");
         Expression expr;
+        var parameterizeBefore = FilterValue.Parameterize;
+        FilterValue.Parameterize = config is QueryKitConfiguration { ParameterizeFilterValues: true };
         try
         {
             expr = ExprParser<T>(parameter, config).End().Parse(input);
@@ -44,6 +46,10 @@ public static class FilterParser
         catch (ParseException e)
         {
             throw new ParsingException(e);
+        }
+        finally
+        {
+            FilterValue.Parameterize = parameterizeBefore;
         }
 
         return Expression.Lambda<Func<T, bool>>(expr, parameter);
@@ -453,7 +459,7 @@ public static class FilterParser
                     var stringCtor = (underlyingType ?? leftExpr.Type).GetConstructor(new[] { typeof(string) });
                     if (stringCtor != null)
                     {
-                        Expression constructed = Expression.New(stringCtor, FilterValue.Parameter(right, typeof(string)));
+                        Expression constructed = Expression.New(stringCtor, FilterValue.Create(right, typeof(string)));
                         return underlyingType == null ? constructed : Expression.Convert(constructed, leftExpr.Type);
                     }
                 }
@@ -474,7 +480,7 @@ public static class FilterParser
         {
             if (op.IsCountOperator() && (int.TryParse(right, out var intVal) || int.TryParse(right, NumberStyles.Integer, CultureInfo.InvariantCulture, out intVal)))
             {
-                return FilterValue.Parameter(intVal, typeof(int));
+                return FilterValue.Create(intVal, typeof(int));
             }
             targetType = targetType.GetGenericArguments()[0];
             return CreateRightExprFromType(targetType, right, op);
@@ -536,7 +542,7 @@ public static class FilterParser
                     dt = DateTime.SpecifyKind(dt, DateTimeKind.Utc);
                 }
 
-                return FilterValue.Parameter(dt, rawType);
+                return FilterValue.Create(dt, rawType);
             }
 
             if (targetType == typeof(DateTimeOffset))
@@ -544,13 +550,13 @@ public static class FilterParser
                 var dtStyle = right.EndsWith("Z") ? DateTimeStyles.AdjustToUniversal : DateTimeStyles.AssumeLocal;
                 var dto = DateTimeOffset.Parse(right, CultureInfo.InvariantCulture, dtStyle);
                 // Npgsql only accepts a DateTimeOffset parameter with offset 0. The UTC value is the same instant.
-                return FilterValue.Parameter(dto.ToUniversalTime(), rawType);
+                return FilterValue.Create(dto.ToUniversalTime(), rawType);
             }
 
             if (targetType == typeof(DateOnly))
             {
                 var date = DateOnly.Parse(right, CultureInfo.InvariantCulture);
-                return FilterValue.Parameter(date, rawType);
+                return FilterValue.Create(date, rawType);
             }
 
             if (targetType == typeof(TimeOnly))
@@ -564,7 +570,7 @@ public static class FilterParser
                 // One microsecond is 10 ticks. The TimeOnly constructor with microseconds needs .NET 7.
                 var value = new TimeOnly(time.Hour, time.Minute, time.Second, millisecond)
                     .Add(TimeSpan.FromTicks(microsecond * 10));
-                return FilterValue.Parameter(value, rawType);
+                return FilterValue.Create(value, rawType);
             }
 
             if (targetType == typeof(Guid))
@@ -573,16 +579,16 @@ public static class FilterParser
                 // For equality/comparison operators, we can compare GUIDs directly (more efficient and EF-friendly)
                 if (op.IsStringComparisonOperator())
                 {
-                    return FilterValue.Parameter(right, typeof(string));
+                    return FilterValue.Create(right, typeof(string));
                 }
 
                 // Parse the GUID for direct comparison
                 var guidValue = Guid.Parse(right);
-                return FilterValue.Parameter(guidValue, typeof(Guid));
+                return FilterValue.Create(guidValue, typeof(Guid));
             }
 
             var convertedValue = conversionFunction(right);
-            return FilterValue.Parameter(convertedValue, leftExprType);
+            return FilterValue.Create(convertedValue, leftExprType);
         }
 
         if (rawType.IsEnum || (Nullable.GetUnderlyingType(rawType)?.IsEnum ?? false))
@@ -621,7 +627,7 @@ public static class FilterParser
             {
                 throw new InvalidOperationException($"Unsupported value '{right}' for type '{targetType.Name}'");
             }
-            return FilterValue.Parameter(enumValue, rawType);
+            return FilterValue.Create(enumValue, rawType);
         }
         
         // for some complex derived expressions
@@ -634,7 +640,7 @@ public static class FilterParser
 
             if (bool.TryParse(right, out var boolVal))
             {
-                return FilterValue.Parameter(boolVal, typeof(bool));
+                return FilterValue.Create(boolVal, typeof(bool));
             }
         }
 
