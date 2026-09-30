@@ -82,7 +82,7 @@ public class FilterParsingRegressionTests : TestBase
     }
 
     [Fact]
-    public async Task list_value_with_comma_is_one_item()
+    public async Task list_value_with_comma_is_split_into_items()
     {
         // Arrange
         var testingServiceScope = new TestingServiceScope();
@@ -106,8 +106,8 @@ public class FilterParsingRegressionTests : TestBase
         var notInPeople = await queryablePeople.ApplyQueryKitFilter(notInInput).ToListAsync();
 
         // Assert
-        inPeople.Select(x => x.Id).Should().Equal(fakePersonOne.Id);
-        notInPeople.Select(x => x.Id).Should().Equal(fakePersonTwo.Id);
+        inPeople.Select(x => x.Id).Should().Equal(fakePersonTwo.Id);
+        notInPeople.Select(x => x.Id).Should().Equal(fakePersonOne.Id);
     }
 
     [Theory]

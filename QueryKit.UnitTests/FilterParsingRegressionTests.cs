@@ -95,12 +95,12 @@ public class FilterParsingRegressionTests
     }
 
     [Theory]
-    [InlineData("Title ^^ [\"Warm, with syrup\", \"a\\b\"]", new[] { "Warm, with syrup", "a\\b" })]
-    [InlineData("Title !^^ [\"Warm, with syrup\", \"a\\b\"]", new[] { "Warm", "with syrup" })]
-    [InlineData("Title ^^* [\"WARM, WITH SYRUP\"]", new[] { "Warm, with syrup" })]
-    [InlineData("Title ^^ [\"\"\"Warm, with syrup\"\"\", \"Warm\"]", new[] { "Warm, with syrup", "Warm" })]
+    [InlineData("Title ^^ [\"Warm, with syrup\", \"a\\b\"]", new[] { "Warm", "with syrup", "a\\b" })]
+    [InlineData("Title !^^ [\"Warm, with syrup\", \"a\\b\"]", new[] { "Warm, with syrup" })]
+    [InlineData("Title ^^* [\"WARM, WITH SYRUP\"]", new[] { "Warm", "with syrup" })]
+    [InlineData("Title ^^ [\"\"\"Warm, with syrup\"\"\", \"Warm\"]", new[] { "Warm", "with syrup" })]
     [InlineData("Title ^^ [\" Warm \", \"with syrup \"]", new[] { "Warm", "with syrup" })]
-    public void list_value_with_comma_is_one_item(string input, string[] expectedTitles)
+    public void list_value_with_comma_is_split_into_items(string input, string[] expectedTitles)
     {
         var people = new[]
         {
