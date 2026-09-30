@@ -794,6 +794,46 @@ var config = new QueryKitConfiguration(config =>
 
 Setting `MaxPropertyDepth = 0` only allows root-level properties. A `null` value (default) allows unlimited depth.
 
+#### Parameterize Filter Values
+
+By default (`ParameterizeFilterValues = false`), QueryKit writes each filter value into the SQL as a literal constant. Set `ParameterizeFilterValues` to `true` to send filter values as SQL parameters instead. Parameters let EF Core reuse one compiled query and one database plan across calls that differ only in their filter values.
+
+```csharp
+var config = new QueryKitConfiguration(config =>
+{
+    config.ParameterizeFilterValues = true;
+});
+var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
+```
+
+#### Ignored Clause Behavior
+
+`IgnoredClauseBehavior` and `ParameterizeFilterValues` both come from the `IQueryKitFilterBehavior` interface. `QueryKitConfiguration` implements this interface, so a custom configuration class can implement `IQueryKitFilterBehavior` directly instead.
+
+`IgnoredClauseBehavior` controls what QueryKit does with a clause on a property that has `PreventFilter`, or on an unknown property when `AllowUnknownProperties` is `true`. The default is `IgnoredClauseBehavior.ReplaceWithTrue`, which replaces the clause with `true == true` so the rest of the expression keeps its shape. A property-list clause (for example `(FirstName, Title) @=* "x"`) where every property is prevented gives a plain `true` instead, not `true == true`. Set `IgnoredClauseBehavior` to `IgnoredClauseBehavior.Remove` to drop the clause instead, so a logical operator with a removed side keeps only its other side.
+
+```csharp
+var config = new QueryKitConfiguration(config =>
+{
+    config.AllowUnknownProperties = true;
+    config.IgnoredClauseBehavior = IgnoredClauseBehavior.Remove;
+});
+var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
+```
+
+#### Parse Limits
+
+`IQueryKitParseLimits` caps how much a filter string can do before QueryKit parses it, through `MaxInputLength` (default `5000` characters) and `MaxNestingDepth` (default `32` levels of parentheses). `QueryKitConfiguration` implements this interface, so a custom configuration class can implement `IQueryKitParseLimits` directly instead. A filter string that goes over `MaxInputLength` throws a `QueryKitInputLengthExceededException`. A filter string that goes over `MaxNestingDepth` throws a `QueryKitNestingDepthExceededException`. Both exceptions throw before parsing starts. These limits apply only to filter strings. Sort strings have no limit, and the number of items in an in-list has no limit. The nesting-depth check counts every `(` character, including a `(` inside a quoted value.
+
+```csharp
+var config = new QueryKitConfiguration(config =>
+{
+    config.MaxInputLength = 500;
+    config.MaxNestingDepth = 5;
+});
+var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
+```
+
 ### Nested Objects
 
 Say we have a nested object like this:
@@ -980,6 +1020,8 @@ any exception thrown by QueryKit.
 * A `SoundsLikeNotImplementedException` will be thrown when trying to use `soundex` on a `DbContext` that doesn't have it implemented.
 * A `QueryKitParsingException` is a more generic error that will include specific details on a more granular error in the parsing pipeline.
 * A `QueryKitPropertyDepthExceededException` will be thrown when a property path exceeds the configured `MaxPropertyDepth` limit.
+* A `QueryKitInputLengthExceededException` will be thrown when a filter string exceeds the configured `MaxInputLength` limit.
+* A `QueryKitNestingDepthExceededException` will be thrown when a filter string exceeds the configured `MaxNestingDepth` limit.
 
 ## SoundEx
 

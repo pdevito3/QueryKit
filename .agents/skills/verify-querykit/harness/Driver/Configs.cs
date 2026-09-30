@@ -76,5 +76,23 @@ public static class Configs
 
         ["upper"] = ("CaseInsensitiveComparison = Upper.",
             () => new QueryKitConfiguration(s => s.CaseInsensitiveComparison = CaseInsensitiveMode.Upper)),
+
+        ["parameterized"] = ("ParameterizeFilterValues = true.",
+            () => new QueryKitConfiguration(s => s.ParameterizeFilterValues = true)),
+
+        ["remove-ignored"] = ("IgnoredClauseBehavior = Remove, AllowUnknownProperties = true, Rating PreventFilter.",
+            () => new QueryKitConfiguration(s =>
+            {
+                s.IgnoredClauseBehavior = IgnoredClauseBehavior.Remove;
+                s.AllowUnknownProperties = true;
+                s.Property<Recipe>(x => x.Rating).PreventFilter();
+            })),
+
+        ["small-limits"] = ("MaxInputLength = 100, MaxNestingDepth = 3.",
+            () => new QueryKitConfiguration(s =>
+            {
+                s.MaxInputLength = 100;
+                s.MaxNestingDepth = 3;
+            })),
     };
 }

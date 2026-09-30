@@ -112,9 +112,11 @@ public class FilterParsingRegressionTests : TestBase
     }
 
     [Theory]
-    [InlineData("SpecificDate == 2024-01-15T10:00:00+02:00")]
-    [InlineData("SpecificDate ^^ [2024-01-15T10:00:00+02:00]")]
-    public async Task date_time_offset_value_with_offset_matches_same_instant(string valueFilter)
+    [InlineData("SpecificDate == 2024-01-15T10:00:00+02:00", false)]
+    [InlineData("SpecificDate ^^ [2024-01-15T10:00:00+02:00]", false)]
+    [InlineData("SpecificDate == 2024-01-15T10:00:00+02:00", true)]
+    [InlineData("SpecificDate ^^ [2024-01-15T10:00:00+02:00]", true)]
+    public async Task date_time_offset_value_with_offset_matches_same_instant(string valueFilter, bool parameterizeFilterValues)
     {
         // Arrange
         var testingServiceScope = new TestingServiceScope();
@@ -130,10 +132,11 @@ public class FilterParsingRegressionTests : TestBase
         await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
 
         var input = $"""{nameof(TestingPerson.Title)} == "{title}" && {valueFilter}""";
+        var config = new QueryKitConfiguration(settings => settings.ParameterizeFilterValues = parameterizeFilterValues);
 
         // Act
         var queryablePeople = testingServiceScope.DbContext().People;
-        var people = await queryablePeople.ApplyQueryKitFilter(input).ToListAsync();
+        var people = await queryablePeople.ApplyQueryKitFilter(input, config).ToListAsync();
 
         // Assert
         people.Select(x => x.Id).Should().Equal(fakePersonOne.Id);

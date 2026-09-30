@@ -36,7 +36,7 @@ public interface IQueryKitConfiguration
     public CaseInsensitiveMode CaseInsensitiveComparison { get; set; }
 }
 
-public class QueryKitConfiguration : IQueryKitConfiguration, IQueryKitParseLimits
+public class QueryKitConfiguration : IQueryKitConfiguration, IQueryKitParseLimits, IQueryKitFilterBehavior
 {
     public QueryKitPropertyMappings PropertyMappings { get; }
     public string EqualsOperator { get; set; }
