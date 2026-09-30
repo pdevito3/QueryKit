@@ -516,6 +516,22 @@ public class FilterParserTests
         .WithMessage("There was a parsing failure, likely due to an invalid comparison or logical operator. You may also be missing double quotes surrounding a string or guid.*");
     }
 
+    [Theory]
+    [InlineData("""Age ^#$%^%@ 25""")]
+    [InlineData("""Title == "temp" %$@#^ Age == 25""")]
+    [InlineData("""BirthMonth == invalid""")]
+    public void parsing_exception_message_has_no_dotnet_type_names(string input)
+    {
+        var act = () => FilterParser.ParseFilter<TestingPerson>(input);
+        var exception = act.Should().Throw<ParsingException>().Which;
+
+        exception.Message.Should().NotContain("System.");
+        exception.Message.Should().NotContain("Sprache.");
+        exception.Message.Should().NotMatch("*InvalidOperationException*");
+        exception.Message.Should().NotMatch("*ParseException*");
+        exception.InnerException.Should().NotBeNull();
+    }
+
     [Fact]
     public void can_throw_error_when_property_has_space()
     {
