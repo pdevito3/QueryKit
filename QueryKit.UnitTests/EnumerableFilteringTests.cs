@@ -11,7 +11,7 @@ public class EnumerableFilteringTests()
     public async Task can_filter_enumerable()
     {
         // Arrange
-        var recipeOne = new FakeRecipeBuilder().Build();
+        var recipeOne = new FakeRecipeBuilder().WithTitle(Guid.NewGuid().ToString()).Build();
         var recipeTwo = new FakeRecipeBuilder().Build();
         var listOfRecipes = new List<Recipe> { recipeOne, recipeTwo };
 
