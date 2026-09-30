@@ -334,7 +334,7 @@ public static class FilterParser
             .XOr(NumberParser.Select(v => new RightSideValue(v, false)))
             .XOr((RawStringLiteralParser.Or(DoubleQuoteParser)).Select(v => new RightSideValue(v, true)))
             .XOr(SquareBracketParser.Select(v => new RightSideValue(v, false)))
-            .XOr(Identifier.DelimitedBy(Parse.Char('.')).Select(v => new RightSideValue(string.Join(".", v), false))); // Keep this last to try property paths only if nothing else matches
+            .XOr(Identifier.Select(v => new RightSideValue(v, false))); // Keep this last to try property paths only if nothing else matches
 
     private static readonly Parser<RightSideValue> RightSideValueParser =
         from atSign in Parse.Char('@').Optional()

@@ -661,42 +661,25 @@ public class PropertyResolverTests
     }
 
     [Fact]
-    public void property_path_on_the_right_side_is_compared()
+    public void property_path_on_the_right_side_throws()
     {
         var input = """Title == Author.Name""";
 
-        var filterExpression = FilterParser.ParseFilter<Recipe>(input);
+        var act = () => FilterParser.ParseFilter<Recipe>(input);
 
-        filterExpression.ToDisplayString().Should().Be("x => (x.Title == x.Author.Name)");
+        act.Should().Throw<ParsingException>()
+            .WithInnerException<InvalidOperationException>()
+            .WithMessage("*Equal is not defined for the types 'System.String' and*Author*");
     }
 
     [Fact]
-    public void property_path_on_the_right_side_obeys_max_property_depth()
+    public void unquoted_dotted_word_on_the_right_side_throws()
     {
-        var input = """Title == Author.Name""";
-        var config = new QueryKitConfiguration(config =>
-        {
-            config.MaxPropertyDepth = 0;
-        });
+        var input = """Title == foo.bar""";
 
-        var act = () => FilterParser.ParseFilter<Recipe>(input, config);
+        var act = () => FilterParser.ParseFilter<Recipe>(input);
 
-        act.Should().Throw<QueryKitPropertyDepthExceededException>();
-    }
-
-    [Fact]
-    public void prevented_property_path_on_the_right_side_removes_the_clause()
-    {
-        var input = """Title == Author.Name || Directions == "x" """;
-        var config = new QueryKitConfiguration(config =>
-        {
-            config.IgnoredClauseBehavior = IgnoredClauseBehavior.Remove;
-            config.Property<Recipe>(x => x.Author.Name).PreventFilter();
-        });
-
-        var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
-
-        filterExpression.ToDisplayString().Should().Be("""x => (x.Directions == "x")""");
+        act.Should().Throw<ParsingException>().WithMessage("*Line 1, Column 13*");
     }
 
     [Fact]
