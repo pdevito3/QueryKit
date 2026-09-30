@@ -42,6 +42,8 @@ build_driver() {
   dotnet build "$DRIVER_PROJ" -c Release --artifacts-path "$STATE_DIR/build" -nologo -v quiet >"$STATE_DIR/build.log" 2>&1 \
     || { tail -30 "$STATE_DIR/build.log" >&2; die "driver build failed. Full log: $STATE_DIR/build.log"; }
   [[ -f "$DRIVER_DLL" ]] || die "build succeeded but $DRIVER_DLL is missing."
+  # The build keeps the old driver dll when the public API of QueryKit did not change, so mark the build time for the doctor.
+  touch "$DRIVER_DLL"
   git -C "$REPO" rev-parse --short HEAD >"$STATE_DIR/built-rev"
   git -C "$REPO" status --porcelain -- QueryKit | wc -l | tr -d ' ' >"$STATE_DIR/built-dirty-files"
 }

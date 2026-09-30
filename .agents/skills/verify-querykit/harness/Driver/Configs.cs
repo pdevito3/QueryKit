@@ -68,6 +68,20 @@ public static class Configs
                 s.Property<Recipe>(x => x.Price).HasQueryName("cost").PreventFilter().PreventSort();
             })),
 
+        ["collide-filter"] = ("Directions HasQueryName(\"title\"), a query name that collides with the Title member. Title PreventFilter.",
+            () => new QueryKitConfiguration(s =>
+            {
+                s.Property<Recipe>(x => x.Directions).HasQueryName("title");
+                s.Property<Recipe>(x => x.Title).PreventFilter();
+            })),
+
+        ["collide-sort"] = ("Serving HasQueryName(\"directions\"), a query name that collides with the Directions member. Directions HasQueryName(\"title\") and PreventSort.",
+            () => new QueryKitConfiguration(s =>
+            {
+                s.Property<Recipe>(x => x.Serving).HasQueryName("directions");
+                s.Property<Recipe>(x => x.Directions).HasQueryName("title").PreventSort();
+            })),
+
         ["allow-unknown"] = ("AllowUnknownProperties = true.",
             () => new QueryKitConfiguration(s => s.AllowUnknownProperties = true)),
 
