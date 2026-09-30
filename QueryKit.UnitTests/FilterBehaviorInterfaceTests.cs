@@ -33,9 +33,9 @@ public class FilterBehaviorInterfaceTests
         filterExpression.ToDisplayString().Should().Be("x => (x.Age > 100)");
     }
 
-    // Implements only the IQueryKitConfiguration members of v1.14.2 plus IQueryKitFilterBehavior.
-    // This class does not compile when either interface gets a new member.
-    private sealed class InterfaceOnlyConfiguration : IQueryKitConfiguration, IQueryKitFilterBehavior
+    // Implements only the IQueryKitConfiguration members plus IQueryKitFilterBehavior. This class
+    // does not compile when either interface gets a new member. Shared with ParseLimitsTests.
+    internal class InterfaceOnlyConfiguration : IQueryKitConfiguration, IQueryKitFilterBehavior
     {
         public QueryKitPropertyMappings PropertyMappings { get; } = new();
         public string EqualsOperator { get; set; } = "==";
