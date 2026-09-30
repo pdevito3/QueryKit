@@ -344,6 +344,11 @@ public static class FilterParser
                 select LogicalOperator.GetByOperatorString(match.Operator)));
     }
 
+    // Npgsql only accepts a DateTimeOffset parameter with offset 0, so a parameter gets the same instant in UTC.
+    // A literal keeps its offset, like v1.14.2.
+    private static DateTimeOffset ToParameterOffset(DateTimeOffset value)
+        => FilterValue.Parameterize ? value.ToUniversalTime() : value;
+
     private static readonly Dictionary<Type, Func<string, object>> TypeConversionFunctions = new()
     {
         { typeof(string), value => value },
@@ -358,7 +363,7 @@ public static class FilterParser
         { typeof(short), value => short.Parse(value, CultureInfo.InvariantCulture) },
         { typeof(byte), value => byte.Parse(value, CultureInfo.InvariantCulture) },
         { typeof(DateTime), value => DateTime.Parse(value, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal) },
-        { typeof(DateTimeOffset), value => DateTimeOffset.Parse(value).ToUniversalTime() },
+        { typeof(DateTimeOffset), value => ToParameterOffset(DateTimeOffset.Parse(value)) },
         { typeof(DateOnly), value => DateOnly.Parse(value) },
         { typeof(TimeOnly), value => TimeOnly.Parse(value) },
         { typeof(TimeSpan), value => TimeSpan.Parse(value) },
@@ -519,8 +524,7 @@ public static class FilterParser
             {
                 var dtStyle = right.EndsWith("Z") ? DateTimeStyles.AdjustToUniversal : DateTimeStyles.AssumeLocal;
                 var dto = DateTimeOffset.Parse(right, CultureInfo.InvariantCulture, dtStyle);
-                // Npgsql only accepts a DateTimeOffset parameter with offset 0. The UTC value is the same instant.
-                return FilterValue.Create(dto.ToUniversalTime(), rawType);
+                return FilterValue.Create(ToParameterOffset(dto), rawType);
             }
 
             if (targetType == typeof(DateOnly))
