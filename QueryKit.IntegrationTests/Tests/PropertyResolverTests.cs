@@ -182,6 +182,66 @@ public class PropertyResolverTests : TestBase
     }
 
     [Fact]
+    public async Task prevented_property_on_the_right_side_is_not_compared_through_a_colliding_query_name()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var title = Guid.NewGuid().ToString();
+        var fakePerson = new FakeTestingPersonBuilder()
+            .WithTitle(title)
+            .WithFirstName("Other")
+            .WithLastName(title)
+            .Build();
+        await testingServiceScope.InsertAsync(fakePerson);
+
+        var input = """LastName == Title""";
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.FirstName!).HasQueryName("title");
+            config.Property<TestingPerson>(x => x.Title!).PreventFilter();
+        });
+
+        // Act
+        var people = await testingServiceScope.DbContext().People
+            .Where(x => x.Id == fakePerson.Id)
+            .ApplyQueryKitFilter(input, config)
+            .ToListAsync();
+
+        // Assert
+        people.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task prevented_property_on_the_right_side_cannot_be_probed_through_a_colliding_query_name()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var title = Guid.NewGuid().ToString();
+        var fakePerson = new FakeTestingPersonBuilder()
+            .WithTitle(title)
+            .WithFirstName("Other")
+            .WithLastName($"{title} and more")
+            .Build();
+        await testingServiceScope.InsertAsync(fakePerson);
+
+        var input = """LastName _= Title""";
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.FirstName!).HasQueryName("title");
+            config.Property<TestingPerson>(x => x.Title!).PreventFilter();
+        });
+
+        // Act
+        var people = await testingServiceScope.DbContext().People
+            .Where(x => x.Id == fakePerson.Id)
+            .ApplyQueryKitFilter(input, config)
+            .ToListAsync();
+
+        // Assert
+        people.Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task prevented_property_in_a_list_is_not_filtered_in_any_case()
     {
         // Arrange
@@ -231,6 +291,43 @@ public class PropertyResolverTests : TestBase
         var config = new QueryKitConfiguration(config =>
         {
             config.Property<TestingPerson>(x => x.FirstName).HasQueryName("first").PreventSort();
+        });
+
+        // Act
+        var people = await testingServiceScope.DbContext().People
+            .Where(x => x.Title == title)
+            .ApplyQueryKitSort(input, config)
+            .ToListAsync();
+
+        // Assert
+        people.Select(x => x.Id).Should().Equal(firstPerson.Id, secondPerson.Id);
+    }
+
+    [Fact]
+    public async Task prevented_property_is_not_sorted_when_its_query_name_collides_with_another_query_name()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var title = new Faker().Lorem.Sentence();
+        var firstPerson = new FakeTestingPersonBuilder()
+            .WithTitle(title)
+            .WithFirstName("B")
+            .WithLastName("Same")
+            .WithAge(1)
+            .Build();
+        var secondPerson = new FakeTestingPersonBuilder()
+            .WithTitle(title)
+            .WithFirstName("A")
+            .WithLastName("Same")
+            .WithAge(2)
+            .Build();
+        await testingServiceScope.InsertAsync(firstPerson, secondPerson);
+
+        var input = "title, Age";
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.LastName!).HasQueryName("firstname");
+            config.Property<TestingPerson>(x => x.FirstName!).HasQueryName("title").PreventSort();
         });
 
         // Act

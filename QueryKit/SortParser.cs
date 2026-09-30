@@ -55,8 +55,7 @@ public static class SortParser
             throw new ArgumentException($"Invalid direction: {direction}. Allowed values are '{Ascending}' and '{Descending}'.");
         }
 
-        var propertyPath = config?.GetPropertyPathByQueryName(propertyName) ?? propertyName;
-        var reference = PropertyResolver.Resolve(typeof(T), propertyPath, config);
+        var reference = PropertyResolver.Resolve(typeof(T), propertyName, config);
         if (reference.Kind != PropertyReferenceKind.CustomOperation && !reference.CanSort)
         {
             return new SortExpressionInfo<T>
@@ -67,16 +66,7 @@ public static class SortParser
         }
 
         var parameter = Expression.Parameter(typeof(T), "x");
-        var sortExpressionBody = CreateSortExpressionBody(parameter, propertyName, config);
-        
-        if (sortExpressionBody == null)
-        {
-            return new SortExpressionInfo<T>
-            {
-                Expression = null,
-                IsAscending = true
-            };
-        }
+        var sortExpressionBody = CreateSortExpressionBody(parameter, reference);
         
         var isAscending = direction == Ascending;
         return new SortExpressionInfo<T>
@@ -86,28 +76,22 @@ public static class SortParser
         };
     }
 
-    private static Expression? CreateSortExpressionBody(Expression parameter, string propertyName, IQueryKitConfiguration? config)
+    // Builds the sort from the same resolved reference that the CanSort check used.
+    private static Expression CreateSortExpressionBody(ParameterExpression parameter, PropertyReference reference)
     {
-        // First check if this is a derived property
-        var derivedPropertyInfo = config?.PropertyMappings?.GetDerivedPropertyInfoByQueryName(propertyName);
-        if (derivedPropertyInfo?.DerivedExpression != null)
+        if (reference.Kind == PropertyReferenceKind.DerivedProperty)
         {
             // Replace the parameter in the derived expression with our current parameter
-            var parameterReplacer = new ParameterReplacer((ParameterExpression)parameter);
-            return parameterReplacer.Visit(derivedPropertyInfo.DerivedExpression);
+            var parameterReplacer = new ParameterReplacer(parameter);
+            return parameterReplacer.Visit(reference.Mapping!.DerivedExpression!);
         }
 
         // Handle regular properties with null-safe navigation
-        var propertyPath = config?.GetPropertyPathByQueryName(propertyName) ?? propertyName;
-
-        // Validate property depth before processing
-        config?.ValidatePropertyDepth(propertyPath);
-
-        var propertyNames = propertyPath.Split('.');
-
-        var result = CreateNullSafePropertyExpression(parameter, propertyNames, 0);
+        var result = reference.Kind == PropertyReferenceKind.Member
+            ? CreateNullSafePropertyExpression(parameter, reference.Path.Split('.'), 0)
+            : null;
         if (result == null)
-            throw new SortParsingException(propertyName);
+            throw new SortParsingException(reference.Text);
 
         return result;
     }

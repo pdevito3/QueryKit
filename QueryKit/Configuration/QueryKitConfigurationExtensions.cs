@@ -4,11 +4,6 @@ using QueryKit.Exceptions;
 
 internal static class QueryKitConfigurationExtensions
 {
-    internal static string? GetPropertyPathByQueryName(this IQueryKitConfiguration configuration, string? queryName)
-    {
-        return configuration.PropertyMappings.GetPropertyPathByQueryName(queryName);
-    }
-
     internal static void ValidatePropertyDepth(this IQueryKitConfiguration? configuration, string? propertyPath)
     {
         if (configuration == null || string.IsNullOrEmpty(propertyPath))

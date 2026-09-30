@@ -262,6 +262,38 @@ public class SortParserTests
     }
 
     [Fact]
+    public void can_prevent_sort_when_the_query_name_of_the_property_collides_with_another_query_name()
+    {
+        var input = "title, Age desc";
+
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.LastName!).HasQueryName("firstname");
+            config.Property<TestingPerson>(x => x.FirstName!).HasQueryName("title").PreventSort();
+        });
+        var sortExpression = SortParser.ParseSort<TestingPerson>(input, config);
+
+        sortExpression.Should().HaveCount(1);
+        GetMemberName(sortExpression[0].Expression!).Should().Be("Age");
+    }
+
+    [Fact]
+    public void query_name_maps_one_time_when_it_collides_with_another_query_name()
+    {
+        var input = "title";
+
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.LastName!).HasQueryName("firstname");
+            config.Property<TestingPerson>(x => x.FirstName!).HasQueryName("title");
+        });
+        var sortExpression = SortParser.ParseSort<TestingPerson>(input, config);
+
+        sortExpression.Should().HaveCount(1);
+        GetMemberName(sortExpression[0].Expression!).Should().Be("FirstName");
+    }
+
+    [Fact]
     public void can_throw_error_when_property_not_recognized()
     {
         var propertyName = "NotARealProperty";

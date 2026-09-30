@@ -203,6 +203,61 @@ public class PropertyResolverTests
     }
 
     [Fact]
+    public void property_on_the_right_side_uses_a_colliding_query_name_like_the_left_side()
+    {
+        var input = """LastName == Title""";
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.FirstName!).HasQueryName("title");
+            config.Property<TestingPerson>(x => x.Title!).PreventFilter();
+        });
+
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+
+        filterExpression.ToDisplayString().Should().Be("x => (x.LastName == x.FirstName)");
+    }
+
+    [Fact]
+    public void prevented_property_is_not_compared_on_the_right_side_through_a_colliding_query_name()
+    {
+        var input = """LastName _= Title""";
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.FirstName!).HasQueryName("title");
+            config.Property<TestingPerson>(x => x.Title!).PreventFilter();
+        });
+
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+
+        filterExpression.ToDisplayString().Should().Be("x => ((x.LastName != null) AndAlso x.LastName.StartsWith(x.FirstName))");
+    }
+
+    [Fact]
+    public void prevented_property_on_the_right_side_removes_the_clause_when_a_query_name_maps_to_it()
+    {
+        var input = """LastName == FirstName || Age > 100""";
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.IgnoredClauseBehavior = IgnoredClauseBehavior.Remove;
+            config.Property<TestingPerson>(x => x.Title!).HasQueryName("firstname").PreventFilter();
+        });
+
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+
+        filterExpression.ToDisplayString().Should().Be("x => (x.Age > 100)");
+    }
+
+    [Fact]
+    public void collection_property_path_on_the_right_side_is_not_a_value()
+    {
+        var input = """Title == Ingredients.Name""";
+
+        var act = () => FilterParser.ParseFilter<Recipe>(input);
+
+        act.Should().Throw<ParsingException>();
+    }
+
+    [Fact]
     public void prevented_property_in_a_list_is_skipped_in_any_case()
     {
         var input = """(title, FirstName) == "x" """;

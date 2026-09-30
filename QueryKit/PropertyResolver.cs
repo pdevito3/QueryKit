@@ -82,6 +82,12 @@ internal static class PropertyResolver
         return PropertyReference.NotMember(PropertyReferenceKind.Unknown, reference, null, unknownSegment!);
     }
 
+    /// <summary>
+    /// Whether the text is a path of real member names, with no query name mapping.
+    /// </summary>
+    internal static bool IsMemberPath(Type rootType, string text)
+        => ResolveMemberPath(rootType, text, out _) != null;
+
     // Matches each segment to a public member, ignoring case. A segment after a collection resolves on the element type.
     private static string? ResolveMemberPath(Type rootType, string path, out string? unknownSegment)
     {

@@ -2,7 +2,6 @@
 
 using System.Globalization;
 using System.Linq.Expressions;
-using System.Reflection;
 using System.Text;
 using Configuration;
 using Exceptions;
@@ -211,9 +210,6 @@ public static class FilterParser
 
         return Result.Failure<string>(input, $"Operator alias '{alias}' must be followed by whitespace", new[] { alias });
     };
-
-    private static PropertyInfo? GetPropertyInfo(Type type, string propertyName)
-        => type.GetProperty(propertyName, BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance);
 
     private static readonly Parser<string> LogicalOperatorTextParser =
         Parse.String(LogicalOperator.AndOperator.Operator()).Text().Or(Parse.String(LogicalOperator.OrOperator.Operator()).Text());
@@ -881,37 +877,44 @@ public static class FilterParser
                 }
 
                 // Check if the right side is a property path for property-to-property comparison.
-                // A quoted string literal is always a value, even when its text matches a property name.
-                if (!temp.rightIsQuotedLiteral && IsPropertyPath(temp.right, parameter.Type))
+                // A quoted string literal, null, and a bool are always values, even when their text matches a property name.
+                // Only a member path is a property here. It resolves like the left side, so a query name that collides
+                // with the member name maps it, and the check and the build use the same member.
+                if (!temp.rightIsQuotedLiteral && temp.right != "null" && !bool.TryParse(temp.right, out _) &&
+                    PropertyResolver.IsMemberPath(parameter.Type, temp.right))
                 {
-                    if (!PropertyResolver.Resolve(parameter.Type, temp.right, config).CanFilter)
+                    var rightReference = PropertyResolver.Resolve(parameter.Type, temp.right, config);
+                    if (!rightReference.CanFilter)
                     {
                         return IgnoredClause(config);
                     }
 
-                    var rightPropertyExpr = CreateRightPropertyExpr<T>(parameter, temp.right, config);
-                    if (rightPropertyExpr != null)
+                    var rightPropertyExpr = CreateMemberExpression(parameter, rightReference.Path);
+                    if (rightPropertyExpr is not MemberExpression)
                     {
-                        // Handle GUID conversion for property-to-property comparisons
-                        // Only convert to string for string operators
-                        var comparedLeftExpr = leftExpr;
-                        if (temp.op.IsStringComparisonOperator())
-                        {
-                            if (comparedLeftExpr.Type == typeof(Guid) || comparedLeftExpr.Type == typeof(Guid?))
-                            {
-                                comparedLeftExpr = HandleGuidConversion(comparedLeftExpr, comparedLeftExpr.Type);
-                            }
-                            if (rightPropertyExpr.Type == typeof(Guid) || rightPropertyExpr.Type == typeof(Guid?))
-                            {
-                                rightPropertyExpr = HandleGuidConversion(rightPropertyExpr, rightPropertyExpr.Type);
-                            }
-                        }
-
-                        // Ensure compatible types for property-to-property comparison
-                        var (leftCompatible, rightCompatible) = EnsureCompatibleTypes(comparedLeftExpr, rightPropertyExpr);
-                        var propToProptPath = leftExpr is MemberExpression ptpMemberExpr ? GetPropertyPath(ptpMemberExpr, parameter) : null;
-                        return temp.op.GetExpression<T>(leftCompatible, rightCompatible, config?.DbContextType, ResolveCaseMode(propToProptPath, config));
+                        // A path through a collection gives many values, but a comparison needs one value on each side
+                        throw new InvalidOperationException($"The right-side property '{temp.right}' is inside a collection.");
                     }
+
+                    // Handle GUID conversion for property-to-property comparisons
+                    // Only convert to string for string operators
+                    var comparedLeftExpr = leftExpr;
+                    if (temp.op.IsStringComparisonOperator())
+                    {
+                        if (comparedLeftExpr.Type == typeof(Guid) || comparedLeftExpr.Type == typeof(Guid?))
+                        {
+                            comparedLeftExpr = HandleGuidConversion(comparedLeftExpr, comparedLeftExpr.Type);
+                        }
+                        if (rightPropertyExpr.Type == typeof(Guid) || rightPropertyExpr.Type == typeof(Guid?))
+                        {
+                            rightPropertyExpr = HandleGuidConversion(rightPropertyExpr, rightPropertyExpr.Type);
+                        }
+                    }
+
+                    // Ensure compatible types for property-to-property comparison
+                    var (leftCompatible, rightCompatible) = EnsureCompatibleTypes(comparedLeftExpr, rightPropertyExpr);
+                    var propToProptPath = leftExpr is MemberExpression ptpMemberExpr ? GetPropertyPath(ptpMemberExpr, parameter) : null;
+                    return temp.op.GetExpression<T>(leftCompatible, rightCompatible, config?.DbContextType, ResolveCaseMode(propToProptPath, config));
                 }
 
                 // Try to determine the property path for HasConversion support
@@ -1401,62 +1404,6 @@ public static class FilterParser
         }
 
         return result;
-    }
-
-    private static bool IsPropertyPath(string value, Type entityType)
-    {
-        // Skip obvious literal values
-        if (value == "null" || 
-            value.StartsWith("\"") || 
-            value.StartsWith("[") ||
-            value.Contains("-") && (DateTime.TryParse(value, out _) || DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.None, out _)) ||
-            decimal.TryParse(value, out _) ||
-            decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out _) ||
-            bool.TryParse(value, out _) ||
-            Guid.TryParse(value, out _))
-        {
-            return false;
-        }
-
-        // Check if it's a valid property path
-        var propertyPath = value.Split('.');
-        var currentType = entityType;
-
-        foreach (var propName in propertyPath)
-        {
-            var property = GetPropertyInfo(currentType, propName);
-            if (property == null)
-            {
-                return false;
-            }
-            currentType = property.PropertyType;
-        }
-
-        return true;
-    }
-
-    private static Expression? CreateRightPropertyExpr<T>(ParameterExpression parameter, string propertyPath, IQueryKitConfiguration? config)
-    {
-        try
-        {
-            // Validate property depth before processing
-            config?.ValidatePropertyDepth(propertyPath);
-
-            var propertyNames = propertyPath.Split('.');
-            return propertyNames.Aggregate((Expression)parameter, (expr, propName) =>
-            {
-                var propertyInfo = GetPropertyInfo(expr.Type, propName);
-                if (propertyInfo == null)
-                {
-                    throw new ArgumentException($"Property '{propName}' not found on type '{expr.Type.Name}'");
-                }
-                return Expression.PropertyOrField(expr, propertyInfo.Name);
-            });
-        }
-        catch
-        {
-            return null;
-        }
     }
 
     private static (Expression left, Expression right) EnsureCompatibleTypes(Expression left, Expression right)
