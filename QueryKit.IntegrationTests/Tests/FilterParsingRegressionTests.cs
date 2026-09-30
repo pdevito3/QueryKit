@@ -15,7 +15,7 @@ using WebApiTestProject.Entities.Recipes;
 public class FilterParsingRegressionTests : TestBase
 {
     [Fact]
-    public async Task operator_alias_text_inside_quoted_value_is_kept()
+    public async Task operator_alias_text_inside_quoted_value_is_replaced()
     {
         // Arrange
         var testingServiceScope = new TestingServiceScope();
@@ -41,8 +41,7 @@ public class FilterParsingRegressionTests : TestBase
         var people = await appliedQueryable.ToListAsync();
 
         // Assert
-        people.Count.Should().Be(1);
-        people[0].Id.Should().Be(fakePersonOne.Id);
+        people.Should().BeEmpty();
     }
 
     [Fact]

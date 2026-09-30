@@ -124,26 +124,20 @@ public class QueryKitPropertyMappings
     }
 
     public string ReplaceAliasesWithPropertyPaths(string input)
-        => ReplaceAliasesWithPropertyPaths(input, Enumerable.Empty<string>());
-
-    // A comparison alias is an operator only as a whole word, so the filter text keeps its aliases and the parser reads them.
-    internal string ReplaceAliasesWithPropertyPaths(string input, IEnumerable<string> comparisonAliases)
     {
-        var operatorPatterns = ComparisonOperator.List.Select(x => $@"\s*{Regex.Escape(x.Operator())}")
-            .Concat(comparisonAliases.Select(alias => $@"\s+{Regex.Escape(alias)}(?=\s|$)"))
-            .ToList();
+        var operators = ComparisonOperator.List.Select(x => x.Operator()).ToList();
         
         foreach (QueryKitPropertyInfo queryKitPropertyInfo in _propertyMappings.Values)
         {
             var propertyPath = GetPropertyPathByQueryName(queryKitPropertyInfo.QueryName);
             if (!string.IsNullOrEmpty(propertyPath))
             {
-                foreach (var operatorPattern in operatorPatterns)
+                foreach (var op in operators)
                 {
                     // Use regular expression to isolate left side of the expression. Query names and
                     // operators are matched literally, so escape any regex metacharacters they contain
                     // (e.g. the `^` in `^^` would otherwise be read as a start-of-line anchor).
-                    var regex = AliasRegexCache.Get($@"\b{Regex.Escape(queryKitPropertyInfo.QueryName!)}\b(?={operatorPattern})");
+                    var regex = AliasRegexCache.Get($@"\b{Regex.Escape(queryKitPropertyInfo.QueryName!)}\b(?=\s*{Regex.Escape(op)})");
 
                     if (queryKitPropertyInfo is { CanSort: false, CanFilter: false} && regex.IsMatch(input))
                     {

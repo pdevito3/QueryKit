@@ -22,7 +22,10 @@ public static class FilterParser
     public static Expression<Func<T, bool>> ParseFilter<T>(string input, IQueryKitConfiguration? config = null)
     {
         EnsureWithinParseLimits(input, config);
-        input = ReplaceQueryNamesWithPropertyPaths(input, config);
+
+        input = config?.ReplaceLogicalAliases(input) ?? input;
+        input = config?.ReplaceComparisonAliases(input) ?? input;
+        input = config?.PropertyMappings?.ReplaceAliasesWithPropertyPaths(input) ?? input;
         
         var parameter = Expression.Parameter(typeof(T), "x");
         Expression expr;
@@ -54,19 +57,6 @@ public static class FilterParser
         }
 
         return Expression.Lambda<Func<T, bool>>(expr, parameter);
-    }
-    
-    // Each query name in front of a comparison operator or a comparison alias is replaced with its property path before the parse.
-    // A property that can not be filtered or sorted throws InvalidOperationException when the filter uses its query name.
-    private static string ReplaceQueryNamesWithPropertyPaths(string input, IQueryKitConfiguration? config)
-    {
-        if (config?.PropertyMappings == null)
-        {
-            return input;
-        }
-
-        var comparisonAliases = ComparisonOperator.GetAliasMatches(config).Select(x => x.Alias);
-        return config.PropertyMappings.ReplaceAliasesWithPropertyPaths(input, comparisonAliases);
     }
     
     private static Expression ReplaceDerivedProperties(Expression expr, IQueryKitConfiguration? config, ParameterExpression parameter)
@@ -165,12 +155,13 @@ public static class FilterParser
 
     private static Parser<ComparisonOperator> ComparisonOperatorParser(IQueryKitConfiguration? config)
     {
-        var operatorParser = ComparisonOperatorAliasParser(config).Or(CanonicalComparisonOperatorParser);
+        var operatorParser = CanonicalComparisonOperatorParser.Or(ComparisonOperatorAliasParser(config));
         return Parse.Char(ComparisonOperator.AllPrefix).Optional().Select(opt => opt.IsDefined)
             .Then(hasHash => operatorParser.Select(x => ComparisonOperator.GetByOperatorString(x.Operator, x.CaseInsensitive, hasHash)));
     }
 
-    // Aliases are matched in the grammar (not by rewriting the input) so text inside quoted values is never changed.
+    // The rewrite before the parse replaces each alias that stands between whitespace, like v1.14.2.
+    // The grammar reads an alias that the rewrite did not replace, for example `(Age)eq 3`.
     // Longer aliases are tried first so an alias that starts with another alias (e.g. `@@$$` and `@@$`) still matches.
     private static Parser<(string Operator, bool CaseInsensitive)> ComparisonOperatorAliasParser(IQueryKitConfiguration? config)
     {
