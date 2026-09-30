@@ -64,7 +64,7 @@ public static class FilterParser
     // call stack or exhausting CPU and memory during parsing.
     private static void EnsureWithinParseLimits(string input, IQueryKitConfiguration? config)
     {
-        var maxLength = config?.MaxInputLength ?? QueryKitSettings.DefaultMaxInputLength;
+        var maxLength = (config as IQueryKitParseLimits)?.MaxInputLength ?? QueryKitSettings.DefaultMaxInputLength;
         if (input.Length > maxLength)
         {
             throw new QueryKitInputLengthExceededException(input.Length, maxLength);
@@ -74,7 +74,7 @@ public static class FilterParser
         // quoting styles (plain and raw-string style with 3+ quote marks), so a scanner that tries
         // to skip "quoted" spans could misjudge one of them and undercount real nesting. Counting
         // everything can only reject too much, never too little.
-        var maxDepth = config?.MaxNestingDepth ?? QueryKitSettings.DefaultMaxNestingDepth;
+        var maxDepth = (config as IQueryKitParseLimits)?.MaxNestingDepth ?? QueryKitSettings.DefaultMaxNestingDepth;
         var depth = 0;
         foreach (var c in input)
         {
