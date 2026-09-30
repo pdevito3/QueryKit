@@ -33,12 +33,10 @@ public interface IQueryKitConfiguration
     public string HasOperator { get; set; }
     public string DoesNotHaveOperator { get; set; }
     public int? MaxPropertyDepth { get; set; }
-    public int MaxNestingDepth { get; set; }
-    public int MaxInputLength { get; set; }
     public CaseInsensitiveMode CaseInsensitiveComparison { get; set; }
 }
 
-public class QueryKitConfiguration : IQueryKitConfiguration
+public class QueryKitConfiguration : IQueryKitConfiguration, IQueryKitParseLimits
 {
     public QueryKitPropertyMappings PropertyMappings { get; }
     public string EqualsOperator { get; set; }
