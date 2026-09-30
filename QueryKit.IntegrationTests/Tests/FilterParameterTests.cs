@@ -2,11 +2,15 @@ namespace QueryKit.IntegrationTests.Tests;
 
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using QueryKit.Configuration;
 using SharedTestingHelper.Fakes;
 using WebApiTestProject.Entities;
 
 public class FilterParameterTests() : TestBase
 {
+    private static readonly QueryKitConfiguration ParameterizedConfig =
+        new(settings => settings.ParameterizeFilterValues = true);
+
     [Theory]
     [InlineData("""Title == "lamb" """, """Title == "chicken" """)]
     [InlineData("""Title @=* "lamb" """, """Title @=* "chicken" """)]
@@ -44,15 +48,47 @@ public class FilterParameterTests() : TestBase
         await testingServiceScope.InsertAsync(lamb, chicken, beef);
 
         var input = $"""Title ^^* ["{lamb.Title!.ToUpper()}", "{chicken.Title}"]""";
-        var query = testingServiceScope.DbContext().People.ApplyQueryKitFilter(input);
+        var query = testingServiceScope.DbContext().People.ApplyQueryKitFilter(input, ParameterizedConfig);
         var people = await query.ToListAsync();
 
         SqlWithoutParameterValues(query).Should().Contain("= ANY (@");
         people.Select(x => x.Id).Should().BeEquivalentTo(new[] { lamb.Id, chicken.Id });
     }
 
+    [Theory]
+    [InlineData("""Title == "lamb" """, "'lamb'")]
+    [InlineData("Age > 30", "> 30")]
+    [InlineData("Date == 2022-07-01", "DATE '2022-07-01'")]
+    [InlineData("(Age + 5) > 30", "+ 5")]
+    public void filter_values_are_sql_literals_by_default(string input, string expectedLiteral)
+    {
+        var testingServiceScope = new TestingServiceScope();
+
+        var sql = testingServiceScope.DbContext().People.ApplyQueryKitFilter(input).ToQueryString();
+
+        sql.Should().NotContain("@");
+        sql.Should().Contain(expectedLiteral);
+    }
+
+    [Fact]
+    public async Task in_list_is_a_literal_list_by_default_and_still_filters()
+    {
+        var testingServiceScope = new TestingServiceScope();
+        var lamb = new FakeTestingPersonBuilder().WithTitle($"lamb {Guid.NewGuid()}").Build();
+        var chicken = new FakeTestingPersonBuilder().WithTitle($"chicken {Guid.NewGuid()}").Build();
+        var beef = new FakeTestingPersonBuilder().WithTitle($"beef {Guid.NewGuid()}").Build();
+        await testingServiceScope.InsertAsync(lamb, chicken, beef);
+
+        var input = $"""Title ^^ ["{lamb.Title}", "{chicken.Title}"]""";
+        var query = testingServiceScope.DbContext().People.ApplyQueryKitFilter(input);
+        var people = await query.ToListAsync();
+
+        query.ToQueryString().Should().Contain($"IN ('{lamb.Title}', '{chicken.Title}')");
+        people.Select(x => x.Id).Should().BeEquivalentTo(new[] { lamb.Id, chicken.Id });
+    }
+
     private static string SqlWithoutParameterValues(TestingServiceScope testingServiceScope, string input)
-        => SqlWithoutParameterValues(testingServiceScope.DbContext().People.ApplyQueryKitFilter(input));
+        => SqlWithoutParameterValues(testingServiceScope.DbContext().People.ApplyQueryKitFilter(input, ParameterizedConfig));
 
     // ToQueryString() writes each parameter value in a "-- @p='...'" comment line before the SQL.
     private static string SqlWithoutParameterValues(IQueryable<TestingPerson> query)

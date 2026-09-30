@@ -43,6 +43,12 @@ public class QueryKitSettings
     public int MaxInputLength { get; set; } = DefaultMaxInputLength;
     public CaseInsensitiveMode CaseInsensitiveComparison { get; set; } = CaseInsensitiveMode.Lower;
 
+    /// <summary>
+    /// When true, filter values are field reads that EF Core sends as SQL parameters. When false (the default),
+    /// filter values are constants that EF Core writes into the SQL as literals.
+    /// </summary>
+    public bool ParameterizeFilterValues { get; set; }
+
     public QueryKitPropertyMapping<TModel> Property<TModel>(Expression<Func<TModel, object>>? propertySelector)
     {
         return PropertyMappings.Property(propertySelector);
