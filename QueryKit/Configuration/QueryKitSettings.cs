@@ -51,10 +51,10 @@ public class QueryKitSettings
     public CaseInsensitiveMode CaseInsensitiveComparison { get; set; } = CaseInsensitiveMode.Lower;
 
     /// <summary>
-    /// When true, filter values are field reads that EF Core sends as SQL parameters. When false (the default),
-    /// filter values are constants that EF Core writes into the SQL as literals.
+    /// When true (the default), filter values are field reads that EF Core sends as SQL parameters. When false,
+    /// filter values are constants that EF Core writes into the SQL as literals, the same as v1.14.2.
     /// </summary>
-    public bool ParameterizeFilterValues { get; set; }
+    public bool ParameterizeFilterValues { get; set; } = true;
 
     /// <summary>
     /// What the filter parser does with a clause on a prevented or unknown property. The default is
