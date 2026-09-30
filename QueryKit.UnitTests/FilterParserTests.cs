@@ -817,12 +817,12 @@ public class FilterParserTests
     }
 
     [Fact]
-    public void has_type_throws_correct_message_on_non_collection_property()
+    public void has_type_on_non_collection_property_throws_the_v1_14_2_message()
     {
         var input = """Title ^$ "winner" """;
         var act = () => FilterParser.ParseFilter<Recipe>(input);
         act.Should().Throw<QueryKitParsingException>()
-            .WithMessage("HasType is only supported for collections");
+            .WithMessage("DoesNotHaveType is only supported for collections");
     }
 
     [Fact]

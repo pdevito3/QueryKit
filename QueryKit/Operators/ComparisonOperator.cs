@@ -766,7 +766,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
                 return GetCollectionExpression(left, right, Expression.Equal, UsesAll);
             }
 
-            throw new QueryKitParsingException("HasType is only supported for collections");
+            throw new QueryKitParsingException("DoesNotHaveType is only supported for collections");
         }
     }
 
