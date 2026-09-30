@@ -22,6 +22,7 @@ public static class FilterParser
     public static Expression<Func<T, bool>> ParseFilter<T>(string input, IQueryKitConfiguration? config = null)
     {
         EnsureWithinParseLimits(input, config);
+        EnsureNoQueryNameOfAPropertyPreventedForFilterAndSort(input, config);
         
         var parameter = Expression.Parameter(typeof(T), "x");
         Expression expr;
@@ -53,6 +54,19 @@ public static class FilterParser
         }
 
         return Expression.Lambda<Func<T, bool>>(expr, parameter);
+    }
+    
+    // A property that can not be filtered or sorted throws InvalidOperationException when the filter uses its query name.
+    // The alias passes run on a copy of the input, so the check sees the operators in the same form as the rewrite pass.
+    private static void EnsureNoQueryNameOfAPropertyPreventedForFilterAndSort(string input, IQueryKitConfiguration? config)
+    {
+        if (config?.PropertyMappings == null)
+        {
+            return;
+        }
+
+        var aliasesReplaced = config.ReplaceComparisonAliases(config.ReplaceLogicalAliases(input));
+        config.PropertyMappings.ReplaceAliasesWithPropertyPaths(aliasesReplaced);
     }
     
     private static Expression ReplaceDerivedProperties(Expression expr, IQueryKitConfiguration? config, ParameterExpression parameter)

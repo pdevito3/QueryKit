@@ -541,7 +541,7 @@ public class PropertyResolverTests
     }
 
     [Fact]
-    public void property_prevented_for_filter_and_sort_is_removed_by_its_query_name()
+    public void property_prevented_for_filter_and_sort_throws_by_its_query_name()
     {
         var input = """name == "x" || Age > 100""";
         var config = new QueryKitConfiguration(config =>
@@ -550,9 +550,26 @@ public class PropertyResolverTests
             config.Property<TestingPerson>(x => x.Title).HasQueryName("name").PreventFilter().PreventSort();
         });
 
-        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+        var act = () => FilterParser.ParseFilter<TestingPerson>(input, config);
 
-        filterExpression.ToDisplayString().Should().Be("x => (x.Age > 100)");
+        act.Should().ThrowExactly<InvalidOperationException>()
+            .WithMessage("'Title' is not allowed for filtering or sorting.");
+    }
+
+    [Fact]
+    public void property_prevented_for_filter_and_sort_throws_by_its_query_name_before_an_operator_alias()
+    {
+        var input = """name eq "x" """;
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.EqualsOperator = "eq";
+            config.Property<TestingPerson>(x => x.Title).HasQueryName("name").PreventFilter().PreventSort();
+        });
+
+        var act = () => FilterParser.ParseFilter<TestingPerson>(input, config);
+
+        act.Should().ThrowExactly<InvalidOperationException>()
+            .WithMessage("'Title' is not allowed for filtering or sorting.");
     }
 
     [Fact]
