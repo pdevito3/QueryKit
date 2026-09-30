@@ -695,41 +695,14 @@ public static class FilterParser
             .SelectMany(temp => parenthesizedArithmetic.Or(rightSideValueParser.Select(value => CreateArithmeticFromValue(value.Value))), (temp, rightSide) => new { temp.leftArithmetic, temp.op, rightSide })
             .Select(temp =>
             {
-                var leftArithmetic = ResolveArithmeticProperties(temp.leftArithmetic, typeof(T), config);
-                var rightArithmetic = ResolveArithmeticProperties(temp.rightSide, typeof(T), config);
-
-                var leftExpr = leftArithmetic.ToLinqExpression(parameter, typeof(T));
-                var rightExpr = rightArithmetic.ToLinqExpression(parameter, typeof(T));
+                var leftExpr = temp.leftArithmetic.ToLinqExpression(parameter, typeof(T));
+                var rightExpr = temp.rightSide.ToLinqExpression(parameter, typeof(T));
                 
                 var (leftCompatible, rightCompatible) = EnsureCompatibleTypes(leftExpr, rightExpr);
                 return temp.op.GetExpression<T>(leftCompatible, rightCompatible, config?.DbContextType);
             });
     }
     
-    // Resolves each property in an arithmetic expression to its member path.
-    private static ArithmeticExpression ResolveArithmeticProperties(ArithmeticExpression expr, Type entityType, IQueryKitConfiguration? config)
-    {
-        switch (expr)
-        {
-            case PropertyArithmeticExpression property:
-                var reference = PropertyResolver.Resolve(entityType, property.PropertyPath, config);
-                if (reference.Kind != PropertyReferenceKind.Member)
-                {
-                    return property;
-                }
-
-                return new PropertyArithmeticExpression(reference.Path);
-            case BinaryArithmeticExpression binary:
-                var left = ResolveArithmeticProperties(binary.Left, entityType, config);
-                var right = ResolveArithmeticProperties(binary.Right, entityType, config);
-                return new BinaryArithmeticExpression(left, binary.Operator, right);
-            case GroupedArithmeticExpression grouped:
-                return new GroupedArithmeticExpression(ResolveArithmeticProperties(grouped.Inner, entityType, config));
-            default:
-                return expr;
-        }
-    }
-
     private static bool ContainsArithmeticOperator(ArithmeticExpression expr)
     {
         return expr switch

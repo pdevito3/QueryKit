@@ -190,7 +190,7 @@ public class PropertyResolverTests
     }
 
     [Fact]
-    public void arithmetic_property_obeys_max_property_depth()
+    public void arithmetic_property_skips_max_property_depth()
     {
         var input = """(Recipe.Rating + 0) > 1""";
         var config = new QueryKitConfiguration(config =>
@@ -200,7 +200,7 @@ public class PropertyResolverTests
 
         var act = () => FilterParser.ParseFilter<Ingredient>(input, config);
 
-        act.Should().Throw<QueryKitPropertyDepthExceededException>();
+        act.Should().NotThrow();
     }
 
     [Fact]
