@@ -6,9 +6,9 @@ namespace QueryKit.Configuration;
 /// </summary>
 public enum IgnoredClauseBehavior
 {
-    /// <summary>Default. Replaces the clause with (true == true). Under an OR, the whole OR is then true.</summary>
+    /// <summary>Replaces the clause with (true == true), the same as v1.14.2. Under an OR, the whole OR is then true.</summary>
     ReplaceWithTrue = 0,
 
-    /// <summary>Removes the clause. A logical operator with a removed side keeps only its other side.</summary>
+    /// <summary>Default. Removes the clause. A logical operator with a removed side keeps only its other side.</summary>
     Remove = 1
 }

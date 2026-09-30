@@ -812,13 +812,13 @@ var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
 
 `IgnoredClauseBehavior` and `ParameterizeFilterValues` both come from the `IQueryKitFilterBehavior` interface. `QueryKitConfiguration` implements this interface, so a custom configuration class can implement `IQueryKitFilterBehavior` directly instead.
 
-`IgnoredClauseBehavior` controls what QueryKit does with a clause on a property that has `PreventFilter`, or on an unknown property when `AllowUnknownProperties` is `true`. The default is `IgnoredClauseBehavior.ReplaceWithTrue`, which replaces the clause with `true == true` so the rest of the expression keeps its shape. A property-list clause (for example `(FirstName, Title) @=* "x"`) where every property is prevented gives a plain `true` instead, not `true == true`. Set `IgnoredClauseBehavior` to `IgnoredClauseBehavior.Remove` to drop the clause instead, so a logical operator with a removed side keeps only its other side.
+`IgnoredClauseBehavior` controls what QueryKit does with a clause on a property that has `PreventFilter`, or on an unknown property when `AllowUnknownProperties` is `true`. The default is `IgnoredClauseBehavior.Remove`, which drops the clause, so a logical operator with a removed side keeps only its other side. Set `IgnoredClauseBehavior` to `IgnoredClauseBehavior.ReplaceWithTrue` for the v1.14.2 behavior. This value replaces the clause with `true == true` so the rest of the expression keeps its shape. With `ReplaceWithTrue`, a property-list clause (for example `(FirstName, Title) @=* "x"`) where every property is prevented gives a plain `true` instead, not `true == true`.
 
 ```csharp
 var config = new QueryKitConfiguration(config =>
 {
     config.AllowUnknownProperties = true;
-    config.IgnoredClauseBehavior = IgnoredClauseBehavior.Remove;
+    config.IgnoredClauseBehavior = IgnoredClauseBehavior.ReplaceWithTrue;
 });
 var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
 ```
