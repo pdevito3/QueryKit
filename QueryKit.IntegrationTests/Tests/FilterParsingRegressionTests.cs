@@ -242,7 +242,7 @@ public class FilterParsingRegressionTests : TestBase
     }
 
     [Fact]
-    public async Task comparison_operator_factory_with_uses_all_matches_every_item()
+    public async Task comparison_operator_factory_with_uses_all_matches_any_item()
     {
         // Arrange
         var testingServiceScope = new TestingServiceScope();
@@ -269,7 +269,7 @@ public class FilterParsingRegressionTests : TestBase
             .ToListAsync();
 
         // Assert
-        recipes.Select(x => x.Id).Should().Equal(fakeRecipeOne.Id);
+        recipes.Select(x => x.Id).Should().BeEquivalentTo(new[] { fakeRecipeOne.Id, fakeRecipeTwo.Id });
     }
 
     [Fact]

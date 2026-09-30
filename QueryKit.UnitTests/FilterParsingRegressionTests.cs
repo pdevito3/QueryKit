@@ -232,13 +232,13 @@ public class FilterParsingRegressionTests
 
     [Theory]
     [MemberData(nameof(ComparisonOperatorFactories))]
-    public void comparison_operator_factory_keeps_uses_all(string factoryName)
+    public void comparison_operator_factory_ignores_uses_all(string factoryName)
     {
         var factory = typeof(ComparisonOperator).GetMethod(factoryName, BindingFlags.Public | BindingFlags.Static)!;
 
         var comparisonOperator = (ComparisonOperator)factory.Invoke(null, new object[] { true, true })!;
 
-        comparisonOperator.UsesAll.Should().BeTrue();
+        comparisonOperator.UsesAll.Should().BeFalse();
         comparisonOperator.CaseInsensitive.Should().BeTrue();
     }
 
@@ -249,7 +249,7 @@ public class FilterParsingRegressionTests
     }
 
     [Fact]
-    public void comparison_operator_factory_with_uses_all_builds_all_expression()
+    public void comparison_operator_factory_with_uses_all_builds_any_expression()
     {
         Expression<Func<Recipe, IEnumerable<string>>> ingredientNames = x => x.Ingredients.Select(y => y.Name);
 
@@ -258,7 +258,7 @@ public class FilterParsingRegressionTests
         var filterExpression = Expression.Lambda<Func<Recipe, bool>>(body, ingredientNames.Parameters);
 
         filterExpression.ToDisplayString().Should()
-            .Be(FilterParser.ParseFilter<Recipe>("""Ingredients.Name %== "waffle" """).ToDisplayString());
+            .Be(FilterParser.ParseFilter<Recipe>("""Ingredients.Name == "waffle" """).ToDisplayString());
     }
 
     [Theory]
