@@ -13,6 +13,9 @@ A developer passes a `QueryKitConfiguration` to change how QueryKit reads the in
 - `config-allow-unknown` ignores unknown properties with `AllowUnknownProperties = true`.
 - `config-max-depth` limits the depth of dotted paths with `MaxPropertyDepth`.
 - `config-upper` uses `ToUpper()` for case-insensitive operators with `CaseInsensitiveComparison = CaseInsensitiveMode.Upper`.
+- `config-parameterized` sends filter values as SQL parameters with `ParameterizeFilterValues = true`.
+- `config-remove-ignored` drops an ignored clause instead of replacing it with `True == True`, with `IgnoredClauseBehavior = IgnoredClauseBehavior.Remove`.
+- `config-small-limits` lowers the parse limits with `MaxInputLength` and `MaxNestingDepth`.
 
 ## How to get to it (user POV)
 
@@ -25,7 +28,7 @@ Preconditions:
 
 - A run is up and `qk doctor` prints only `ok` lines.
 - The seed data matches `features/README.md`.
-- `qk configs` lists `aliases`, `loose-names`, `derived`, `custom-operation`, `word-operators`, `allow-unknown`, `max-depth-0`, and `upper`.
+- `qk configs` lists `aliases`, `loose-names`, `derived`, `custom-operation`, `word-operators`, `hidden-price`, `allow-unknown`, `max-depth-0`, `upper`, `parameterized`, `remove-ignored`, and `small-limits`.
 
 - **Query names.** Run `qk run configuration-query-name --config aliases --filter 'chef == "Julia Child" && name _= "S"'`. Both targets give `["Salt Bread"]`.
 - **Query names that are not identifiers.** Run `qk run configuration-loose-query-names --config loose-names --filter 'recipe-title == "Pancakes" || _stars > 4 || chef name == "Gordon Ramsay"'`. Both targets give `["Pancakes", "Beef Stew"]`.
@@ -37,6 +40,9 @@ Preconditions:
 - **Allow unknown.** Run `qk run configuration-allow-unknown --config allow-unknown --filter 'Nope == 1 && Rating > 3'`. Exit `0`. Both targets give `Pancakes` and `Salt Bread`.
 - **Max depth.** Run `qk run configuration-max-depth --config max-depth-0 --filter 'Author.Name == "Julia Child"'`. Exit `2`. Both targets have `error.type` `QueryKit.Exceptions.QueryKitPropertyDepthExceededException`.
 - **Upper mode.** Run `qk run configuration-upper --config upper --filter 'Title @=* "bread"'`. Both targets give `["Salt Bread"]`. The `sql` contains `upper(r."Title")`.
+- **Parameterized values.** Run `qk run configuration-parameterized --config parameterized --filter 'Title == "Pancakes"'`. Both targets give `["Pancakes"]`. The `sql` contains a `@` parameter instead of the literal `'Pancakes'`.
+- **Remove ignored clauses.** Run `qk run configuration-remove-ignored --config remove-ignored --filter 'Rating > 1 && Nope == 1'`. Exit `0`. Both targets give all four recipes. The `expression` has no `True == True`.
+- **Small parse limits.** Run `qk run configuration-small-limits --config small-limits --filter '((((Title == "Pancakes"))))'`. Exit `2`. Both targets have `error.type` `QueryKit.Exceptions.QueryKitNestingDepthExceededException`.
 
 ## Gotchas
 
