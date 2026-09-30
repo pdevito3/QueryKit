@@ -41,6 +41,20 @@ internal static class FilterValue
         return Expression.Field(Expression.Constant(holder, holderType), nameof(FilterValue<object>.Value));
     }
 
+    // Returns an in-list for Contains. When parameters are on, the list is one parameter. Otherwise it
+    // is a constant that EF Core compares item by item, and the SQL is a literal IN list.
+    public static Expression CreateList(object list, Type elementType)
+    {
+        var listType = typeof(List<>).MakeGenericType(elementType);
+        if (_parameterize)
+        {
+            return Create(list, listType);
+        }
+
+        var valuesType = typeof(InListValues<>).MakeGenericType(elementType);
+        return Expression.Constant(Activator.CreateInstance(valuesType, list), valuesType);
+    }
+
     // Dates and times are constructor calls, and a nullable enum wraps its constant in a Nullable<T>
     // constructor. Every other value is a constant.
     private static Expression Literal(object? value, Type type)

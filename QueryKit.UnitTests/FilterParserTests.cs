@@ -216,7 +216,7 @@ public class FilterParserTests
         var input = """Age ^^ [20, 30, 40]""";
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
         filterExpression.ToDisplayString().Should()
-            .Be(""""x => value(System.Collections.Generic.List`1[System.Nullable`1[System.Int32]]).Contains(x.Age)"""");
+            .Be(""""x => value(QueryKit.InListValues`1[System.Nullable`1[System.Int32]]).Contains(x.Age)"""");
     }
 
     [Fact]
@@ -225,7 +225,7 @@ public class FilterParserTests
         var input = """Id ^^ ["6d623e92-d2cf-4496-a2df-f49fa77328ee"]""";
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
         filterExpression.ToDisplayString().Should()
-            .Be(""""x => value(System.Collections.Generic.List`1[System.Guid]).Contains(x.Id)"""");
+            .Be(""""x => value(QueryKit.InListValues`1[System.Guid]).Contains(x.Id)"""");
     }
 
     [Fact]
