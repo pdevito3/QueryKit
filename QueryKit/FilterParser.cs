@@ -26,7 +26,7 @@ public static class FilterParser
         var parameter = Expression.Parameter(typeof(T), "x");
         Expression expr;
         var parameterizeBefore = FilterValue.Parameterize;
-        FilterValue.Parameterize = config is QueryKitConfiguration { ParameterizeFilterValues: true };
+        FilterValue.Parameterize = config is IQueryKitFilterBehavior { ParameterizeFilterValues: true };
         try
         {
             expr = ExprParser<T>(parameter, config).End().Parse(input);
@@ -1253,7 +1253,7 @@ public static class FilterParser
         );
 
     private static bool RemovesIgnoredClauses(IQueryKitConfiguration? config)
-        => config is QueryKitConfiguration { IgnoredClauseBehavior: IgnoredClauseBehavior.Remove };
+        => config is IQueryKitFilterBehavior { IgnoredClauseBehavior: IgnoredClauseBehavior.Remove };
 
     // A clause on a prevented or unknown property. By default it becomes true == true, the same as v1.14.2.
     private static Expression IgnoredClause(IQueryKitConfiguration? config)
