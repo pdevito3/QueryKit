@@ -28,21 +28,12 @@ public class FilterParsingRegressionTests
     [Theory]
     [InlineData("de-DE")]
     [InlineData("fr-FR")]
-    public void decimal_value_with_culture_decimal_comma_is_read_as_before(string cultureName)
+    [InlineData("en-US")]
+    public void decimal_value_with_decimal_comma_is_not_accepted(string cultureName)
     {
         var input = """Rating > 4,5""";
 
-        var filterExpression = WithCulture(cultureName, () => FilterParser.ParseFilter<TestingPerson>(input));
-
-        filterExpression.ToDisplayString().Should().Be("x => (x.Rating > 45)");
-    }
-
-    [Fact]
-    public void decimal_value_with_decimal_comma_is_not_accepted_in_a_culture_with_decimal_point()
-    {
-        var input = """Rating > 4,5""";
-
-        var act = () => WithCulture("en-US", () => FilterParser.ParseFilter<TestingPerson>(input));
+        var act = () => WithCulture(cultureName, () => FilterParser.ParseFilter<TestingPerson>(input));
 
         act.Should().Throw<QueryKitException>();
     }
