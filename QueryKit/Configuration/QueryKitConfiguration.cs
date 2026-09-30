@@ -73,6 +73,7 @@ public class QueryKitConfiguration : IQueryKitConfiguration, IQueryKitParseLimit
     public int MaxInputLength { get; set; }
     public CaseInsensitiveMode CaseInsensitiveComparison { get; set; }
     public bool ParameterizeFilterValues { get; set; }
+    public IgnoredClauseBehavior IgnoredClauseBehavior { get; set; }
 
     public QueryKitConfiguration(Action<QueryKitSettings> configureSettings)
     {
@@ -115,5 +116,6 @@ public class QueryKitConfiguration : IQueryKitConfiguration, IQueryKitParseLimit
         MaxInputLength = settings.MaxInputLength;
         CaseInsensitiveComparison = settings.CaseInsensitiveComparison;
         ParameterizeFilterValues = settings.ParameterizeFilterValues;
+        IgnoredClauseBehavior = settings.IgnoredClauseBehavior;
     }
 }
