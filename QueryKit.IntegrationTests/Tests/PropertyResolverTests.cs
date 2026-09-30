@@ -12,6 +12,33 @@ using WebApiTestProject.Entities;
 public class PropertyResolverTests : TestBase
 {
     [Fact]
+    public async Task unknown_property_clause_under_or_is_true_by_default()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var title = new Faker().Lorem.Sentence();
+        var fakePerson = new FakeTestingPersonBuilder()
+            .WithTitle(title)
+            .WithAge(30)
+            .Build();
+        await testingServiceScope.InsertAsync(fakePerson);
+
+        var input = $"""Title == "{title}" && (Nope == "x" || Age > 100)""";
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.AllowUnknownProperties = true;
+        });
+
+        // Act
+        var people = await testingServiceScope.DbContext().People
+            .ApplyQueryKitFilter(input, config)
+            .ToListAsync();
+
+        // Assert
+        people.Should().ContainSingle(x => x.Id == fakePerson.Id);
+    }
+
+    [Fact]
     public async Task unknown_property_clause_under_or_does_not_return_every_row()
     {
         // Arrange
@@ -26,6 +53,7 @@ public class PropertyResolverTests : TestBase
         var input = $"""Title == "{title}" && (Nope == "x" || Age > 100)""";
         var config = new QueryKitConfiguration(config =>
         {
+            config.IgnoredClauseBehavior = IgnoredClauseBehavior.Remove;
             config.AllowUnknownProperties = true;
         });
 
@@ -54,6 +82,7 @@ public class PropertyResolverTests : TestBase
         var input = $"""Title == "{title}" && (Rating == 1 || Age > 100)""";
         var config = new QueryKitConfiguration(config =>
         {
+            config.IgnoredClauseBehavior = IgnoredClauseBehavior.Remove;
             config.Property<TestingPerson>(x => x.Rating).PreventFilter();
         });
 
@@ -82,6 +111,7 @@ public class PropertyResolverTests : TestBase
         var input = $"""Title == "{title}" && (first == "Paul" || Age > 100)""";
         var config = new QueryKitConfiguration(config =>
         {
+            config.IgnoredClauseBehavior = IgnoredClauseBehavior.Remove;
             config.Property<TestingPerson>(x => x.FirstName).HasQueryName("first").PreventFilter().PreventSort();
         });
 
@@ -138,6 +168,7 @@ public class PropertyResolverTests : TestBase
         var input = $"""Title == "{title}" && (FirstName == LastName || Age > 100)""";
         var config = new QueryKitConfiguration(config =>
         {
+            config.IgnoredClauseBehavior = IgnoredClauseBehavior.Remove;
             config.Property<TestingPerson>(x => x.LastName).PreventFilter();
         });
 
@@ -398,6 +429,7 @@ public class PropertyResolverTests : TestBase
         var input = $"""Title == "{title}" && ((Nope + 1) > 3 || Age > 100)""";
         var config = new QueryKitConfiguration(config =>
         {
+            config.IgnoredClauseBehavior = IgnoredClauseBehavior.Remove;
             config.AllowUnknownProperties = true;
         });
 

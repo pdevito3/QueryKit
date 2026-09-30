@@ -689,7 +689,7 @@ public static class FilterParser
                 var rightArithmetic = ResolveArithmeticProperties(temp.rightSide, typeof(T), config);
                 if (leftArithmetic == null || rightArithmetic == null)
                 {
-                    return RemovedClauseExpression.Instance;
+                    return IgnoredClause(config);
                 }
 
                 var leftExpr = leftArithmetic.ToLinqExpression(parameter, typeof(T));
@@ -808,7 +808,7 @@ public static class FilterParser
                 {
                     if (!temp.reference.CanFilter)
                     {
-                        return RemovedClauseExpression.Instance;
+                        return IgnoredClause(config);
                     }
 
                     return CreateCustomOperationExpression<T>(parameter, temp.reference.Mapping!, temp.op, temp.right);
@@ -816,13 +816,13 @@ public static class FilterParser
 
                 if (temp.reference.Kind == PropertyReferenceKind.Unknown)
                 {
-                    return RemovedClauseExpression.Instance;
+                    return IgnoredClause(config);
                 }
 
                 var leftExpr = CreateLeftExpr(parameter, temp.reference, config);
                 if (leftExpr is RemovedClauseExpression)
                 {
-                    return leftExpr;
+                    return IgnoredClause(config);
                 }
 
                 if (leftExpr.Type == typeof(Guid) || leftExpr.Type == typeof(Guid?))
@@ -854,7 +854,7 @@ public static class FilterParser
                 {
                     if (!PropertyResolver.Resolve(parameter.Type, temp.right, config).CanFilter)
                     {
-                        return RemovedClauseExpression.Instance;
+                        return IgnoredClause(config);
                     }
 
                     var rightPropertyExpr = CreateRightPropertyExpr<T>(parameter, temp.right, config);
@@ -1186,8 +1186,8 @@ public static class FilterParser
                             : Expression.OrElse(result, comparison);
                 }
 
-                // If all properties were filtered out, remove the clause
-                return result ?? RemovedClauseExpression.Instance;
+                // If all properties were filtered out, the clause is ignored. v1.14.2 used true here, not true == true.
+                return result ?? (RemovesIgnoredClauses(config) ? RemovedClauseExpression.Instance : Expression.Constant(true));
             });
     }
     
@@ -1222,6 +1222,15 @@ public static class FilterParser
             AndExprParser<T>(parameter, config),
             CombineClauses<T>
         );
+
+    private static bool RemovesIgnoredClauses(IQueryKitConfiguration? config)
+        => config is QueryKitConfiguration { IgnoredClauseBehavior: IgnoredClauseBehavior.Remove };
+
+    // A clause on a prevented or unknown property. By default it becomes true == true, the same as v1.14.2.
+    private static Expression IgnoredClause(IQueryKitConfiguration? config)
+        => RemovesIgnoredClauses(config)
+            ? RemovedClauseExpression.Instance
+            : Expression.Equal(Expression.Constant(true), Expression.Constant(true));
 
     // A removed clause has no effect, so the operator keeps only the other side
     private static Expression CombineClauses<T>(LogicalOperator op, Expression left, Expression right)

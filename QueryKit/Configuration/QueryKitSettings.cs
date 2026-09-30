@@ -49,6 +49,12 @@ public class QueryKitSettings
     /// </summary>
     public bool ParameterizeFilterValues { get; set; }
 
+    /// <summary>
+    /// What the filter parser does with a clause on a prevented or unknown property. The default is
+    /// <see cref="Configuration.IgnoredClauseBehavior.ReplaceWithTrue"/>, the same as v1.14.2.
+    /// </summary>
+    public IgnoredClauseBehavior IgnoredClauseBehavior { get; set; } = IgnoredClauseBehavior.ReplaceWithTrue;
+
     public QueryKitPropertyMapping<TModel> Property<TModel>(Expression<Func<TModel, object>>? propertySelector)
     {
         return PropertyMappings.Property(propertySelector);
