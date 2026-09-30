@@ -173,7 +173,7 @@ public class CustomFilterPropertyTests
         });
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
         filterExpression.ToDisplayString().Should()
-            .Be("""x => value(System.Collections.Generic.List`1[System.String]).Contains(x.Title)""");
+            .Be("""x => value(QueryKit.InListValues`1[System.String]).Contains(x.Title)""");
     }
 
     [Theory]
