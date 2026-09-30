@@ -925,18 +925,71 @@ public static class FilterParser
     private static Parser<PropertyReference> CreateLeftExprParser(Type entityType, IQueryKitConfiguration? config)
     {
         var leftPropertyParser = IdentifierPathParser.Token();
-
-        return leftPropertyParser.Select(left =>
+        var queryNameParser = DerivedOrCustomOperationQueryNameParser(config).Token();
+        return input =>
         {
-            var reference = PropertyResolver.Resolve(entityType, left, config);
-            if (reference.Kind == PropertyReferenceKind.Unknown && config?.AllowUnknownProperties != true)
+            var left = leftPropertyParser(input);
+            var reference = left.WasSuccessful ? PropertyResolver.Resolve(entityType, left.Value, config) : null;
+            if (reference != null && (reference.Kind != PropertyReferenceKind.Unknown || config?.AllowUnknownProperties == true))
             {
-                throw new UnknownFilterPropertyException(reference.UnknownSegment!);
+                return Result.Success(reference, left.Remainder);
             }
 
-            return reference;
-        });
+            // v1.14.2 did not accept the text here, so a derived property or custom operation query name can not change an accepted filter.
+            var queryName = queryNameParser(input);
+            if (queryName.WasSuccessful)
+            {
+                return Result.Success(PropertyResolver.Resolve(entityType, queryName.Value, config), queryName.Remainder);
+            }
+
+            if (reference == null)
+            {
+                return Result.Failure<PropertyReference>(left.Remainder, left.Message, left.Expectations);
+            }
+
+            throw new UnknownFilterPropertyException(reference.UnknownSegment!);
+        };
     }
+
+    // The rewrite before the parse does not replace the query name of a derived property or a custom operation,
+    // so the grammar reads it when the identifier path is not a property. This lets the query name hold any text (for example `full-name` or `full name`).
+    // Longer query names are tried first, so a query name that starts with another query name still matches.
+    private static Parser<string> DerivedOrCustomOperationQueryNameParser(IQueryKitConfiguration? config)
+    {
+        Parser<string> parser = i => Result.Failure<string>(i, "no query name", Array.Empty<string>());
+        var mappings = config?.PropertyMappings;
+        if (mappings == null)
+        {
+            return parser;
+        }
+
+        var queryNames = mappings.DerivedPropertyMappings.Values.Concat(mappings.CustomOperationMappings.Values)
+            .Select(info => info.QueryName)
+            .Where(queryName => !string.IsNullOrEmpty(queryName))
+            .Select(queryName => queryName!)
+            .Distinct(StringComparer.InvariantCultureIgnoreCase)
+            .OrderByDescending(queryName => queryName.Length);
+        foreach (var queryName in queryNames)
+        {
+            parser = parser.Or(WholeQueryName(queryName));
+        }
+
+        return parser;
+    }
+
+    // A query name is a whole name: the next character can not continue a property path.
+    private static Parser<string> WholeQueryName(string queryName) => input =>
+    {
+        var result = Parse.IgnoreCase(queryName).Text()(input);
+        if (!result.WasSuccessful || result.Remainder.AtEnd || !IsPropertyPathChar(result.Remainder.Current))
+        {
+            return result;
+        }
+
+        return Result.Failure<string>(input, $"Query name '{queryName}' must not be followed by '{result.Remainder.Current}'", new[] { queryName });
+    };
+
+    private static bool IsPropertyPathChar(char c) => char.IsLetterOrDigit(c) || c == '_' || c == '.';
 
     private static Expression CreateLeftExpr(ParameterExpression parameter, PropertyReference reference, IQueryKitConfiguration? config)
     {

@@ -542,7 +542,7 @@ public class PropertyResolverTests
     }
 
     [Fact]
-    public void derived_property_query_name_with_a_hyphen_throws()
+    public void derived_property_query_name_with_a_hyphen_resolves_to_its_expression()
     {
         var input = """full-name == "Ann Lee" """;
         var config = new QueryKitConfiguration(config =>
@@ -550,9 +550,37 @@ public class PropertyResolverTests
             config.DerivedProperty<TestingPerson>(x => x.FirstName + " " + x.LastName).HasQueryName("full-name");
         });
 
-        var act = () => FilterParser.ParseFilter<TestingPerson>(input, config);
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
 
-        act.Should().ThrowExactly<UnknownFilterPropertyException>().WithMessage("*'full'*");
+        filterExpression.ToDisplayString().Should().Be("""x => (((x.FirstName + " ") + x.LastName) == "Ann Lee")""");
+    }
+
+    [Fact]
+    public void custom_operation_query_name_with_a_space_resolves_to_its_operation()
+    {
+        var input = """is adult == true""";
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.CustomOperation<TestingPerson>((x, op, value) => x.Age > 17).HasQueryName("is adult");
+        });
+
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+
+        filterExpression.ToDisplayString().Should().Be("x => Invoke((entity, op, value) => (Convert(entity, TestingPerson).Age > Convert(17, Nullable`1)), Convert(x, Object), ==, True)");
+    }
+
+    [Fact]
+    public void derived_property_query_name_does_not_match_the_start_of_a_longer_name()
+    {
+        var input = """FirstName == "Ann" """;
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.DerivedProperty<TestingPerson>(x => x.FirstName + " " + x.LastName).HasQueryName("first");
+        });
+
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+
+        filterExpression.ToDisplayString().Should().Be("""x => (x.FirstName == "Ann")""");
     }
 
     [Fact]
