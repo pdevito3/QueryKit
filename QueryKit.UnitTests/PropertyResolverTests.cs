@@ -90,7 +90,7 @@ public class PropertyResolverTests
         var config = new QueryKitConfiguration(config =>
         {
             config.IgnoredClauseBehavior = IgnoredClauseBehavior.ReplaceWithTrue;
-            config.Property<TestingPerson>(x => x.Age).PreventFilter();
+            config.Property<TestingPerson>(x => x.Age!).PreventFilter();
         });
 
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
@@ -106,7 +106,7 @@ public class PropertyResolverTests
         var config = new QueryKitConfiguration(config =>
         {
             config.IgnoredClauseBehavior = IgnoredClauseBehavior.ReplaceWithTrue;
-            config.Property<TestingPerson>(x => x.Rating).PreventFilter();
+            config.Property<TestingPerson>(x => x.Rating!).PreventFilter();
         });
 
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
@@ -121,7 +121,7 @@ public class PropertyResolverTests
         var config = new QueryKitConfiguration(config =>
         {
             config.IgnoredClauseBehavior = IgnoredClauseBehavior.ReplaceWithTrue;
-            config.Property<TestingPerson>(x => x.Title).PreventFilter();
+            config.Property<TestingPerson>(x => x.Title!).PreventFilter();
         });
 
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
@@ -409,6 +409,21 @@ public class PropertyResolverTests
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
 
         filterExpression.ToDisplayString().Should().Be("x => (x.Age > 100)");
+    }
+
+    [Fact]
+    public void prevented_custom_operation_is_true_equals_true_when_replaced()
+    {
+        var input = """adult == true || Age > 100""";
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.IgnoredClauseBehavior = IgnoredClauseBehavior.ReplaceWithTrue;
+            config.CustomOperation<TestingPerson>((x, op, value) => x.Age > 17).HasQueryName("adult").PreventFilter();
+        });
+
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+
+        filterExpression.ToDisplayString().Should().Be("x => ((True == True) OrElse (x.Age > 100))");
     }
 
     [Fact]
