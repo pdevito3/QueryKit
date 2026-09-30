@@ -421,7 +421,7 @@ public class PropertyResolverTests
     }
 
     [Fact]
-    public void alias_replacement_does_not_replace_a_query_name_in_a_nested_path()
+    public void alias_replacement_replaces_a_query_name_in_a_nested_path()
     {
         var config = new QueryKitConfiguration(config =>
         {
@@ -430,7 +430,7 @@ public class PropertyResolverTests
 
         var input = config.PropertyMappings.ReplaceAliasesWithPropertyPaths("""Author.Name == "x" && name == "y" """);
 
-        input.Should().Be("""Author.Name == "x" && Title == "y" """);
+        input.Should().Be("""Author.Title == "x" && Title == "y" """);
     }
 
     [Fact]
