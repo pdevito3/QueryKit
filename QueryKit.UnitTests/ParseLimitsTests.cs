@@ -108,21 +108,9 @@ public class ParseLimitsTests
     }
 
     [Fact]
-    public void configuration_that_implements_only_the_interface_has_no_limits()
+    public void configuration_that_implements_the_interface_uses_its_own_limits()
     {
-        var config = new FilterBehaviorInterfaceTests.InterfaceOnlyConfiguration();
-
-        var deep = new string('(', 33) + """Title == "salt" """ + new string(')', 33);
-        FilterParser.ParseFilter<TestingPerson>(deep, config).Should().NotBeNull();
-
-        var longInput = $"""Title == "{new string('a', 5000)}" """;
-        FilterParser.ParseFilter<TestingPerson>(longInput, config).Should().NotBeNull();
-    }
-
-    [Fact]
-    public void configuration_that_implements_the_parse_limits_uses_its_own_limits()
-    {
-        var config = new InterfaceOnlyConfigurationWithLimits { MaxNestingDepth = 2, MaxInputLength = 100 };
+        var config = new FilterBehaviorInterfaceTests.InterfaceOnlyConfiguration { MaxNestingDepth = 2, MaxInputLength = 100 };
         var input = new string('(', 3) + """Title == "salt" """ + new string(')', 3);
 
         var act = () => FilterParser.ParseFilter<TestingPerson>(input, config);
@@ -231,12 +219,17 @@ public class ParseLimitsTests
             .Which.Message.Should().Contain("depth of 11");
     }
 
+    [Fact]
+    public void configuration_that_implements_the_interface_uses_its_own_input_length()
+    {
+        var config = new FilterBehaviorInterfaceTests.InterfaceOnlyConfiguration { MaxNestingDepth = 32, MaxInputLength = 10 };
+        var input = """Title == "salt and pepper" """;
+
+        var act = () => FilterParser.ParseFilter<TestingPerson>(input, config);
+        act.Should().Throw<QueryKitInputLengthExceededException>()
+            .WithMessage($"*length of {input.Length}*maximum allowed length of 10*");
+    }
+
     private static QueryKitConfiguration DepthLimit(int maxNestingDepth)
         => new(settings => settings.MaxNestingDepth = maxNestingDepth);
-
-    private sealed class InterfaceOnlyConfigurationWithLimits : FilterBehaviorInterfaceTests.InterfaceOnlyConfiguration, IQueryKitParseLimits
-    {
-        public int MaxNestingDepth { get; set; }
-        public int MaxInputLength { get; set; }
-    }
 }
