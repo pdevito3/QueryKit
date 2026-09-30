@@ -25,9 +25,10 @@ Preconditions:
 
 - A run is up and `qk doctor` prints only `ok` lines.
 - The seed data matches `features/README.md`.
-- `qk configs` lists `aliases`, `derived`, `custom-operation`, `word-operators`, `allow-unknown`, `max-depth-0`, and `upper`.
+- `qk configs` lists `aliases`, `loose-names`, `derived`, `custom-operation`, `word-operators`, `allow-unknown`, `max-depth-0`, and `upper`.
 
 - **Query names.** Run `qk run configuration-query-name --config aliases --filter 'chef == "Julia Child" && name _= "S"'`. Both targets give `["Salt Bread"]`.
+- **Query names that are not identifiers.** Run `qk run configuration-loose-query-names --config loose-names --filter 'recipe-title == "Pancakes" || _stars > 4 || chef name == "Gordon Ramsay"'`. Both targets give `["Pancakes", "Beef Stew"]`.
 - **Prevent filter.** Run `qk run configuration-prevent-filter --config aliases --filter 'Rating > 1'`. Exit `0`. Both targets give all four recipes. The `expression` is `x => (True == True)`.
 - **Prevent sort.** Run `qk run configuration-prevent-sort --config aliases --sort 'Price'`. Exit `0`. Both targets give the seed order `["Pancakes", "Beef Stew", "Salt Bread", "Plain Water"]`, not the price order.
 - **Derived properties.** Run `qk run configuration-derived --config derived --filter 'headline @=* "julia" && top_rated == true'`. Both targets give `Pancakes` and `Salt Bread`. The `sql` contains `|| ' by ' ||`.

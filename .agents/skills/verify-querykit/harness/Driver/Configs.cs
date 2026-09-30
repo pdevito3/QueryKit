@@ -21,6 +21,14 @@ public static class Configs
                 s.Property<Recipe>(x => x.Price).PreventSort();
             })),
 
+        ["loose-names"] = ("HasQueryName with text that is not an identifier: Title->recipe-title, Rating->_stars, Author.Name->chef name.",
+            () => new QueryKitConfiguration(s =>
+            {
+                s.Property<Recipe>(x => x.Title).HasQueryName("recipe-title");
+                s.Property<Recipe>(x => x.Rating).HasQueryName("_stars");
+                s.Property<Recipe>(x => x.Author.Name).HasQueryName("chef name");
+            })),
+
         ["derived"] = ("DerivedProperty: headline = Title + \" by \" + Author.Name, top_rated = Rating >= 4.",
             () => new QueryKitConfiguration(s =>
             {

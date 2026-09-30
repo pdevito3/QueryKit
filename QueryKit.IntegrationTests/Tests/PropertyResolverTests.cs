@@ -409,4 +409,34 @@ public class PropertyResolverTests : TestBase
         // Assert
         people.Should().BeEmpty();
     }
+
+    [Theory]
+    [InlineData("first-name")]
+    [InlineData("_first")]
+    [InlineData("first name")]
+    public async Task query_name_that_is_not_a_plain_identifier_filters_by_its_property(string queryName)
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var firstName = new Faker().Lorem.Sentence();
+        var fakePerson = new FakeTestingPersonBuilder()
+            .WithFirstName(firstName)
+            .Build();
+        await testingServiceScope.InsertAsync(fakePerson);
+
+        var input = $"""{queryName} == "{firstName}" """;
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.FirstName).HasQueryName(queryName);
+        });
+
+        // Act
+        var people = await testingServiceScope.DbContext().People
+            .ApplyQueryKitFilter(input, config)
+            .ToListAsync();
+
+        // Assert
+        people.Should().ContainSingle();
+        people[0].Id.Should().Be(fakePerson.Id);
+    }
 }

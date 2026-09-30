@@ -98,16 +98,48 @@ public static class FilterParser
         from rest in Parse.LetterOrDigit.XOr(Parse.Char('_')).Many()
         select new string(first.Concat(rest).ToArray());
 
+    private static readonly Parser<string> IdentifierPathParser =
+        Identifier.DelimitedBy(Parse.Char('.')).Select(parts => string.Join(".", parts));
+
+    // A property is a configured query name or a path of identifiers. Query names are matched in the grammar,
+    // so a query name can hold any text (e.g. `first-name`, `_first`, or `first name`) and text inside quoted values is never changed.
+    // Longer query names are tried first so a query name that starts with another query name (e.g. `first` and `first name`) still matches.
+    private static Parser<string> PropertyPathParser(IQueryKitConfiguration? config)
+    {
+        Parser<string> parser = i => Result.Failure<string>(i, "no query name", Array.Empty<string>());
+        var queryNames = config?.PropertyMappings?.QueryNames ?? Enumerable.Empty<string>();
+        foreach (var queryName in queryNames.OrderByDescending(x => x.Length))
+        {
+            parser = parser.Or(QueryName(queryName));
+        }
+
+        return parser.Or(IdentifierPathParser);
+    }
+
+    // A query name is a whole name: the next character can not continue a property path.
+    private static Parser<string> QueryName(string queryName) => input =>
+    {
+        var result = Parse.IgnoreCase(queryName).Text()(input);
+        if (!result.WasSuccessful || result.Remainder.AtEnd || !IsPropertyPathChar(result.Remainder.Current))
+            return result;
+
+        return Result.Failure<string>(input, $"Query name '{queryName}' must not be followed by '{result.Remainder.Current}'", new[] { queryName });
+    };
+
+    private static bool IsPropertyPathChar(char c) => char.IsLetterOrDigit(c) || c == '_' || c == '.';
+
+    private static Parser<IEnumerable<string>> PropertyListParser(Parser<string> propertyPathParser)
+    {
+        var propertiesParser = propertyPathParser.Token().DelimitedBy(Parse.Char(',').Token());
+        return from openParen in Parse.Char('(')
+               from properties in propertiesParser
+               from closeParen in Parse.Char(')')
+               select properties;
+    }
+
     // Each parser is built once. A parser in a second or later `from` clause is built in a lambda
     // that runs on each parse, so keep those parsers in fields too. A field can only use fields that
     // are declared above it, so the recursive arithmetic parser goes through Parse.Ref.
-    private static readonly Parser<IEnumerable<IEnumerable<string>>> PropertyListParser =
-        from openParen in Parse.Char('(')
-        from properties in Identifier.DelimitedBy(Parse.Char('.')).Token()
-                                    .DelimitedBy(Parse.Char(',').Token())
-        from closeParen in Parse.Char(')')
-        select properties;
-
     private static readonly Parser<string> ComparisonOperatorTextParser =
         Parse.String(ComparisonOperator.EqualsOperator().Operator()).Text()
             .Or(Parse.String(ComparisonOperator.NotEqualsOperator().Operator()).Text())
@@ -970,11 +1002,11 @@ public static class FilterParser
 
     private static Parser<PropertyReference> CreateLeftExprParser(Type entityType, IQueryKitConfiguration? config)
     {
-        var leftIdentifierParser = Identifier.DelimitedBy(Parse.Char('.')).Token();
+        var leftPropertyParser = PropertyPathParser(config).Token();
 
-        return leftIdentifierParser.Select(left =>
+        return leftPropertyParser.Select(left =>
         {
-            var reference = PropertyResolver.Resolve(entityType, string.Join(".", left), config);
+            var reference = PropertyResolver.Resolve(entityType, left, config);
             if (reference.Kind == PropertyReferenceKind.Unknown && config?.AllowUnknownProperties != true)
             {
                 throw new UnknownFilterPropertyException(reference.UnknownSegment!);
@@ -1113,7 +1145,7 @@ public static class FilterParser
         var comparisonOperatorParser = ComparisonOperatorParser(config).Token();
         var rightSideValueParser = RightSideValueParser.Token();
 
-        return PropertyListParser
+        return PropertyListParser(PropertyPathParser(config))
             .SelectMany(properties => comparisonOperatorParser,
                 (properties, op) => new { properties, op })
             .SelectMany(temp => rightSideValueParser,
@@ -1131,11 +1163,8 @@ public static class FilterParser
                 // we use AND instead of OR so that all properties must NOT match
                 var isNegativeOperator = temp.op.Operator().StartsWith("!") || temp.op.Operator().Contains("!=");
 
-                foreach (var propertyPath in temp.properties)
+                foreach (var fullPropPath in temp.properties)
                 {
-                    var propertyPathList = propertyPath.ToList();
-                    var fullPropPath = string.Join(".", propertyPathList);
-
                     // Build expression for each property. A property list does not support custom operations.
                     var reference = PropertyResolver.Resolve(parameter.Type, fullPropPath, config);
                     if (!reference.CanFilter)
