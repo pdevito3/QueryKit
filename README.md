@@ -794,6 +794,44 @@ var config = new QueryKitConfiguration(config =>
 
 Setting `MaxPropertyDepth = 0` only allows root-level properties. A `null` value (default) allows unlimited depth.
 
+#### Parameterize Filter Values
+
+By default (`ParameterizeFilterValues = false`), QueryKit writes each filter value into the SQL as a literal constant. Set `ParameterizeFilterValues` to `true` to send filter values as SQL parameters instead. Parameters let EF Core reuse one compiled query and one database plan across calls that differ only in their filter values.
+
+```csharp
+var config = new QueryKitConfiguration(config =>
+{
+    config.ParameterizeFilterValues = true;
+});
+var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
+```
+
+#### Ignored Clause Behavior
+
+`IgnoredClauseBehavior` controls what QueryKit does with a clause on a property that has `PreventFilter`, or on an unknown property when `AllowUnknownProperties` is `true`. The default is `IgnoredClauseBehavior.ReplaceWithTrue`, which replaces the clause with `true == true` so the rest of the expression keeps its shape. Set it to `IgnoredClauseBehavior.Remove` to drop the clause instead, so a logical operator with a removed side keeps only its other side.
+
+```csharp
+var config = new QueryKitConfiguration(config =>
+{
+    config.AllowUnknownProperties = true;
+    config.IgnoredClauseBehavior = IgnoredClauseBehavior.Remove;
+});
+var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
+```
+
+#### Parse Limits
+
+`IQueryKitParseLimits` caps how much a filter string can do before QueryKit parses it, through `MaxInputLength` (default `5000` characters) and `MaxNestingDepth` (default `32` levels of parentheses). A filter string that goes over either limit throws before parsing starts. This protects an application that accepts filter strings from an external caller.
+
+```csharp
+var config = new QueryKitConfiguration(config =>
+{
+    config.MaxInputLength = 500;
+    config.MaxNestingDepth = 5;
+});
+var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
+```
+
 ### Nested Objects
 
 Say we have a nested object like this:
