@@ -320,6 +320,140 @@ public class PropertyResolverTests
         filterExpression.ToDisplayString().Should().Contain("x.Rating");
     }
 
+    [Theory]
+    [InlineData("first-name")]
+    [InlineData("_first")]
+    [InlineData("first name")]
+    [InlineData("person.first")]
+    [InlineData("first_name")]
+    public void query_name_that_is_not_a_plain_identifier_resolves_to_its_property(string queryName)
+    {
+        var input = $"""{queryName} == "Ann" """;
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.FirstName).HasQueryName(queryName);
+        });
+
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+
+        filterExpression.ToDisplayString().Should().Be("""x => (x.FirstName == "Ann")""");
+    }
+
+    [Fact]
+    public void query_name_with_a_hyphen_resolves_in_every_case()
+    {
+        var input = """FIRST-NAME == "Ann" """;
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.FirstName).HasQueryName("first-name");
+        });
+
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+
+        filterExpression.ToDisplayString().Should().Be("""x => (x.FirstName == "Ann")""");
+    }
+
+    [Fact]
+    public void query_name_with_a_hyphen_in_a_value_is_not_replaced()
+    {
+        var input = """Title == "first-name == x" """;
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.FirstName).HasQueryName("first-name");
+        });
+
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+
+        filterExpression.ToDisplayString().Should().Be("""x => (x.Title == "first-name == x")""");
+    }
+
+    [Fact]
+    public void query_name_on_the_right_side_is_a_value()
+    {
+        var input = """Title == first""";
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.FirstName).HasQueryName("first");
+        });
+
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+
+        filterExpression.ToDisplayString().Should().Be("""x => (x.Title == "first")""");
+    }
+
+    [Fact]
+    public void query_name_with_a_hyphen_sorts_by_its_property()
+    {
+        var input = "first-name desc";
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.FirstName).HasQueryName("first-name");
+        });
+
+        var sortExpressions = SortParser.ParseSort<TestingPerson>(input, config);
+
+        sortExpressions.Should().ContainSingle();
+        sortExpressions[0].Expression!.ToString().Should().Be("x => Convert(x.FirstName, Object)");
+        sortExpressions[0].IsAscending.Should().BeFalse();
+    }
+
+    [Fact]
+    public void longer_query_name_wins_over_a_query_name_it_starts_with()
+    {
+        var input = """first name == "Ann" && first == "Lee" """;
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.FirstName).HasQueryName("first name");
+            config.Property<TestingPerson>(x => x.LastName).HasQueryName("first");
+        });
+
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+
+        filterExpression.ToDisplayString().Should().Be("""x => ((x.FirstName == "Ann") AndAlso (x.LastName == "Lee"))""");
+    }
+
+    [Fact]
+    public void query_name_does_not_match_the_start_of_a_longer_property_name()
+    {
+        var input = """FirstName == "Ann" """;
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.Title).HasQueryName("first");
+        });
+
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+
+        filterExpression.ToDisplayString().Should().Be("""x => (x.FirstName == "Ann")""");
+    }
+
+    [Fact]
+    public void query_name_with_a_hyphen_in_a_property_list_resolves_to_its_property()
+    {
+        var input = """(first-name, Title) == "x" """;
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.FirstName).HasQueryName("first-name");
+        });
+
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+
+        filterExpression.ToDisplayString().Should().Be("""x => ((x.FirstName == "x") OrElse (x.Title == "x"))""");
+    }
+
+    [Fact]
+    public void derived_property_query_name_with_a_hyphen_resolves_to_its_expression()
+    {
+        var input = """full-name == "Ann Lee" """;
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.DerivedProperty<TestingPerson>(x => x.FirstName + " " + x.LastName).HasQueryName("full-name");
+        });
+
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+
+        filterExpression.ToDisplayString().Should().Be("""x => (((x.FirstName + " ") + x.LastName) == "Ann Lee")""");
+    }
+
     [Fact]
     public void query_name_in_a_value_is_not_replaced()
     {
