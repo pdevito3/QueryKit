@@ -3,6 +3,7 @@ namespace QueryKit.IntegrationTests.Tests;
 using System.Globalization;
 using System.Linq.Expressions;
 using Configuration;
+using Exceptions;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Operators;
@@ -319,5 +320,23 @@ public class FilterParsingRegressionTests : TestBase
 
         // Assert
         recipes.Select(x => x.Title[prefix.Length..]).Should().BeEquivalentTo(expectedTitles);
+    }
+
+    [Theory]
+    [InlineData("""Age == "abc" """)]
+    [InlineData("""Age == abc""")]
+    [InlineData("""Rating > "abc" """)]
+    [InlineData("""Rating > abc""")]
+    public async Task invalid_value_throws_parsing_exception(string input)
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var act = async () => await queryablePeople.ApplyQueryKitFilter(input).ToListAsync();
+
+        // Assert
+        await act.Should().ThrowAsync<ParsingException>();
     }
 }

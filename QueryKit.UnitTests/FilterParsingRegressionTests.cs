@@ -286,6 +286,41 @@ public class FilterParsingRegressionTests
         result.Select(x => x.Title).Should().BeEquivalentTo(expectedTitles);
     }
 
+    [Theory]
+    [InlineData("""Age == "abc" """)]
+    [InlineData("""Age == abc""")]
+    [InlineData("""Rating > "abc" """)]
+    [InlineData("""Rating > abc""")]
+    [InlineData("""Age == 99999999999""")]
+    [InlineData("""Id == "abc" """)]
+    [InlineData("""SpecificDateTime == "abc" """)]
+    [InlineData("""Favorite == "abc" """)]
+    [InlineData("""Age ^^ ["abc"]""")]
+    public void invalid_value_throws_parsing_exception(string input)
+    {
+        var act = () => FilterParser.ParseFilter<TestingPerson>(input);
+
+        act.Should().Throw<ParsingException>();
+    }
+
+    [Theory]
+    [InlineData("Age sideways")]
+    [InlineData("Title, Age up")]
+    public void invalid_sort_direction_throws_query_kit_parsing_exception(string input)
+    {
+        var act = () => SortParser.ParseSort<TestingPerson>(input);
+
+        act.Should().Throw<QueryKitParsingException>().WithMessage("Invalid direction: *");
+    }
+
+    [Fact]
+    public void unknown_logical_operator_throws_query_kit_parsing_exception()
+    {
+        var act = () => LogicalOperator.GetByOperatorString("xor");
+
+        act.Should().Throw<QueryKitParsingException>().WithMessage("Operator xor is not supported");
+    }
+
     private static TResult WithCulture<TResult>(string cultureName, Func<TResult> action)
     {
         var originalCulture = CultureInfo.CurrentCulture;

@@ -52,7 +52,7 @@ public static class SortParser
 
         if (direction != Ascending && direction != Descending)
         {
-            throw new ArgumentException($"Invalid direction: {direction}. Allowed values are '{Ascending}' and '{Descending}'.");
+            throw new QueryKitParsingException($"Invalid direction: {direction}. Allowed values are '{Ascending}' and '{Descending}'.");
         }
 
         var propertyPath = config?.GetPropertyPathByQueryName(propertyName) ?? propertyName;
