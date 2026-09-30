@@ -556,12 +556,39 @@ public class FilterParserTests
     }
 
     [Fact]
-    public void child_collection_member_resolves_in_any_case()
+    public void child_collection_member_in_another_case_throws()
     {
         var input = """ingredients.name == "flour" """;
-        var filterExpression = FilterParser.ParseFilter<Recipe>(input);
-        filterExpression.ToDisplayString().Should()
-            .Be(""""x => x.Ingredients.Select(y => y.Name).Any(z => (z == "flour"))"""");
+        var act = () => FilterParser.ParseFilter<Recipe>(input);
+        act.Should().ThrowExactly<NullReferenceException>();
+    }
+
+    [Fact]
+    public void unknown_child_collection_member_throws_when_unknown_properties_are_allowed()
+    {
+        var input = """Ingredients.Nope == "flour" """;
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.AllowUnknownProperties = true;
+        });
+        var act = () => FilterParser.ParseFilter<Recipe>(input, config);
+        act.Should().ThrowExactly<NullReferenceException>();
+    }
+
+    [Fact]
+    public void member_after_a_child_collection_member_resolves_in_any_case()
+    {
+        var input = """Ingredients.Preparations.text == "sifted" """;
+        var act = () => FilterParser.ParseFilter<Recipe>(input);
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void nested_child_collection_member_in_another_case_throws()
+    {
+        var input = """Ingredients.preparations.Text == "sifted" """;
+        var act = () => FilterParser.ParseFilter<Recipe>(input);
+        act.Should().ThrowExactly<NullReferenceException>();
     }
 
     [Fact]

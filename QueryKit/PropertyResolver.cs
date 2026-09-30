@@ -79,20 +79,35 @@ internal static class PropertyResolver
     }
 
     // Matches each segment to a public member, ignoring case. A segment after a collection resolves on the element type.
+    // After a collection, only properties match: the first segment in the exact case, a later segment in any case.
+    // A segment after a collection that does not match throws NullReferenceException.
     private static string? ResolveMemberPath(Type rootType, string path, out string? unknownSegment)
     {
         var memberNames = new List<string>();
         var currentType = rootType;
+        var afterCollection = false;
 
         foreach (var segment in path.Split('.'))
         {
+            var firstAfterCollection = !afterCollection && memberNames.Count > 0 && IsCollection(currentType);
             while (IsCollection(currentType))
             {
                 currentType = currentType.GetGenericArguments()[0];
             }
 
-            var member = (MemberInfo?)currentType.GetProperty(segment, MemberFlags)
+            MemberInfo? member;
+            if (firstAfterCollection || afterCollection)
+            {
+                member = (firstAfterCollection ? currentType.GetProperty(segment) : currentType.GetProperty(segment, MemberFlags))
+                         ?? throw new NullReferenceException();
+                afterCollection = true;
+            }
+            else
+            {
+                member = (MemberInfo?)currentType.GetProperty(segment, MemberFlags)
                          ?? currentType.GetField(segment, MemberFlags);
+            }
+
             if (member == null)
             {
                 unknownSegment = segment;
