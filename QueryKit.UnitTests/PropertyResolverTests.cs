@@ -53,6 +53,84 @@ public class PropertyResolverTests
     }
 
     [Fact]
+    public void unknown_property_clause_is_true_equals_true_under_and()
+    {
+        var input = """Age > 100 && Nope == "x" """;
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.IgnoredClauseBehavior = IgnoredClauseBehavior.ReplaceWithTrue;
+            config.AllowUnknownProperties = true;
+        });
+
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+
+        filterExpression.ToDisplayString().Should().Be("x => ((x.Age > 100) AndAlso (True == True))");
+    }
+
+    [Fact]
+    public void ignored_clause_in_a_group_is_true_equals_true_in_the_group()
+    {
+        var input = """Title == "a" && (Nope == "x" || Age > 100)""";
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.IgnoredClauseBehavior = IgnoredClauseBehavior.ReplaceWithTrue;
+            config.AllowUnknownProperties = true;
+        });
+
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+
+        filterExpression.ToDisplayString().Should().Be(
+            """x => ((x.Title == "a") AndAlso ((True == True) OrElse (x.Age > 100)))""");
+    }
+
+    [Fact]
+    public void prevented_property_in_arithmetic_is_true_equals_true()
+    {
+        var input = """(Age + 0) > 10 || Title == "a" """;
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.IgnoredClauseBehavior = IgnoredClauseBehavior.ReplaceWithTrue;
+            config.Property<TestingPerson>(x => x.Age).PreventFilter();
+        });
+
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+
+        filterExpression.ToDisplayString().Should().Be(
+            """x => ((True == True) OrElse (x.Title == "a"))""");
+    }
+
+    [Fact]
+    public void prevented_property_on_the_right_side_of_arithmetic_is_true_equals_true()
+    {
+        var input = """(Age + 0) > (Rating * 2)""";
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.IgnoredClauseBehavior = IgnoredClauseBehavior.ReplaceWithTrue;
+            config.Property<TestingPerson>(x => x.Rating).PreventFilter();
+        });
+
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+
+        filterExpression.ToDisplayString().Should().Be("x => (True == True)");
+    }
+
+    [Fact]
+    public void prevented_property_on_the_right_side_is_true_equals_true_when_replaced()
+    {
+        var input = """FirstName == Title || Age > 100""";
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.IgnoredClauseBehavior = IgnoredClauseBehavior.ReplaceWithTrue;
+            config.Property<TestingPerson>(x => x.Title).PreventFilter();
+        });
+
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+
+        filterExpression.ToDisplayString().Should().Be(
+            "x => ((True == True) OrElse (x.Age > 100))");
+    }
+
+    [Fact]
     public void unknown_property_clause_is_removed_under_or()
     {
         var input = """Nope == "x" || Age > 100""";
