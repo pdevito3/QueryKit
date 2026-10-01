@@ -56,7 +56,8 @@ public static class SortParser
         }
 
         var propertyPath = config?.GetPropertyPathByQueryName(propertyName) ?? propertyName;
-        if (config != null && config.IsPropertySortable(propertyPath) == false)
+        var reference = PropertyResolver.Resolve(typeof(T), propertyPath, config);
+        if (reference.Kind != PropertyReferenceKind.CustomOperation && !reference.CanSort)
         {
             return new SortExpressionInfo<T>
             {

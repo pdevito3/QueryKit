@@ -769,6 +769,10 @@ public static class FilterParser
             {
                 var leftArithmetic = ResolveArithmeticProperties(temp.leftArithmetic, typeof(T), config);
                 var rightArithmetic = ResolveArithmeticProperties(temp.rightSide, typeof(T), config);
+                if (leftArithmetic == null || rightArithmetic == null)
+                {
+                    return IgnoredClause(config);
+                }
 
                 var leftExpr = leftArithmetic.ToLinqExpression(parameter, typeof(T));
                 var rightExpr = rightArithmetic.ToLinqExpression(parameter, typeof(T));
@@ -779,7 +783,8 @@ public static class FilterParser
     }
     
     // Resolves each property in an arithmetic expression to its member path.
-    private static ArithmeticExpression ResolveArithmeticProperties(ArithmeticExpression expr, Type entityType, IQueryKitConfiguration? config)
+    // Returns null when a property cannot be filtered, because then the parser removes the clause.
+    private static ArithmeticExpression? ResolveArithmeticProperties(ArithmeticExpression expr, Type entityType, IQueryKitConfiguration? config)
     {
         switch (expr)
         {
@@ -790,13 +795,14 @@ public static class FilterParser
                     return property;
                 }
 
-                return new PropertyArithmeticExpression(reference.Path);
+                return reference.CanFilter ? new PropertyArithmeticExpression(reference.Path) : null;
             case BinaryArithmeticExpression binary:
                 var left = ResolveArithmeticProperties(binary.Left, entityType, config);
                 var right = ResolveArithmeticProperties(binary.Right, entityType, config);
-                return new BinaryArithmeticExpression(left, binary.Operator, right);
+                return left == null || right == null ? null : new BinaryArithmeticExpression(left, binary.Operator, right);
             case GroupedArithmeticExpression grouped:
-                return new GroupedArithmeticExpression(ResolveArithmeticProperties(grouped.Inner, entityType, config));
+                var inner = ResolveArithmeticProperties(grouped.Inner, entityType, config);
+                return inner == null ? null : new GroupedArithmeticExpression(inner);
             default:
                 return expr;
         }
@@ -841,11 +847,6 @@ public static class FilterParser
                value.All(c => char.IsLetterOrDigit(c) || c == '_' || c == '.');
     }
 
-    // The filter settings of a left-side property: by its property path after alias replacement, in the exact case, like v1.14.2.
-    // Derived properties and custom operations are not in this lookup.
-    private static QueryKitPropertyInfo? GetFilterPropertyInfo(string text, IQueryKitConfiguration? config)
-        => config?.PropertyMappings?.GetPropertyInfo(text);
-
     private static CaseInsensitiveMode ResolveCaseMode(string? propertyPath, IQueryKitConfiguration? config)
     {
         if (!string.IsNullOrEmpty(propertyPath) && config?.PropertyMappings != null)
@@ -877,6 +878,11 @@ public static class FilterParser
                 var temp = clause with { right = right };
                 if (temp.reference.Kind == PropertyReferenceKind.CustomOperation)
                 {
+                    if (!temp.reference.CanFilter)
+                    {
+                        return IgnoredClause(config);
+                    }
+
                     return CreateCustomOperationExpression<T>(parameter, temp.reference.Mapping!, temp.op, temp.right);
                 }
 
@@ -924,6 +930,11 @@ public static class FilterParser
                 // A quoted string literal is always a value, even when its text matches a property name.
                 if (!temp.rightIsQuotedLiteral && IsPropertyPath(temp.right, parameter.Type))
                 {
+                    if (!PropertyResolver.Resolve(parameter.Type, temp.right, config).CanFilter)
+                    {
+                        return IgnoredClause(config);
+                    }
+
                     var rightPropertyExpr = CreateRightPropertyExpr<T>(parameter, temp.right, config);
                     if (rightPropertyExpr != null)
                     {
@@ -1119,7 +1130,7 @@ public static class FilterParser
             ? reference.Mapping!.DerivedExpression!
             : CreateMemberExpression(parameter, reference.Path);
 
-        if (GetFilterPropertyInfo(reference.Text, config)?.CanFilter == false)
+        if (!reference.CanFilter)
         {
             return RemovedClauseExpression.Instance;
         }
@@ -1265,14 +1276,11 @@ public static class FilterParser
                 foreach (var fullPropPath in temp.properties)
                 {
                     // Build expression for each property. A property list does not support custom operations.
-                    // Check if property can be filtered
-                    var propertyConfig = config?.PropertyMappings?.GetPropertyInfo(fullPropPath);
-                    if (propertyConfig != null && !propertyConfig.CanFilter)
+                    var reference = PropertyResolver.Resolve(parameter.Type, fullPropPath, config);
+                    if (!reference.CanFilter)
                     {
                         continue;
                     }
-
-                    var reference = PropertyResolver.Resolve(parameter.Type, fullPropPath, config);
 
                     if (reference.Kind is PropertyReferenceKind.Unknown or PropertyReferenceKind.CustomOperation)
                     {
@@ -1296,7 +1304,7 @@ public static class FilterParser
                     }
 
                     var rightExpr = CreateRightExpr(leftExpr, temp.right, temp.rightIsQuotedLiteral, temp.op, config, fullPropPath, reference.Path);
-                    var comparison = temp.op.GetExpression<T>(leftExpr, rightExpr, config?.DbContextType, ResolveCaseMode(fullPropPath, config));
+                    var comparison = temp.op.GetExpression<T>(leftExpr, rightExpr, config?.DbContextType, ResolveCaseMode(reference.Path, config));
 
                     // Combine with AND for negative operators, OR for positive operators
                     result = result == null
