@@ -32,11 +32,26 @@ public static class FilterParser
         FilterValue.Parameterize = config is IQueryKitFilterBehavior { ParameterizeFilterValues: true };
         var maxNestingDepthBefore = _maxNestingDepth;
         var nestingDepthBefore = _nestingDepth;
+        var queryNameOverUnknownBefore = _queryNameOverUnknown;
+        var queryNameFallbackOffBefore = _queryNameFallbackOff;
         _maxNestingDepth = (config as IQueryKitParseLimits)?.MaxNestingDepth ?? QueryKitSettings.DefaultMaxNestingDepth;
         _nestingDepth = 0;
+        _queryNameOverUnknown = false;
+        _queryNameFallbackOff = false;
         try
         {
-            expr = ExprParser<T>(parameter, config).End().Parse(input);
+            try
+            {
+                expr = ExprParser<T>(parameter, config).End().Parse(input);
+            }
+            catch (Exception) when (_queryNameOverUnknown)
+            {
+                // v1.14.2 threw UnknownFilterPropertyException where a query name now reads an unknown identifier.
+                // A filter that fails now also failed in v1.14.2, so parse it again without the query names to get the v1.14.2 exception.
+                _queryNameFallbackOff = true;
+                _nestingDepth = 0;
+                expr = ExprParser<T>(parameter, config).End().Parse(input);
+            }
 
             // When the parser removed every clause, no clause limits the result
             if (expr is RemovedClauseExpression)
@@ -59,6 +74,8 @@ public static class FilterParser
             FilterValue.Parameterize = parameterizeBefore;
             _maxNestingDepth = maxNestingDepthBefore;
             _nestingDepth = nestingDepthBefore;
+            _queryNameOverUnknown = queryNameOverUnknownBefore;
+            _queryNameFallbackOff = queryNameFallbackOffBefore;
         }
 
         return Expression.Lambda<Func<T, bool>>(expr, parameter);
@@ -89,6 +106,11 @@ public static class FilterParser
     // that the parser is in now. Parsing is synchronous, so the values belong to the thread that parses.
     [ThreadStatic] private static int _maxNestingDepth;
     [ThreadStatic] private static int _nestingDepth;
+
+    // Set when a derived property or custom operation query name reads text where v1.14.2 read an unknown identifier.
+    // When the fallback is off, the parser throws for the unknown identifier like v1.14.2.
+    [ThreadStatic] private static bool _queryNameOverUnknown;
+    [ThreadStatic] private static bool _queryNameFallbackOff;
 
     // Parses '(' inner ')' and counts the group against MaxNestingDepth. The grammar does the count,
     // so a '(' or ')' inside a quoted value cannot change it. The parser recurses once for each group,
@@ -947,9 +969,12 @@ public static class FilterParser
             }
 
             // v1.14.2 did not accept the text here, so a derived property or custom operation query name can not change an accepted filter.
-            var queryName = queryNameParser(input);
+            var queryName = _queryNameFallbackOff && reference != null
+                ? Result.Failure<string>(input, "query names are off", Array.Empty<string>())
+                : queryNameParser(input);
             if (queryName.WasSuccessful)
             {
+                _queryNameOverUnknown |= reference != null;
                 return Result.Success(PropertyResolver.Resolve(entityType, queryName.Value, config), queryName.Remainder);
             }
 
