@@ -1289,7 +1289,7 @@ public static class FilterParser
     
     private static Parser<Expression> AtomicExprParser<T>(ParameterExpression parameter, IQueryKitConfiguration? config = null)
         => ComparisonExprParser<T>(parameter, config)
-            .Or(Grouped(Parse.Ref(() => ExprParser<T>(parameter, config))));
+            .Or(Grouped(Parse.Ref(() => ExprParser<T>(parameter, config))).Token());
 
     private static Parser<Expression> ExprParser<T>(ParameterExpression parameter, IQueryKitConfiguration? config = null)
         => OrExprParser<T>(parameter, config);
