@@ -39,9 +39,13 @@ require_run() {
 
 build_driver() {
   echo "qk: building driver (QueryKit project reference, net10.0)..." >&2
+  # MSBuild skips the driver compile when the QueryKit reference assembly is unchanged, so the driver dll keeps
+  # its old mtime. The stale check in 'qk doctor' compares against this stamp from the start of the build instead.
+  touch "$STATE_DIR/build-started"
   dotnet build "$DRIVER_PROJ" -c Release --artifacts-path "$STATE_DIR/build" -nologo -v quiet >"$STATE_DIR/build.log" 2>&1 \
     || { tail -30 "$STATE_DIR/build.log" >&2; die "driver build failed. Full log: $STATE_DIR/build.log"; }
   [[ -f "$DRIVER_DLL" ]] || die "build succeeded but $DRIVER_DLL is missing."
+  mv "$STATE_DIR/build-started" "$STATE_DIR/built-at"
   git -C "$REPO" rev-parse --short HEAD >"$STATE_DIR/built-rev"
   git -C "$REPO" status --porcelain -- QueryKit | wc -l | tr -d ' ' >"$STATE_DIR/built-dirty-files"
 }
@@ -106,10 +110,11 @@ cmd_doctor() {
   if docker exec "$CONTAINER" psql -h 127.0.0.1 -U postgres -d querykit_verify -tAc 'select 1' >/dev/null 2>&1; then ok "Postgres answers queries"; else bad "Postgres does not answer"; fi
 
   if [[ -f "$DRIVER_DLL" ]]; then ok "driver built at $DRIVER_DLL"; else bad "driver dll missing. Run 'qk rebuild'."; fi
-  local stale
+  local stale built_at="$STATE_DIR/built-at"
+  [[ -f "$built_at" ]] || built_at="$DRIVER_DLL"
   stale="$(find "$REPO/QueryKit" "$SKILL_DIR/harness/Driver" \( -name bin -o -name obj \) -prune -o \
-           \( -name '*.cs' -o -name '*.csproj' \) -newer "$DRIVER_DLL" -print 2>/dev/null | head -5)"
-  if [[ -z "$stale" ]]; then ok "driver is newer than every QueryKit and driver source file"
+           \( -name '*.cs' -o -name '*.csproj' \) -newer "$built_at" -print 2>/dev/null | head -5)"
+  if [[ -z "$stale" ]]; then ok "driver build is newer than every QueryKit and driver source file"
   else bad "driver is stale. Changed since build: $(echo "$stale" | sed "s|$REPO/||" | tr '\n' ' '). Run 'qk rebuild'."; fi
   ok "driver built from $(cat "$STATE_DIR/built-rev") with $(cat "$STATE_DIR/built-dirty-files") uncommitted QueryKit file(s). HEAD is now $(git -C "$REPO" rev-parse --short HEAD)"
   return $fail
