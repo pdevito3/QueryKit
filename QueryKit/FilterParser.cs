@@ -256,6 +256,51 @@ public static class FilterParser
         from number in Parse.DecimalInvariant
         select sign + number;
 
+    // v1.14.2 read a number only with the decimal separator of the current culture.
+    private static readonly Parser<string> CultureNumberParser =
+        from sign in Parse.Char('-').Optional().Select(x => x.IsDefined ? "-" : "")
+        from number in Parse.Decimal
+        select sign + number;
+
+    // The part of a number that v1.14.2 read: null when the current culture reads the whole number,
+    // else the part before the '.' (for example "4" of "4.5" in de-DE), or "" when the culture reads no number.
+    private static string? CultureNumberPrefix(string number)
+    {
+        var result = CultureNumberParser.TryParse(number);
+        if (!result.WasSuccessful)
+        {
+            return "";
+        }
+
+        return result.Value.Length == number.Length ? null : result.Value;
+    }
+
+    // In a culture whose decimal separator is not '.', v1.14.2 read only the prefix of a '.' number (see CultureNumberPrefix),
+    // built the clause with that prefix, and then failed in the grammar at the '.'.
+    // If the clause builds with the whole number, the filter is valid. If it does not build, give the v1.14.2 result:
+    // the exception of the clause for the prefix, else ParsingException. In a '.' culture, nothing changes.
+    private static Expression BuildClauseLikeV1142(string? cultureNumberPrefix, string right, Func<string, Expression> buildClause)
+    {
+        if (cultureNumberPrefix == null)
+        {
+            return buildClause(right);
+        }
+
+        try
+        {
+            return buildClause(right);
+        }
+        catch (Exception exception)
+        {
+            if (cultureNumberPrefix.Length > 0)
+            {
+                buildClause(cultureNumberPrefix);
+            }
+
+            throw new ParsingException(exception);
+        }
+    }
+
     private static readonly Parser<string> GuidFormatParser = Parse.Regex(@"[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}").Text();
     
     private static readonly Parser<string> RawStringLiteralParser =
@@ -268,32 +313,35 @@ public static class FilterParser
     // Carries whether the right-hand value was written as a quoted string literal (e.g. "id").
     // This is needed to disambiguate a literal from a bare property reference (property-to-property
     // comparison) once the surrounding quotes have been stripped, since both are otherwise identical strings.
-    private readonly record struct RightSideValue(string Value, bool IsQuotedLiteral);
+    // CultureNumberPrefix is set when the value holds a number that only the '.' decimal point reads (see BuildClauseLikeV1142).
+    private readonly record struct RightSideValue(string Value, bool IsQuotedLiteral, string? CultureNumberPrefix = null);
 
-    private static readonly Parser<IEnumerable<string>> SquareBracketValuesParser =
+    private static readonly Parser<IEnumerable<(string Value, bool IsDotOnlyNumber)>> SquareBracketValuesParser =
         Parse.String("null").Text()
             .Or(GuidFormatParser)
             .Or(DateTimeFormatParser)
             .Or(TimeFormatParser)
-            .Or(ListNumberParser)
-            .Or(RawStringLiteralParser.Or(DoubleQuoteParser))
-            .Or(Identifier)
+            .Select(v => (v, false))
+            .Or(ListNumberParser.Select(v => (v, CultureNumberPrefix(v) != null)))
+            .Or(RawStringLiteralParser.Or(DoubleQuoteParser).Or(Identifier).Select(v => (v, false)))
             .DelimitedBy(Parse.Char(',').Token());
 
-    private static readonly Parser<string> SquareBracketParser =
+    // v1.14.2 failed in the grammar at a '.' list number, before it built the clause, so no part of the list is read.
+    private static readonly Parser<RightSideValue> SquareBracketParser =
         from openingBracket in Parse.Char('[')
         from content in SquareBracketValuesParser
         from closingBracket in Parse.Char(']')
-        select "[" + string.Join(",", content) + "]";
+        select new RightSideValue("[" + string.Join(",", content.Select(x => x.Value)) + "]", false,
+            content.Any(x => x.IsDotOnlyNumber) ? "" : null);
 
     private static readonly Parser<RightSideValue> RightSideValueChoiceParser =
         Parse.String("null").Text().Select(v => new RightSideValue(v, false))
             .Or(GuidFormatParser.Select(v => new RightSideValue(v, false)))
             .XOr(DateTimeFormatParser.Select(v => new RightSideValue(v, false)))
             .XOr(TimeFormatParser.Select(v => new RightSideValue(v, false)))
-            .XOr(NumberParser.Select(v => new RightSideValue(v, false)))
+            .XOr(NumberParser.Select(v => new RightSideValue(v, false, CultureNumberPrefix(v))))
             .XOr((RawStringLiteralParser.Or(DoubleQuoteParser)).Select(v => new RightSideValue(v, true)))
-            .XOr(SquareBracketParser.Select(v => new RightSideValue(v, false)))
+            .XOr(SquareBracketParser)
             .XOr(Identifier.Select(v => new RightSideValue(v, false))); // Keep this last to try property paths only if nothing else matches
 
     private static readonly Parser<RightSideValue> RightSideValueParser =
@@ -301,7 +349,9 @@ public static class FilterParser
         from leadingSpaces in Parse.WhiteSpace.Many()
         from value in RightSideValueChoiceParser
         from trailingSpaces in Parse.WhiteSpace.Many()
-        select atSign.IsDefined ? value with { Value = "@" + value.Value } : value;
+        select atSign.IsDefined
+            ? value with { Value = "@" + value.Value, CultureNumberPrefix = value.CultureNumberPrefix is { Length: > 0 } prefix ? "@" + prefix : value.CultureNumberPrefix }
+            : value;
 
     // Arithmetic expression parsers
     private static readonly Parser<ArithmeticOperator> ArithmeticOperatorParser =
@@ -770,9 +820,10 @@ public static class FilterParser
 
         var regularComparison = CreateLeftExprParser(parameter.Type, config)
             .SelectMany(reference => comparisonOperatorParser, (reference, op) => new { reference, op })
-            .SelectMany(temp => rightSideValueParser, (temp, rightValue) => new { temp.reference, temp.op, right = rightValue.Value, rightIsQuotedLiteral = rightValue.IsQuotedLiteral })
-            .Select(temp =>
+            .SelectMany(temp => rightSideValueParser, (temp, rightValue) => new { temp.reference, temp.op, right = rightValue.Value, rightIsQuotedLiteral = rightValue.IsQuotedLiteral, cultureNumberPrefix = rightValue.CultureNumberPrefix })
+            .Select(clause => BuildClauseLikeV1142(clause.cultureNumberPrefix, clause.right, right =>
             {
+                var temp = clause with { right = right };
                 if (temp.reference.Kind == PropertyReferenceKind.CustomOperation)
                 {
                     return CreateCustomOperationExpression<T>(parameter, temp.reference.Mapping!, temp.op, temp.right);
@@ -928,7 +979,7 @@ public static class FilterParser
 
 
                 return temp.op.GetExpression<T>(leftExprForComparison, rightExpr, config?.DbContextType, ResolveCaseMode(propertyPath, config));
-            });
+            }));
 
         return propertyListComparison.Or(arithmeticComparison).Or(regularComparison);
     }
@@ -1136,9 +1187,10 @@ public static class FilterParser
             .SelectMany(properties => comparisonOperatorParser,
                 (properties, op) => new { properties, op })
             .SelectMany(temp => rightSideValueParser,
-                (temp, rightValue) => new { temp.properties, temp.op, right = rightValue.Value, rightIsQuotedLiteral = rightValue.IsQuotedLiteral })
-            .Select(temp =>
+                (temp, rightValue) => new { temp.properties, temp.op, right = rightValue.Value, rightIsQuotedLiteral = rightValue.IsQuotedLiteral, cultureNumberPrefix = rightValue.CultureNumberPrefix })
+            .Select(clause => BuildClauseLikeV1142(clause.cultureNumberPrefix, clause.right, right =>
             {
+                var temp = clause with { right = right };
                 if (!temp.properties.Any())
                 {
                     throw new InvalidOperationException("Property list cannot be empty");
@@ -1196,7 +1248,7 @@ public static class FilterParser
 
                 // If all properties were filtered out, the clause is ignored. v1.14.2 used true here, not true == true.
                 return result ?? (RemovesIgnoredClauses(config) ? RemovedClauseExpression.Instance : Expression.Constant(true));
-            });
+            }));
     }
     
     private static Type? GetInnerGenericType(Type type)
