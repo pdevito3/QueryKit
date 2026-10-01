@@ -137,8 +137,6 @@ public class FilterParsingRegressionTests
     [InlineData("SpecificDateTime ^^ [2024-01-15T08:00:00.5Z]")]
     [InlineData("SpecificDate == 2024-01-15T10:00:00.5+02:00")]
     [InlineData("SpecificDate == 2024-01-15T08:00:00.5000000Z")]
-    [InlineData("SpecificDateTime == 2024-01-15T08:00:00Z.5")]
-    [InlineData("SpecificDate == 2024-01-15T10:00:00+02:00.500")]
     [InlineData("Time == 08:30:00.5")]
     [InlineData("Time == \"08:30:00.500\"")]
     [InlineData("Time ^^ [08:30:00.5]")]
@@ -157,6 +155,16 @@ public class FilterParsingRegressionTests
         var result = FractionalSecondPeople().AsQueryable().ApplyQueryKitFilter(input).ToList();
 
         result.Select(x => x.Title).Should().Equal("whole second");
+    }
+
+    [Theory]
+    [InlineData("SpecificDateTime == 2024-01-15T08:00:00Z.5")]
+    [InlineData("SpecificDate == 2024-01-15T10:00:00+02:00.500")]
+    public void zone_before_the_fraction_throws(string input)
+    {
+        var act = () => FilterParser.ParseFilter<TestingPerson>(input);
+
+        act.Should().Throw<ParsingException>();
     }
 
     private static TestingPerson[] FractionalSecondPeople() => new[]
