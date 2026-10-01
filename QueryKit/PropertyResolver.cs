@@ -54,7 +54,12 @@ internal static class PropertyResolver
     internal static PropertyReference Resolve(Type rootType, string reference, IQueryKitConfiguration? config)
     {
         config?.ValidatePropertyDepth(reference);
+        return ResolveWithoutDepthCheck(rootType, reference, config);
+    }
 
+    // Arithmetic does not apply MaxPropertyDepth.
+    internal static PropertyReference ResolveWithoutDepthCheck(Type rootType, string reference, IQueryKitConfiguration? config)
+    {
         var memberPath = ResolveMemberPath(rootType, reference, out var unknownSegment);
         if (memberPath != null)
         {
