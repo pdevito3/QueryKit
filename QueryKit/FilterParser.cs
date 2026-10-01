@@ -729,10 +729,10 @@ public static class FilterParser
                value.All(c => char.IsLetterOrDigit(c) || c == '_' || c == '.');
     }
 
-    // The filter settings of a left-side property: by the name that its query name maps to, in the exact case.
+    // The filter settings of a left-side property: by its property path after alias replacement, in the exact case, like v1.14.2.
     // Derived properties and custom operations are not in this lookup.
     private static QueryKitPropertyInfo? GetFilterPropertyInfo(string text, IQueryKitConfiguration? config)
-        => config?.PropertyMappings?.GetPropertyInfo(config.PropertyMappings.GetPropertyPathByQueryName(text) ?? text);
+        => config?.PropertyMappings?.GetPropertyInfo(text);
 
     private static CaseInsensitiveMode ResolveCaseMode(string? propertyPath, IQueryKitConfiguration? config)
     {

@@ -38,6 +38,36 @@ public class PropertyResolverTests
     }
 
     [Fact]
+    public void prevented_property_is_found_by_its_path_when_another_query_name_matches_that_path()
+    {
+        var input = """nick == "Ann" """;
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.Title!).HasQueryName("firstname");
+            config.Property<TestingPerson>(x => x.FirstName!).HasQueryName("nick").PreventFilter();
+        });
+
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+
+        filterExpression.ToDisplayString().Should().Be("x => (True == True)");
+    }
+
+    [Fact]
+    public void property_is_not_prevented_by_another_property_whose_query_name_matches_its_path()
+    {
+        var input = """nick == "Ann" || Age > 100""";
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.Title!).HasQueryName("firstname").PreventFilter();
+            config.Property<TestingPerson>(x => x.FirstName!).HasQueryName("nick");
+        });
+
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+
+        filterExpression.ToDisplayString().Should().Be("""x => ((x.FirstName == "Ann") OrElse (x.Age > 100))""");
+    }
+
+    [Fact]
     public void property_list_with_only_prevented_properties_is_true_by_default()
     {
         var input = """(Title, FirstName) == "x" || Age > 100""";
