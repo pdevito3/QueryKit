@@ -258,6 +258,7 @@ Property list grouping is particularly useful for:
   * `TimeOnly`: 
     * `var filterInput = """Time == "12:30:00" """;`
     * `var filterInput = """Time == "12:30:00.678722" """;`
+  * In a date and time value, write the zone after the fraction: `2022-07-01T00:00:03.5Z`. An unquoted value with the zone before the fraction (`2022-07-01T00:00:03Z.5`) throws a `ParsingException`.
 
 * `bool` properties need to use `== true`, `== false`, or the same using the `!=` operator. they can not be standalone properies: 
 

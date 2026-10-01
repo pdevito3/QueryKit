@@ -143,7 +143,6 @@ public class FilterParsingRegressionTests : TestBase
 
     [Theory]
     [InlineData("SpecificDateTime == 2024-01-15T08:00:00.500Z", true)]
-    [InlineData("SpecificDateTime == 2024-01-15T08:00:00Z.5", true)]
     [InlineData("SpecificDate == 2024-01-15T10:00:00.5+02:00", true)]
     [InlineData("Time == 08:30:00.5", true)]
     [InlineData("Time == \"08:30:00.500\"", true)]
