@@ -459,7 +459,7 @@ public static class FilterParser
     };
 
     private static Expression CreateRightExpr(Expression leftExpr, string right, bool rightIsQuotedLiteral, ComparisonOperator op,
-        IQueryKitConfiguration? config = null, string? propertyPath = null)
+        IQueryKitConfiguration? config = null, string? propertyPath = null, string? memberPath = null)
     {
         var targetType = leftExpr.Type;
 
@@ -522,14 +522,56 @@ public static class FilterParser
                     {
                         return Expression.New(stringCtor, FilterValue.Create(right, typeof(string)));
                     }
+
+                    // v1.14.2 compared a nullable struct with a string here and threw, so construct the underlying type instead.
+                    // A null literal keeps the v1.14.2 result.
+                    if (right != "null" && CreateStringConversionRightExpr(leftExpr.Type, right) is { } nullableStructExpr)
+                    {
+                        return nullableStructExpr;
+                    }
                 }
-                
+
                 // For other conversion types, fall back to using the conversion target type
                 targetType = propertyConfig.ConversionTargetType;
             }
+            else if (!CanCreateRightExprFromType(targetType) &&
+                     config.PropertyMappings.GetPropertyInfo(memberPath ?? propertyPath) is { UsesConversion: true } pathConfig &&
+                     pathConfig.ConversionTargetType == typeof(string))
+            {
+                // The lookup by query name above misses a property with a different query name. v1.14.2 then threw,
+                // because it can not read a value of this type, so find the conversion by the property path instead.
+                return CreateStringConversionRightExpr(leftExpr.Type, right) ?? CreateRightExprFromType(targetType, right, rightIsQuotedLiteral, op);
+            }
         }
-        
+
         return CreateRightExprFromType(targetType, right, rightIsQuotedLiteral, op);
+    }
+
+    // Builds the right side for a property with HasConversion<string>() from a constructor that takes a string.
+    // A null literal compares against null, and a nullable struct is constructed from its underlying type.
+    private static Expression? CreateStringConversionRightExpr(Type leftType, string right)
+    {
+        var underlyingType = Nullable.GetUnderlyingType(leftType);
+        if (right == "null" && (!leftType.IsValueType || underlyingType != null))
+        {
+            return Expression.Constant(null, leftType);
+        }
+
+        var stringCtor = (underlyingType ?? leftType).GetConstructor(new[] { typeof(string) });
+        if (stringCtor == null)
+        {
+            return null;
+        }
+
+        Expression constructed = Expression.New(stringCtor, FilterValue.Create(right, typeof(string)));
+        return underlyingType == null ? constructed : Expression.Convert(constructed, leftType);
+    }
+
+    // True when CreateRightExprFromType can read a value of the type. For other types it throws.
+    private static bool CanCreateRightExprFromType(Type type)
+    {
+        var targetType = TransformTargetTypeIfNullable(type);
+        return IsEnumerable(type) || TypeConversionFunctions.ContainsKey(targetType) || targetType.IsEnum || targetType == typeof(object);
     }
 
     private static Expression CreateRightExprFromType(Type leftExprType, string right, bool rightIsQuotedLiteral, ComparisonOperator op)
@@ -876,7 +918,13 @@ public static class FilterParser
                     if (temp.op.IsStringComparisonOperator())
                     {
                         var guidStringExpr = HandleGuidConversion(leftExpr, leftExpr.Type);
-                        return temp.op.GetExpression<T>(guidStringExpr, CreateRightExpr(leftExpr, temp.right, temp.rightIsQuotedLiteral, temp.op, config, guidPropertyPath),
+
+                        // For a Guid with HasConversion<string>(), v1.14.2 built the right side as a Guid and threw, so build it for the string.
+                        var guidConfig = config?.PropertyMappings?.GetPropertyInfoByQueryName(guidPropertyPath);
+                        var leftExprForRightSide = guidConfig?.UsesConversion == true && guidConfig.ConversionTargetType == typeof(string)
+                            ? guidStringExpr
+                            : leftExpr;
+                        return temp.op.GetExpression<T>(guidStringExpr, CreateRightExpr(leftExprForRightSide, temp.right, temp.rightIsQuotedLiteral, temp.op, config, guidPropertyPath),
                             config?.DbContextType, ResolveCaseMode(guidPropertyPath, config));
                     }
 
@@ -1260,7 +1308,7 @@ public static class FilterParser
                         leftExpr = HandleGuidConversion(leftExpr, leftExpr.Type);
                     }
 
-                    var rightExpr = CreateRightExpr(leftExpr, temp.right, temp.rightIsQuotedLiteral, temp.op, config, fullPropPath);
+                    var rightExpr = CreateRightExpr(leftExpr, temp.right, temp.rightIsQuotedLiteral, temp.op, config, fullPropPath, reference.Path);
                     var comparison = temp.op.GetExpression<T>(leftExpr, rightExpr, config?.DbContextType, ResolveCaseMode(fullPropPath, config));
 
                     // Combine with AND for negative operators, OR for positive operators
