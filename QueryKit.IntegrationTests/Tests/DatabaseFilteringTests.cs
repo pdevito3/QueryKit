@@ -103,14 +103,16 @@ public class DatabaseFilteringTests() : TestBase
     {
         // Arrange
         var testingServiceScope = new TestingServiceScope();
+        var uniqueLastName = $"ComboComplexTest{Guid.NewGuid()}";
         var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithLastName(uniqueLastName)
             .WithAge(8888)
             .Build();
         var fakePersonTwo = new FakeTestingPersonBuilder()
             .WithFirstName(fakePersonOne.FirstName)
             .Build();
         await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
-        
+
         var input = $"""(fullname @=* "{fakePersonOne.FirstName} {fakePersonOne.LastName}") && age >= {fakePersonOne.Age}""";
         var config = new QueryKitConfiguration(config =>
         {
@@ -2579,12 +2581,15 @@ public class DatabaseFilteringTests() : TestBase
             .WithQualityLevel(3)
             .Build();
         
-        var recipe = new FakeRecipeBuilder().Build();
+        var uniqueTitle = $"RecipeIngredientQualityTest{Guid.NewGuid()}";
+        var recipe = new FakeRecipeBuilder()
+            .WithTitle(uniqueTitle)
+            .Build();
         recipe.AddIngredient(highQualityIngredient);
         recipe.AddIngredient(lowQualityIngredient);
-        
+
         await testingServiceScope.InsertAsync(recipe);
-        
+
         var input = $"""avgQuality > 5 && Title == "{recipe.Title}" """;
         
         var config = new QueryKitConfiguration(config =>
