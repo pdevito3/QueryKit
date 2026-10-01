@@ -807,6 +807,18 @@ public static class FilterParser
             .SelectMany(temp => parenthesizedArithmetic.Or(rightSideValueParser.Select(value => CreateArithmeticFromValue(value.Value))), (temp, rightSide) => new { temp.leftArithmetic, temp.op, rightSide })
             .Select(temp =>
             {
+                var unknownSegment = FindUnknownArithmeticSegment(temp.leftArithmetic, typeof(T), config)
+                                     ?? FindUnknownArithmeticSegment(temp.rightSide, typeof(T), config);
+                if (unknownSegment != null)
+                {
+                    if (config?.AllowUnknownProperties == true)
+                    {
+                        return IgnoredClause(config);
+                    }
+
+                    throw new UnknownFilterPropertyException(unknownSegment);
+                }
+
                 var leftExpr = temp.leftArithmetic.ToLinqExpression(parameter, typeof(T));
                 var rightExpr = temp.rightSide.ToLinqExpression(parameter, typeof(T));
                 
@@ -815,6 +827,21 @@ public static class FilterParser
             });
     }
     
+    // Returns the first segment that is not a member, for the first property in an arithmetic expression that is not a member.
+    // Arithmetic supports only members, so a derived property or a custom operation is unknown here.
+    private static string? FindUnknownArithmeticSegment(ArithmeticExpression expr, Type entityType, IQueryKitConfiguration? config)
+    {
+        return expr switch
+        {
+            PropertyArithmeticExpression property => PropertyResolver.ResolveWithoutDepthCheck(entityType, property.PropertyPath, config) is { Kind: not PropertyReferenceKind.Member } reference
+                ? reference.UnknownSegment
+                : null,
+            BinaryArithmeticExpression binary => FindUnknownArithmeticSegment(binary.Left, entityType, config) ?? FindUnknownArithmeticSegment(binary.Right, entityType, config),
+            GroupedArithmeticExpression grouped => FindUnknownArithmeticSegment(grouped.Inner, entityType, config),
+            _ => null
+        };
+    }
+
     private static bool ContainsArithmeticOperator(ArithmeticExpression expr)
     {
         return expr switch

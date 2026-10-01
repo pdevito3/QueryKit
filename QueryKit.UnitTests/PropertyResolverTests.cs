@@ -423,7 +423,7 @@ public class PropertyResolverTests
     }
 
     [Fact]
-    public void query_name_in_arithmetic_throws()
+    public void query_name_in_arithmetic_is_not_recognized()
     {
         var input = """(stars + 0) > 3""";
         var config = new QueryKitConfiguration(config =>
@@ -433,7 +433,8 @@ public class PropertyResolverTests
 
         var act = () => FilterParser.ParseFilter<TestingPerson>(input, config);
 
-        act.Should().ThrowExactly<ArgumentException>();
+        act.Should().Throw<UnknownFilterPropertyException>()
+            .WithMessage("The filter property 'stars' was not recognized.");
     }
 
     [Theory]
@@ -710,7 +711,7 @@ public class PropertyResolverTests
     }
 
     [Fact]
-    public void unknown_property_in_arithmetic_throws_when_unknown_properties_are_allowed()
+    public void unknown_property_in_arithmetic_removes_the_clause_when_unknown_properties_are_allowed()
     {
         var input = """(Nope + 1) > 3 || Age > 100""";
         var config = new QueryKitConfiguration(config =>
@@ -719,14 +720,13 @@ public class PropertyResolverTests
             config.AllowUnknownProperties = true;
         });
 
-        var act = () => FilterParser.ParseFilter<TestingPerson>(input, config);
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
 
-        act.Should().Throw<ArgumentException>()
-            .WithMessage("Property 'Nope' not found on type 'TestingPerson'");
+        filterExpression.ToDisplayString().Should().Be("x => (x.Age > 100)");
     }
 
     [Fact]
-    public void unknown_property_on_the_right_side_of_arithmetic_throws_when_unknown_properties_are_allowed()
+    public void unknown_property_on_the_right_side_of_arithmetic_removes_the_clause_when_unknown_properties_are_allowed()
     {
         var input = """(Age + 0) > Nope || Title == "a" """;
         var config = new QueryKitConfiguration(config =>
@@ -735,21 +735,20 @@ public class PropertyResolverTests
             config.AllowUnknownProperties = true;
         });
 
-        var act = () => FilterParser.ParseFilter<TestingPerson>(input, config);
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
 
-        act.Should().Throw<ArgumentException>()
-            .WithMessage("Property 'Nope' not found on type 'TestingPerson'");
+        filterExpression.ToDisplayString().Should().Be("""x => (x.Title == "a")""");
     }
 
     [Fact]
-    public void unknown_property_in_arithmetic_throws_an_argument_exception()
+    public void unknown_property_in_arithmetic_is_not_recognized()
     {
         var input = """(Nope + 1) > 3""";
 
         var act = () => FilterParser.ParseFilter<TestingPerson>(input);
 
-        act.Should().Throw<ArgumentException>()
-            .WithMessage("Property 'Nope' not found on type 'TestingPerson'");
+        act.Should().Throw<UnknownFilterPropertyException>()
+            .WithMessage("The filter property 'Nope' was not recognized.");
     }
 
     [Theory]
