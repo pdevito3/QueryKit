@@ -93,6 +93,64 @@ public class PropertyResolverTests : TestBase
         people.Should().BeEmpty();
     }
 
+    [Fact]
+    public async Task prevented_property_is_found_by_its_path_when_another_query_name_matches_that_path()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var firstName = new Faker().Lorem.Sentence();
+        var fakePerson = new FakeTestingPersonBuilder()
+            .WithFirstName(firstName)
+            .Build();
+        var otherPerson = new FakeTestingPersonBuilder().Build();
+        await testingServiceScope.InsertAsync(fakePerson, otherPerson);
+
+        var input = $"""nick == "{firstName}" """;
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.Title!).HasQueryName("firstname");
+            config.Property<TestingPerson>(x => x.FirstName!).HasQueryName("nick").PreventFilter();
+        });
+
+        // Act
+        var queryable = testingServiceScope.DbContext().People.ApplyQueryKitFilter(input, config);
+        var people = await queryable.ToListAsync();
+
+        // Assert
+        queryable.ToQueryString().Should().NotContain("WHERE");
+        people.Should().Contain(x => x.Id == fakePerson.Id);
+        people.Should().Contain(x => x.Id == otherPerson.Id);
+    }
+
+    [Fact]
+    public async Task property_is_not_prevented_by_another_property_whose_query_name_matches_its_path()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var firstName = new Faker().Lorem.Sentence();
+        var fakePerson = new FakeTestingPersonBuilder()
+            .WithFirstName(firstName)
+            .Build();
+        var otherPerson = new FakeTestingPersonBuilder().Build();
+        await testingServiceScope.InsertAsync(fakePerson, otherPerson);
+
+        var input = $"""nick == "{firstName}" """;
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.Title!).HasQueryName("firstname").PreventFilter();
+            config.Property<TestingPerson>(x => x.FirstName!).HasQueryName("nick");
+        });
+
+        // Act
+        var people = await testingServiceScope.DbContext().People
+            .ApplyQueryKitFilter(input, config)
+            .ToListAsync();
+
+        // Assert
+        people.Should().ContainSingle();
+        people[0].Id.Should().Be(fakePerson.Id);
+    }
+
     [Theory]
     [InlineData("first-name")]
     [InlineData("_first")]
