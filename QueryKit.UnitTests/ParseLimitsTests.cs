@@ -130,6 +130,110 @@ public class ParseLimitsTests
             .WithMessage("*depth of 3*maximum allowed depth of 2*");
     }
 
+    [Fact]
+    public void quoted_close_parentheses_before_a_group_do_not_lower_the_nesting_depth()
+    {
+        var input = $"""Title == "{new string(')', 20)}" || """ + new string('(', 20) + """Title == "salt" """ + new string(')', 20);
+
+        var act = () => FilterParser.ParseFilter<TestingPerson>(input, DepthLimit(10));
+        act.Should().Throw<QueryKitNestingDepthExceededException>()
+            .WithMessage("*depth of 11*maximum allowed depth of 10*");
+    }
+
+    [Fact]
+    public void quoted_close_parentheses_inside_a_group_do_not_lower_the_nesting_depth()
+    {
+        var input = new string('(', 8) + $"""Title == "{new string(')', 8)}" && """
+            + new string('(', 8) + """Title == "salt" """ + new string(')', 16);
+
+        var act = () => FilterParser.ParseFilter<TestingPerson>(input, DepthLimit(10));
+        act.Should().Throw<QueryKitNestingDepthExceededException>()
+            .WithMessage("*depth of 11*maximum allowed depth of 10*");
+    }
+
+    [Fact]
+    public void repeated_quoted_close_parentheses_do_not_lower_the_nesting_depth()
+    {
+        var segment = """((((Title == "))))" && """;
+        var input = string.Concat(Enumerable.Repeat(segment, 5)) + """Title == "salt" """ + new string(')', 20);
+
+        var act = () => FilterParser.ParseFilter<TestingPerson>(input, DepthLimit(10));
+        act.Should().Throw<QueryKitNestingDepthExceededException>()
+            .WithMessage("*depth of 11*maximum allowed depth of 10*");
+    }
+
+    [Fact]
+    public void quoted_parentheses_within_the_nesting_depth_keep_their_value()
+    {
+        var input = """"((Title == ")))" || Title == "(((" || Title == """((("""))"""";
+
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, DepthLimit(2));
+        filterExpression.Compile().Invoke(new TestingPerson { Title = ")))" }).Should().BeTrue();
+        filterExpression.Compile().Invoke(new TestingPerson { Title = "(((" }).Should().BeTrue();
+        filterExpression.Compile().Invoke(new TestingPerson { Title = "salt" }).Should().BeFalse();
+    }
+
+    [Fact]
+    public void quoted_open_parentheses_do_not_count_toward_the_nesting_depth()
+    {
+        var parentheses = new string('(', 33);
+        var input = $$""""Title == "{{parentheses}}" || Title == """{{parentheses}}""" """";
+
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, DepthLimit(1));
+        filterExpression.Compile().Invoke(new TestingPerson { Title = parentheses }).Should().BeTrue();
+    }
+
+    [Fact]
+    public void arithmetic_groups_count_toward_the_nesting_depth()
+    {
+        var input = """((Age + (Rating * 2)) > 3)""";
+
+        FilterParser.ParseFilter<TestingPerson>(input, DepthLimit(3)).Should().NotBeNull();
+        var act = () => FilterParser.ParseFilter<TestingPerson>(input, DepthLimit(2));
+        act.Should().Throw<QueryKitNestingDepthExceededException>()
+            .WithMessage("*depth of 3*maximum allowed depth of 2*");
+    }
+
+    [Fact]
+    public void property_list_groups_count_toward_the_nesting_depth()
+    {
+        var input = """((Title, FirstName) == "salt")""";
+
+        FilterParser.ParseFilter<TestingPerson>(input, DepthLimit(2)).Should().NotBeNull();
+        var act = () => FilterParser.ParseFilter<TestingPerson>(input, DepthLimit(1));
+        act.Should().Throw<QueryKitNestingDepthExceededException>()
+            .WithMessage("*depth of 2*maximum allowed depth of 1*");
+    }
+
+    [Fact]
+    public void deep_filter_with_quoted_close_parentheses_throws_instead_of_overflowing_the_stack()
+    {
+        // Without the grammar count, this filter overflows a 1 MB stack and stops the test process
+        const int depth = 20_000;
+        var input = $"""Title == "{new string(')', depth)}" || """ + new string('(', depth) + """Title == "salt" """ + new string(')', depth);
+
+        Exception? thrown = null;
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                FilterParser.ParseFilter<TestingPerson>(input, DepthLimit(10));
+            }
+            catch (Exception e)
+            {
+                thrown = e;
+            }
+        }, maxStackSize: 1024 * 1024);
+        thread.Start();
+        thread.Join();
+
+        thrown.Should().BeOfType<QueryKitNestingDepthExceededException>()
+            .Which.Message.Should().Contain("depth of 11");
+    }
+
+    private static QueryKitConfiguration DepthLimit(int maxNestingDepth)
+        => new(settings => settings.MaxNestingDepth = maxNestingDepth);
+
     private sealed class InterfaceOnlyConfigurationWithLimits : FilterBehaviorInterfaceTests.InterfaceOnlyConfiguration, IQueryKitParseLimits
     {
         public int MaxNestingDepth { get; set; }

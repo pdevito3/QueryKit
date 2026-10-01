@@ -94,5 +94,8 @@ public static class Configs
                 s.MaxInputLength = 100;
                 s.MaxNestingDepth = 3;
             })),
+
+        ["depth-10"] = ("MaxNestingDepth = 10.",
+            () => new QueryKitConfiguration(s => s.MaxNestingDepth = 10)),
     };
 }
