@@ -153,11 +153,6 @@ public class QueryKitPropertyMappings
                     // (e.g. the `^` in `^^` would otherwise be read as a start-of-line anchor).
                     var regex = AliasRegexCache.Get($@"\b{Regex.Escape(queryKitPropertyInfo.QueryName!)}\b(?=\s*{Regex.Escape(op)})");
 
-                    if (queryKitPropertyInfo is { CanSort: false, CanFilter: false} && regex.IsMatch(input))
-                    {
-                        throw new InvalidOperationException($"'{queryKitPropertyInfo.Name}' is not allowed for filtering or sorting.");
-                    }
-                    
                     input = regex.Replace(input, propertyPath);
                 }
             }

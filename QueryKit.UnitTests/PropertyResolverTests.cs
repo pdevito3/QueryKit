@@ -770,6 +770,33 @@ public class PropertyResolverTests
         filterExpression.ToDisplayString().Should().Be("x => (x.Age > 100)");
     }
 
+    [Fact]
+    public void query_name_of_a_property_prevented_for_filter_and_sort_in_a_quoted_value_is_not_changed()
+    {
+        var input = """Title == "name == x" """;
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.FirstName!).HasQueryName("name").PreventFilter().PreventSort();
+        });
+
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+
+        filterExpression.ToDisplayString().Should().Be("""x => (x.Title == "name == x")""");
+    }
+
+    [Fact]
+    public void alias_replacement_does_not_throw_for_a_property_prevented_for_filter_and_sort()
+    {
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.Title!).HasQueryName("name").PreventFilter().PreventSort();
+        });
+
+        var input = config.PropertyMappings.ReplaceAliasesWithPropertyPaths("""name == "x" """);
+
+        input.Should().Be("""Title == "x" """);
+    }
+
     [Theory]
     [InlineData("==")]
     [InlineData("_=")]
