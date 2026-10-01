@@ -43,6 +43,22 @@ public class AliasCultureTests
         turkish.Should().Throw<UnknownFilterPropertyException>();
     }
 
+    [Theory]
+    [InlineData("tıp", "TIP > 3")]
+    [InlineData("tip", "TİP > 3")]
+    [InlineData("tıp", "(TIP, Title) == 3")]
+    public void query_name_matches_with_the_case_rules_of_tr_tr(string queryName, string input)
+    {
+        var config = new QueryKitConfiguration(settings =>
+        {
+            settings.Property<Recipe>(x => x.Rating).HasQueryName(queryName);
+        });
+
+        var filterExpression = WithCulture("tr-TR", () => FilterParser.ParseFilter<Recipe>(input, config));
+
+        filterExpression.ToString().Should().Contain("x.Rating");
+    }
+
     [Fact]
     public void operator_alias_does_not_match_in_tr_tr_after_an_en_us_parse()
     {

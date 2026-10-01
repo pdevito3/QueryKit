@@ -24,7 +24,7 @@ public static class FilterParser
 
         input = config?.ReplaceLogicalAliases(input) ?? input;
         input = config?.ReplaceComparisonAliases(input) ?? input;
-        input = config?.PropertyMappings?.ReplaceAliasesWithPropertyPaths(input) ?? input;
+        EnsureNoQueryNameOfAPropertyPreventedForFilterAndSort(input, config);
         
         var parameter = Expression.Parameter(typeof(T), "x");
         Expression expr;
@@ -79,6 +79,12 @@ public static class FilterParser
         }
 
         return Expression.Lambda<Func<T, bool>>(expr, parameter);
+    }
+    
+    // A property that can not be filtered or sorted throws InvalidOperationException when the filter uses its query name.
+    private static void EnsureNoQueryNameOfAPropertyPreventedForFilterAndSort(string input, IQueryKitConfiguration? config)
+    {
+        config?.PropertyMappings?.ReplaceAliasesWithPropertyPaths(input);
     }
     
     private static Expression ReplaceDerivedProperties(Expression expr, IQueryKitConfiguration? config, ParameterExpression parameter)
@@ -145,6 +151,58 @@ public static class FilterParser
 
     private static readonly Parser<string> IdentifierPathParser =
         Identifier.DelimitedBy(Parse.Char('.')).Select(parts => string.Join(".", parts));
+
+    // A property is a configured query name or a path of identifiers. Query names are matched in the grammar,
+    // so a query name can hold any text (e.g. `first-name`, `_first`, or `first name`) and text inside quoted values is never changed.
+    // Longer query names are tried first so a query name that starts with another query name (e.g. `first` and `first name`) still matches.
+    // A property query name matches with the case rules of the current culture, like the alias regex of v1.14.2, and gives its configured text.
+    // A derived property or custom operation query name ignores case with the invariant rules.
+    private static Parser<string> PropertyPathParser(IQueryKitConfiguration? config)
+    {
+        Parser<string> parser = i => Result.Failure<string>(i, "no query name", Array.Empty<string>());
+        var mappings = config?.PropertyMappings;
+        if (mappings != null)
+        {
+            var queryNames = mappings.PropertyQueryNames.Select(queryName => (queryName, text: PropertyQueryNameText(queryName)))
+                .Concat(mappings.DerivedOrCustomOperationQueryNames.Select(queryName => (queryName, text: Parse.IgnoreCase(queryName).Text())))
+                .OrderByDescending(x => x.queryName.Length);
+            foreach (var (queryName, text) in queryNames)
+            {
+                parser = parser.Or(QueryName(queryName, text));
+            }
+        }
+
+        return parser.Or(IdentifierPathParser);
+    }
+
+    // A query name is a whole name: the next character can not continue a property path.
+    private static Parser<string> QueryName(string queryName, Parser<string> textParser) => input =>
+    {
+        var result = textParser(input);
+        if (!result.WasSuccessful || result.Remainder.AtEnd || !IsPropertyPathChar(result.Remainder.Current))
+            return result;
+
+        return Result.Failure<string>(input, $"Query name '{queryName}' must not be followed by '{result.Remainder.Current}'", new[] { queryName });
+    };
+
+    private static Parser<string> PropertyQueryNameText(string queryName) => input =>
+    {
+        var culture = CultureInfo.CurrentCulture;
+        var remainder = input;
+        foreach (var c in queryName)
+        {
+            if (remainder.AtEnd || char.ToLower(remainder.Current, culture) != char.ToLower(c, culture))
+            {
+                return Result.Failure<string>(input, $"Query name '{queryName}' expected", new[] { queryName });
+            }
+
+            remainder = remainder.Advance();
+        }
+
+        return Result.Success(queryName, remainder);
+    };
+
+    private static bool IsPropertyPathChar(char c) => char.IsLetterOrDigit(c) || c == '_' || c == '.';
 
     private static Parser<IEnumerable<string>> PropertyListParser(Parser<string> propertyPathParser)
     {
@@ -1058,75 +1116,44 @@ public static class FilterParser
 
     private static Parser<PropertyReference> CreateLeftExprParser(Type entityType, IQueryKitConfiguration? config)
     {
-        var leftPropertyParser = IdentifierPathParser.Token();
-        var queryNameParser = DerivedOrCustomOperationQueryNameParser(config).Token();
+        var leftPropertyParser = PropertyPathParser(config).Token();
+        var identifierPathParser = IdentifierPathParser.Token();
+        var derivedOrCustomOperationQueryNames = new HashSet<string>(
+            config?.PropertyMappings?.DerivedOrCustomOperationQueryNames ?? Enumerable.Empty<string>(),
+            StringComparer.InvariantCultureIgnoreCase);
         return input =>
         {
             var left = leftPropertyParser(input);
-            var reference = left.WasSuccessful ? PropertyResolver.Resolve(entityType, left.Value, config) : null;
-            if (reference != null && (reference.Kind != PropertyReferenceKind.Unknown || config?.AllowUnknownProperties == true))
-            {
-                return Result.Success(reference, left.Remainder);
-            }
-
-            // v1.14.2 did not accept the text here, so a derived property or custom operation query name can not change an accepted filter.
-            var queryName = _queryNameFallbackOff && reference != null
-                ? Result.Failure<string>(input, "query names are off", Array.Empty<string>())
-                : queryNameParser(input);
-            if (queryName.WasSuccessful)
-            {
-                _queryNameOverUnknown |= reference != null;
-                return Result.Success(PropertyResolver.Resolve(entityType, queryName.Value, config), queryName.Remainder);
-            }
-
-            if (reference == null)
+            if (!left.WasSuccessful)
             {
                 return Result.Failure<PropertyReference>(left.Remainder, left.Message, left.Expectations);
             }
 
-            throw new UnknownFilterPropertyException(reference.UnknownSegment!);
+            // v1.14.2 read an identifier path where the grammar now reads a derived property or custom operation query name.
+            // When that identifier path is unknown, a filter that fails throws the v1.14.2 exception for it.
+            if (derivedOrCustomOperationQueryNames.Contains(left.Value))
+            {
+                var identifier = identifierPathParser(input);
+                var identifierReference = identifier.WasSuccessful ? PropertyResolver.Resolve(entityType, identifier.Value, config) : null;
+                if (identifierReference?.Kind == PropertyReferenceKind.Unknown && config?.AllowUnknownProperties != true)
+                {
+                    _queryNameOverUnknown = true;
+                    if (_queryNameFallbackOff)
+                    {
+                        throw new UnknownFilterPropertyException(identifierReference.UnknownSegment!);
+                    }
+                }
+            }
+
+            var reference = PropertyResolver.Resolve(entityType, left.Value, config);
+            if (reference.Kind == PropertyReferenceKind.Unknown && config?.AllowUnknownProperties != true)
+            {
+                throw new UnknownFilterPropertyException(reference.UnknownSegment!);
+            }
+
+            return Result.Success(reference, left.Remainder);
         };
     }
-
-    // The rewrite before the parse does not replace the query name of a derived property or a custom operation,
-    // so the grammar reads it when the identifier path is not a property. This lets the query name hold any text (for example `full-name` or `full name`).
-    // Longer query names are tried first, so a query name that starts with another query name still matches.
-    private static Parser<string> DerivedOrCustomOperationQueryNameParser(IQueryKitConfiguration? config)
-    {
-        Parser<string> parser = i => Result.Failure<string>(i, "no query name", Array.Empty<string>());
-        var mappings = config?.PropertyMappings;
-        if (mappings == null)
-        {
-            return parser;
-        }
-
-        var queryNames = mappings.DerivedPropertyMappings.Values.Concat(mappings.CustomOperationMappings.Values)
-            .Select(info => info.QueryName)
-            .Where(queryName => !string.IsNullOrEmpty(queryName))
-            .Select(queryName => queryName!)
-            .Distinct(StringComparer.InvariantCultureIgnoreCase)
-            .OrderByDescending(queryName => queryName.Length);
-        foreach (var queryName in queryNames)
-        {
-            parser = parser.Or(WholeQueryName(queryName));
-        }
-
-        return parser;
-    }
-
-    // A query name is a whole name: the next character can not continue a property path.
-    private static Parser<string> WholeQueryName(string queryName) => input =>
-    {
-        var result = Parse.IgnoreCase(queryName).Text()(input);
-        if (!result.WasSuccessful || result.Remainder.AtEnd || !IsPropertyPathChar(result.Remainder.Current))
-        {
-            return result;
-        }
-
-        return Result.Failure<string>(input, $"Query name '{queryName}' must not be followed by '{result.Remainder.Current}'", new[] { queryName });
-    };
-
-    private static bool IsPropertyPathChar(char c) => char.IsLetterOrDigit(c) || c == '_' || c == '.';
 
     private static Expression CreateLeftExpr(ParameterExpression parameter, PropertyReference reference, IQueryKitConfiguration? config)
     {
@@ -1258,7 +1285,7 @@ public static class FilterParser
         var comparisonOperatorParser = ComparisonOperatorParser(config).Token();
         var rightSideValueParser = RightSideValueParser.Token();
 
-        return PropertyListParser(IdentifierPathParser)
+        return PropertyListParser(PropertyPathParser(config))
             .SelectMany(properties => comparisonOperatorParser,
                 (properties, op) => new { properties, op })
             .SelectMany(temp => rightSideValueParser,

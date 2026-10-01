@@ -580,6 +580,8 @@ var config = new QueryKitConfiguration(config =>
 });
 ```
 
+You can use a query name on the left side of a comparison, in a property list, and in an arithmetic expression. For example, `(first, LastName) == "Jane"` compares `FirstName` and `LastName` with `Jane`. QueryKit does not change text inside a quoted value. For example, `LastName == "first == x"` compares `LastName` with the text `first == x`.
+
 #### Derived Properties
 
 You can also expose custom derived properties for consumption. Just be sure that Linq can handle them in a db query if you're using it that way.
