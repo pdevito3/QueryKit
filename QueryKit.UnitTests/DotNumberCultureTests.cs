@@ -34,11 +34,11 @@ public class DotNumberCultureTests
     [InlineData("de-DE", "Rating ^^ [\"4.0\"]")]
     [InlineData("de-DE", "Rating > @4.4")]
     [InlineData("de-DE", "HaveMadeItMyself == 4.4")]
-    public void number_that_v1_14_2_also_converted_throws_format_exception(string cultureName, string input)
+    public void number_that_v1_14_2_also_converted_throws_parsing_exception(string cultureName, string input)
     {
         var act = () => WithCulture(cultureName, () => FilterParser.ParseFilter<Recipe>(input));
 
-        act.Should().ThrowExactly<FormatException>();
+        act.Should().ThrowExactly<ParsingException>().WithInnerExceptionExactly<FormatException>();
     }
 
     [Fact]

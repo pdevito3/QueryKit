@@ -405,6 +405,23 @@ public class FilterParsingRegressionTests
         scalarResult.Select(x => x.Title).Should().Equal("match");
     }
 
+    [Theory]
+    [InlineData("""Age == "abc" """)]
+    [InlineData("""Age == abc""")]
+    [InlineData("""Rating > "abc" """)]
+    [InlineData("""Rating > abc""")]
+    [InlineData("""Age == 99999999999""")]
+    [InlineData("""Id == "abc" """)]
+    [InlineData("""SpecificDateTime == "abc" """)]
+    [InlineData("""Favorite == "abc" """)]
+    [InlineData("""Age ^^ ["abc"]""")]
+    public void invalid_value_throws_parsing_exception(string input)
+    {
+        var act = () => FilterParser.ParseFilter<TestingPerson>(input);
+
+        act.Should().Throw<ParsingException>();
+    }
+
     private static TResult WithCulture<TResult>(string cultureName, Func<TResult> action)
     {
         var originalCulture = CultureInfo.CurrentCulture;

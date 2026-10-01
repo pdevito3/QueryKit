@@ -67,6 +67,14 @@ public static class FilterParser
         {
             throw new ParsingException(e);
         }
+        catch (FormatException e)
+        {
+            throw new ParsingException(e);
+        }
+        catch (OverflowException e)
+        {
+            throw new ParsingException(e);
+        }
         finally
         {
             FilterValue.Parameterize = parameterizeBefore;
