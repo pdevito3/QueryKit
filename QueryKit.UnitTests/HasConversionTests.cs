@@ -1,7 +1,6 @@
 namespace QueryKit.UnitTests;
 
 using Configuration;
-using Exceptions;
 using FluentAssertions;
 using WebApiTestProject.Entities;
 
@@ -27,7 +26,7 @@ public class HasConversionTests
     }
 
     [Fact]
-    public void struct_with_query_name_and_has_conversion_throws()
+    public void can_filter_struct_with_query_name_and_has_conversion()
     {
         // Arrange
         var config = new QueryKitConfiguration(config =>
@@ -36,16 +35,15 @@ public class HasConversionTests
         });
 
         // Act
-        var act = () => WrappedIdRows().ApplyQueryKitFilter("""wrappedid == "2" """, config).ToList();
+        var result = WrappedIdRows().ApplyQueryKitFilter("""wrappedid == "2" """, config).ToList();
 
         // Assert
-        act.Should().ThrowExactly<ParsingException>()
-            .WithInnerExceptionExactly<InvalidOperationException>()
-            .WithMessage("Unsupported value '2' for type 'WrappedId'");
+        result.Count.Should().Be(1);
+        result[0].Name.Should().Be("two");
     }
 
     [Fact]
-    public void struct_with_has_conversion_configured_before_query_name_throws()
+    public void can_filter_struct_with_has_conversion_configured_before_query_name()
     {
         // Arrange
         var config = new QueryKitConfiguration(config =>
@@ -54,12 +52,11 @@ public class HasConversionTests
         });
 
         // Act
-        var act = () => WrappedIdRows().ApplyQueryKitFilter("""wrappedid == "2" """, config).ToList();
+        var result = WrappedIdRows().ApplyQueryKitFilter("""wrappedid == "2" """, config).ToList();
 
         // Assert
-        act.Should().ThrowExactly<ParsingException>()
-            .WithInnerExceptionExactly<InvalidOperationException>()
-            .WithMessage("Unsupported value '2' for type 'WrappedId'");
+        result.Count.Should().Be(1);
+        result[0].Name.Should().Be("two");
     }
 
     [Fact]
@@ -80,7 +77,7 @@ public class HasConversionTests
     }
 
     [Fact]
-    public void struct_with_not_equals_query_name_and_has_conversion_throws()
+    public void can_filter_struct_with_not_equals_query_name_and_has_conversion()
     {
         // Arrange
         var config = new QueryKitConfiguration(config =>
@@ -89,16 +86,15 @@ public class HasConversionTests
         });
 
         // Act
-        var act = () => WrappedIdRows().ApplyQueryKitFilter("""wrappedid != "2" """, config).ToList();
+        var result = WrappedIdRows().ApplyQueryKitFilter("""wrappedid != "2" """, config).ToList();
 
         // Assert
-        act.Should().ThrowExactly<ParsingException>()
-            .WithInnerExceptionExactly<InvalidOperationException>()
-            .WithMessage("Unsupported value '2' for type 'WrappedId'");
+        result.Count.Should().Be(1);
+        result[0].Name.Should().Be("one");
     }
 
     [Fact]
-    public void property_path_with_query_name_and_has_conversion_configured_throws()
+    public void can_filter_by_property_path_when_query_name_and_has_conversion_are_configured()
     {
         // Arrange
         var config = new QueryKitConfiguration(config =>
@@ -107,12 +103,11 @@ public class HasConversionTests
         });
 
         // Act
-        var act = () => WrappedIdRows().ApplyQueryKitFilter("""Id == "2" """, config).ToList();
+        var result = WrappedIdRows().ApplyQueryKitFilter("""Id == "2" """, config).ToList();
 
         // Assert
-        act.Should().ThrowExactly<ParsingException>()
-            .WithInnerExceptionExactly<InvalidOperationException>()
-            .WithMessage("Unsupported value '2' for type 'WrappedId'");
+        result.Count.Should().Be(1);
+        result[0].Name.Should().Be("two");
     }
 
     [Fact]
@@ -133,7 +128,7 @@ public class HasConversionTests
     }
 
     [Fact]
-    public void reference_type_with_query_name_and_has_conversion_throws()
+    public void can_filter_reference_type_with_query_name_and_has_conversion()
     {
         // Arrange
         var config = new QueryKitConfiguration(config =>
@@ -142,16 +137,15 @@ public class HasConversionTests
         });
 
         // Act
-        var act = () => EmailRows().ApplyQueryKitFilter("""mail == "b@x.com" """, config).ToList();
+        var result = EmailRows().ApplyQueryKitFilter("""mail == "b@x.com" """, config).ToList();
 
         // Assert
-        act.Should().ThrowExactly<ParsingException>()
-            .WithInnerExceptionExactly<InvalidOperationException>()
-            .WithMessage("Unsupported value 'b@x.com' for type 'EmailAddressRecord'");
+        result.Count.Should().Be(1);
+        result[0].Email!.Value.Should().Be("b@x.com");
     }
 
     [Fact]
-    public void nested_property_with_query_name_and_has_conversion_throws()
+    public void can_filter_nested_property_with_query_name_and_has_conversion()
     {
         // Arrange
         var rows = new List<OwnerRow>
@@ -165,12 +159,11 @@ public class HasConversionTests
         });
 
         // Act
-        var act = () => rows.ApplyQueryKitFilter("""contact == "b@x.com" """, config).ToList();
+        var result = rows.ApplyQueryKitFilter("""contact == "b@x.com" """, config).ToList();
 
         // Assert
-        act.Should().ThrowExactly<ParsingException>()
-            .WithInnerExceptionExactly<InvalidOperationException>()
-            .WithMessage("Unsupported value 'b@x.com' for type 'EmailAddressRecord'");
+        result.Count.Should().Be(1);
+        result[0].Owner.Contact!.Value.Should().Be("b@x.com");
     }
 
     [Fact]
@@ -214,7 +207,7 @@ public class HasConversionTests
     }
 
     [Fact]
-    public void nullable_struct_with_has_conversion_throws()
+    public void can_filter_nullable_struct_with_has_conversion()
     {
         // Arrange
         var rows = new List<NullableWrappedIdRow>
@@ -229,12 +222,11 @@ public class HasConversionTests
         });
 
         // Act
-        var act = () => rows.ApplyQueryKitFilter("""Id == "2" """, config).ToList();
+        var result = rows.ApplyQueryKitFilter("""Id == "2" """, config).ToList();
 
         // Assert
-        act.Should().ThrowExactly<ParsingException>()
-            .WithInnerExceptionExactly<InvalidOperationException>()
-            .WithMessage("The binary operator Equal is not defined for the types*");
+        result.Count.Should().Be(1);
+        result[0].Id.Should().Be(new WrappedId(2));
     }
 
     [Fact]
@@ -278,7 +270,7 @@ public class HasConversionTests
     }
 
     [Fact]
-    public void null_on_reference_type_with_query_name_and_has_conversion_throws()
+    public void can_filter_null_on_reference_type_with_query_name_and_has_conversion()
     {
         // Arrange
         var rows = EmailRows();
@@ -289,16 +281,15 @@ public class HasConversionTests
         });
 
         // Act
-        var act = () => rows.ApplyQueryKitFilter("""mail == null""", config).ToList();
+        var result = rows.ApplyQueryKitFilter("""mail == null""", config).ToList();
 
         // Assert
-        act.Should().ThrowExactly<ParsingException>()
-            .WithInnerExceptionExactly<InvalidOperationException>()
-            .WithMessage("Unsupported value 'null' for type 'EmailAddressRecord'");
+        result.Count.Should().Be(1);
+        result[0].Email.Should().BeNull();
     }
 
     [Fact]
-    public void guid_with_contains_and_has_conversion_throws()
+    public void can_filter_guid_with_contains_and_has_conversion()
     {
         // Arrange
         var config = new QueryKitConfiguration(config =>
@@ -307,11 +298,11 @@ public class HasConversionTests
         });
 
         // Act
-        var act = () => GuidRows().ApplyQueryKitFilter("""Id @= "ab7afb17" """, config).ToList();
+        var result = GuidRows().ApplyQueryKitFilter("""Id @= "ab7afb17" """, config).ToList();
 
         // Assert
-        act.Should().ThrowExactly<ArgumentException>()
-            .WithMessage("Expression of type 'System.Guid' cannot be used for parameter of type 'System.String'*");
+        result.Count.Should().Be(1);
+        result[0].Id.Should().Be(KnownGuid);
     }
 
     [Fact]
@@ -329,6 +320,84 @@ public class HasConversionTests
         // Assert
         result.Count.Should().Be(1);
         result[0].Id.Should().Be(KnownGuid);
+    }
+
+    [Fact]
+    public void can_filter_nullable_struct_with_query_name_and_has_conversion()
+    {
+        // Arrange
+        var rows = new List<NullableWrappedIdRow>
+        {
+            new() { Id = new WrappedId(1) },
+            new() { Id = new WrappedId(2) },
+            new() { Id = null }
+        };
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<NullableWrappedIdRow>(x => x.Id!).HasQueryName("wrappedid").HasConversion<string>();
+        });
+
+        // Act
+        var result = rows.ApplyQueryKitFilter("""wrappedid == "2" """, config).ToList();
+
+        // Assert
+        result.Count.Should().Be(1);
+        result[0].Id.Should().Be(new WrappedId(2));
+    }
+
+    [Fact]
+    public void can_filter_property_list_with_lowercase_path_query_name_and_has_conversion()
+    {
+        // Arrange
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<WrappedIdRow>(x => x.Id).HasQueryName("wrappedid").HasConversion<string>();
+        });
+
+        // Act
+        var result = WrappedIdRows().ApplyQueryKitFilter("""(id) == "2" """, config).ToList();
+
+        // Assert
+        result.Count.Should().Be(1);
+        result[0].Name.Should().Be("two");
+    }
+
+    [Fact]
+    public void int_with_query_name_and_has_conversion_compares_the_int()
+    {
+        // Arrange
+        var rows = new List<NumberRow>
+        {
+            new() { Number = 1 },
+            new() { Number = 2 }
+        };
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<NumberRow>(x => x.Number).HasQueryName("count").HasConversion<string>();
+        });
+
+        // Act
+        var result = rows.ApplyQueryKitFilter("""count == 2""", config).ToList();
+
+        // Assert
+        result.Count.Should().Be(1);
+        result[0].Number.Should().Be(2);
+    }
+
+    [Fact]
+    public void guid_with_query_name_and_has_conversion_compares_a_guid_constant()
+    {
+        // Arrange
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<GuidRow>(x => x.Id).HasQueryName("identifier").HasConversion<string>();
+        });
+
+        // Act
+        var filter = FilterParser.ParseFilter<GuidRow>($"identifier == \"{KnownGuid}\"", config);
+
+        // Assert
+        filter.ToDisplayString().Should().Be($"x => (x.Id == {KnownGuid})");
     }
 
     private static List<WrappedIdRow> WrappedIdRows() => new()
@@ -387,5 +456,10 @@ public class HasConversionTests
     private class GuidRow
     {
         public Guid Id { get; set; }
+    }
+
+    private class NumberRow
+    {
+        public int Number { get; set; }
     }
 }
