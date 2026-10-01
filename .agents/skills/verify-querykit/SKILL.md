@@ -69,7 +69,7 @@ The doctor is read-only. Each line starts with `ok` or `FAIL`. It exits non-zero
 - The host port maps to this container.
 - Postgres answers a query.
 - The driver dll exists.
-- The driver is newer than every `.cs` and `.csproj` file under `QueryKit/` and `harness/Driver/`. A `FAIL` on this line means that the proof would use old code. Run `qk rebuild`.
+- The last driver build started after the last change to every `.cs` and `.csproj` file under `QueryKit/` and `harness/Driver/`. A `FAIL` on this line means that the proof would use old code. Run `qk rebuild`.
 
 The last line shows the git revision of the build and the number of uncommitted `QueryKit/` files. Record it with the proof.
 
