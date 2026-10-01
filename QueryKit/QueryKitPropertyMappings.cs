@@ -124,6 +124,10 @@ public class QueryKitPropertyMappings
     }
 
     public string ReplaceAliasesWithPropertyPaths(string input)
+        => ReplaceAliasesWithPropertyPaths(input, replaceAfterDot: false);
+
+    // The filter parser keeps the v1.14.2 match, which also replaces a query name after a dot.
+    internal string ReplaceAliasesWithPropertyPaths(string input, bool replaceAfterDot)
     {
         var operators = ComparisonOperator.List.Select(x => x.Operator()).ToList();
         
@@ -136,8 +140,10 @@ public class QueryKitPropertyMappings
                 {
                     // Use regular expression to isolate left side of the expression. Query names and
                     // operators are matched literally, so escape any regex metacharacters they contain
-                    // (e.g. the `^` in `^^` would otherwise be read as a start-of-line anchor).
-                    var regex = AliasRegexCache.Get($@"\b{Regex.Escape(queryKitPropertyInfo.QueryName!)}\b(?=\s*{Regex.Escape(op)})");
+                    // (e.g. the `^` in `^^` would otherwise be read as a start-of-line anchor). A query name
+                    // after a dot is a segment of a nested path, so only the parser replaces it.
+                    var afterDot = replaceAfterDot ? "" : @"(?<!\.)";
+                    var regex = AliasRegexCache.Get($@"{afterDot}\b{Regex.Escape(queryKitPropertyInfo.QueryName!)}\b(?=\s*{Regex.Escape(op)})");
 
                     if (queryKitPropertyInfo is { CanSort: false, CanFilter: false} && regex.IsMatch(input))
                     {

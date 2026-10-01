@@ -675,7 +675,7 @@ public class PropertyResolverTests
     }
 
     [Fact]
-    public void alias_replacement_replaces_a_query_name_in_a_nested_path()
+    public void alias_replacement_does_not_replace_a_query_name_in_a_nested_path()
     {
         var config = new QueryKitConfiguration(config =>
         {
@@ -684,7 +684,20 @@ public class PropertyResolverTests
 
         var input = config.PropertyMappings.ReplaceAliasesWithPropertyPaths("""Author.Name == "x" && name == "y" """);
 
-        input.Should().Be("""Author.Title == "x" && Title == "y" """);
+        input.Should().Be("""Author.Name == "x" && Title == "y" """);
+    }
+
+    [Fact]
+    public void filter_with_a_query_name_in_a_nested_path_still_throws_for_the_replaced_path()
+    {
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<Recipe>(x => x.Title).HasQueryName("name");
+        });
+
+        var act = () => FilterParser.ParseFilter<Recipe>("""Author.Name == "x" """, config);
+
+        act.Should().ThrowExactly<UnknownFilterPropertyException>().WithMessage("*'Title'*");
     }
 
     [Fact]
