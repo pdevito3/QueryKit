@@ -342,6 +342,14 @@ public class FilterParsingRegressionTests
         result.Should().Equal(expectedResult);
     }
 
+    [Fact]
+    public void unknown_logical_operator_throws_query_kit_parsing_exception()
+    {
+        var act = () => LogicalOperator.GetByOperatorString("xor");
+
+        act.Should().Throw<QueryKitParsingException>().WithMessage("Operator xor is not supported");
+    }
+
     private static TResult WithCulture<TResult>(string cultureName, Func<TResult> action)
     {
         var originalCulture = CultureInfo.CurrentCulture;
