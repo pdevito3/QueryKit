@@ -34,30 +34,30 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
     public static ComparisonOperator CaseSensitiveHasOperator = new HasType();
     public static ComparisonOperator CaseSensitiveDoesNotHaveOperator = new DoesNotHaveType();
     
-    public static ComparisonOperator EqualsOperator(bool caseInsensitive = false, bool usesAll = false) => new EqualsType(caseInsensitive, usesAll);
-    public static ComparisonOperator NotEqualsOperator(bool caseInsensitive = false, bool usesAll = false) => new NotEqualsType(caseInsensitive, usesAll);
-    public static ComparisonOperator GreaterThanOperator(bool caseInsensitive = false, bool usesAll = false) => new GreaterThanType(caseInsensitive, usesAll);
-    public static ComparisonOperator LessThanOperator(bool caseInsensitive = false, bool usesAll = false) => new LessThanType(caseInsensitive, usesAll);
-    public static ComparisonOperator GreaterThanOrEqualOperator(bool caseInsensitive = false, bool usesAll = false) => new GreaterThanOrEqualType(caseInsensitive, usesAll);
-    public static ComparisonOperator LessThanOrEqualOperator(bool caseInsensitive = false, bool usesAll = false) => new LessThanOrEqualType(caseInsensitive, usesAll);
-    public static ComparisonOperator ContainsOperator(bool caseInsensitive = false, bool usesAll = false) => new ContainsType(caseInsensitive, usesAll);
-    public static ComparisonOperator StartsWithOperator(bool caseInsensitive = false, bool usesAll = false) => new StartsWithType(caseInsensitive, usesAll);
-    public static ComparisonOperator EndsWithOperator(bool caseInsensitive = false, bool usesAll = false) => new EndsWithType(caseInsensitive, usesAll);
-    public static ComparisonOperator NotContainsOperator(bool caseInsensitive = false, bool usesAll = false) => new NotContainsType(caseInsensitive, usesAll);
-    public static ComparisonOperator NotStartsWithOperator(bool caseInsensitive = false, bool usesAll = false) => new NotStartsWithType(caseInsensitive, usesAll);
-    public static ComparisonOperator NotEndsWithOperator(bool caseInsensitive = false, bool usesAll = false) => new NotEndsWithType(caseInsensitive, usesAll);
-    public static ComparisonOperator InOperator(bool caseInsensitive = false, bool usesAll = false) => new InType(caseInsensitive, usesAll);
-    public static ComparisonOperator NotInOperator(bool caseInsensitive = false, bool usesAll = false) => new NotInType(caseInsensitive, usesAll);
-    public static ComparisonOperator SoundsLikeOperator(bool caseInsensitive = false, bool usesAll = false) => new SoundsLikeType(caseInsensitive, usesAll);
-    public static ComparisonOperator DoesNotSoundLikeOperator(bool caseInsensitive = false, bool usesAll = false) => new DoesNotSoundLikeType(caseInsensitive, usesAll);
-    public static ComparisonOperator HasCountEqualToOperator(bool caseInsensitive = false, bool usesAll = false) => new HasCountEqualToType(caseInsensitive, usesAll);
-    public static ComparisonOperator HasCountNotEqualToOperator(bool caseInsensitive = false, bool usesAll = false) => new HasCountNotEqualToType(caseInsensitive, usesAll);
-    public static ComparisonOperator HasCountGreaterThanOperator(bool caseInsensitive = false, bool usesAll = false) => new HasCountGreaterThanType(caseInsensitive, usesAll);
-    public static ComparisonOperator HasCountLessThanOperator(bool caseInsensitive = false, bool usesAll = false) => new HasCountLessThanType(caseInsensitive, usesAll);
-    public static ComparisonOperator HasCountGreaterThanOrEqualOperator(bool caseInsensitive = false, bool usesAll = false) => new HasCountGreaterThanOrEqualType(caseInsensitive, usesAll);
-    public static ComparisonOperator HasCountLessThanOrEqualOperator(bool caseInsensitive = false, bool usesAll = false) => new HasCountLessThanOrEqualType(caseInsensitive, usesAll);
-    public static ComparisonOperator HasOperator(bool caseInsensitive = false, bool usesAll = false) => new HasType(caseInsensitive, usesAll);
-    public static ComparisonOperator DoesNotHaveOperator(bool caseInsensitive = false, bool usesAll = false) => new DoesNotHaveType(caseInsensitive, usesAll);
+    public static ComparisonOperator EqualsOperator(bool caseInsensitive = false, bool usesAll = false) => new EqualsType(caseInsensitive);
+    public static ComparisonOperator NotEqualsOperator(bool caseInsensitive = false, bool usesAll = false) => new NotEqualsType(caseInsensitive);
+    public static ComparisonOperator GreaterThanOperator(bool caseInsensitive = false, bool usesAll = false) => new GreaterThanType(caseInsensitive);
+    public static ComparisonOperator LessThanOperator(bool caseInsensitive = false, bool usesAll = false) => new LessThanType(caseInsensitive);
+    public static ComparisonOperator GreaterThanOrEqualOperator(bool caseInsensitive = false, bool usesAll = false) => new GreaterThanOrEqualType(caseInsensitive);
+    public static ComparisonOperator LessThanOrEqualOperator(bool caseInsensitive = false, bool usesAll = false) => new LessThanOrEqualType(caseInsensitive);
+    public static ComparisonOperator ContainsOperator(bool caseInsensitive = false, bool usesAll = false) => new ContainsType(caseInsensitive);
+    public static ComparisonOperator StartsWithOperator(bool caseInsensitive = false, bool usesAll = false) => new StartsWithType(caseInsensitive);
+    public static ComparisonOperator EndsWithOperator(bool caseInsensitive = false, bool usesAll = false) => new EndsWithType(caseInsensitive);
+    public static ComparisonOperator NotContainsOperator(bool caseInsensitive = false, bool usesAll = false) => new NotContainsType(caseInsensitive);
+    public static ComparisonOperator NotStartsWithOperator(bool caseInsensitive = false, bool usesAll = false) => new NotStartsWithType(caseInsensitive);
+    public static ComparisonOperator NotEndsWithOperator(bool caseInsensitive = false, bool usesAll = false) => new NotEndsWithType(caseInsensitive);
+    public static ComparisonOperator InOperator(bool caseInsensitive = false, bool usesAll = false) => new InType(caseInsensitive);
+    public static ComparisonOperator NotInOperator(bool caseInsensitive = false, bool usesAll = false) => new NotInType(caseInsensitive);
+    public static ComparisonOperator SoundsLikeOperator(bool caseInsensitive = false, bool usesAll = false) => new SoundsLikeType(caseInsensitive);
+    public static ComparisonOperator DoesNotSoundLikeOperator(bool caseInsensitive = false, bool usesAll = false) => new DoesNotSoundLikeType(caseInsensitive);
+    public static ComparisonOperator HasCountEqualToOperator(bool caseInsensitive = false, bool usesAll = false) => new HasCountEqualToType(caseInsensitive);
+    public static ComparisonOperator HasCountNotEqualToOperator(bool caseInsensitive = false, bool usesAll = false) => new HasCountNotEqualToType(caseInsensitive);
+    public static ComparisonOperator HasCountGreaterThanOperator(bool caseInsensitive = false, bool usesAll = false) => new HasCountGreaterThanType(caseInsensitive);
+    public static ComparisonOperator HasCountLessThanOperator(bool caseInsensitive = false, bool usesAll = false) => new HasCountLessThanType(caseInsensitive);
+    public static ComparisonOperator HasCountGreaterThanOrEqualOperator(bool caseInsensitive = false, bool usesAll = false) => new HasCountGreaterThanOrEqualType(caseInsensitive);
+    public static ComparisonOperator HasCountLessThanOrEqualOperator(bool caseInsensitive = false, bool usesAll = false) => new HasCountLessThanOrEqualType(caseInsensitive);
+    public static ComparisonOperator HasOperator(bool caseInsensitive = false, bool usesAll = false) => new HasType(caseInsensitive);
+    public static ComparisonOperator DoesNotHaveOperator(bool caseInsensitive = false, bool usesAll = false) => new DoesNotHaveType(caseInsensitive);
     
     public static ComparisonOperator GetByOperatorString(string op, bool caseInsensitive = false, bool usesAll = false)
     {
@@ -383,10 +383,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
                 return Expression.AndAlso(nullCheck, containsCall);
             }
 
-            // null doesn't contain anything, so we need: left != null && left.Contains(right)
-            return Expression.AndAlso(
-                Expression.NotEqual(left, Expression.Constant(null, typeof(string))),
-                Expression.Call(left, typeof(string).GetMethod("Contains", new[] { typeof(string) })!, right));
+            return Expression.Call(left, typeof(string).GetMethod("Contains", new[] { typeof(string) })!, right);
         }
     }
 
@@ -418,10 +415,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
                 return Expression.AndAlso(nullCheck, startsWithCall);
             }
 
-            // null doesn't start with anything, so we need: left != null && left.StartsWith(right)
-            return Expression.AndAlso(
-                Expression.NotEqual(left, Expression.Constant(null, typeof(string))),
-                Expression.Call(left, typeof(string).GetMethod("StartsWith", new[] { typeof(string) })!, right));
+            return Expression.Call(left, typeof(string).GetMethod("StartsWith", new[] { typeof(string) })!, right);
         }
     }
 
@@ -453,10 +447,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
                 return Expression.AndAlso(nullCheck, endsWithCall);
             }
 
-            // null doesn't end with anything, so we need: left != null && left.EndsWith(right)
-            return Expression.AndAlso(
-                Expression.NotEqual(left, Expression.Constant(null, typeof(string))),
-                Expression.Call(left, typeof(string).GetMethod("EndsWith", new[] { typeof(string) })!, right));
+            return Expression.Call(left, typeof(string).GetMethod("EndsWith", new[] { typeof(string) })!, right);
         }
     }
 
@@ -488,10 +479,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
                 return Expression.OrElse(nullCheck, notContainsCall);
             }
 
-            // null doesn't contain anything, so it should be included: left == null || !left.Contains(right)
-            return Expression.OrElse(
-                Expression.Equal(left, Expression.Constant(null, typeof(string))),
-                Expression.Not(Expression.Call(left, typeof(string).GetMethod("Contains", new[] { typeof(string) })!, right)));
+            return Expression.Not(Expression.Call(left, typeof(string).GetMethod("Contains", new[] { typeof(string) })!, right));
         }
     }
 
@@ -523,10 +511,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
                 return Expression.OrElse(nullCheck, notStartsWithCall);
             }
 
-            // null doesn't start with anything, so it should be included: left == null || !left.StartsWith(right)
-            return Expression.OrElse(
-                Expression.Equal(left, Expression.Constant(null, typeof(string))),
-                Expression.Not(Expression.Call(left, typeof(string).GetMethod("StartsWith", new[] { typeof(string) })!, right)));
+            return Expression.Not(Expression.Call(left, typeof(string).GetMethod("StartsWith", new[] { typeof(string) })!, right));
         }
     }
 
@@ -558,10 +543,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
                 return Expression.OrElse(nullCheck, notEndsWithCall);
             }
 
-            // null doesn't end with anything, so it should be included: left == null || !left.EndsWith(right)
-            return Expression.OrElse(
-                Expression.Equal(left, Expression.Constant(null, typeof(string))),
-                Expression.Not(Expression.Call(left, typeof(string).GetMethod("EndsWith", new[] { typeof(string) })!, right)));
+            return Expression.Not(Expression.Call(left, typeof(string).GetMethod("EndsWith", new[] { typeof(string) })!, right));
         }
     }
 
@@ -606,7 +588,8 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
                 var listType = typeof(List<string>);
                 var caseList = Activator.CreateInstance(listType);
 
-                var originalList = values as IEnumerable<string>;
+                // A caller can pass the list as a constant, like v1.14.2.
+                var originalList = (values ?? ((ConstantExpression)right).Value) as IEnumerable<string>;
                 foreach (var value in originalList!)
                 {
                     listType.GetMethod("Add")!.Invoke(caseList, new[] { caseMode == CaseInsensitiveMode.Upper ? value.ToUpper() : value.ToLower() });
@@ -783,7 +766,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
                 return GetCollectionExpression(left, right, Expression.Equal, UsesAll);
             }
 
-            throw new QueryKitParsingException("HasType is only supported for collections");
+            throw new QueryKitParsingException("DoesNotHaveType is only supported for collections");
         }
     }
 
@@ -851,7 +834,8 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
                 var listType = typeof(List<string>);
                 var caseList = Activator.CreateInstance(listType);
 
-                var originalList = values as IEnumerable<string>;
+                // A caller can pass the list as a constant, like v1.14.2.
+                var originalList = (values ?? ((ConstantExpression)right).Value) as IEnumerable<string>;
                 foreach (var value in originalList!)
                 {
                     listType.GetMethod("Add")!.Invoke(caseList, new[] { caseMode == CaseInsensitiveMode.Upper ? value.ToUpper() : value.ToLower() });

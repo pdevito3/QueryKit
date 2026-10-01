@@ -14,14 +14,6 @@ public class QueryKitPropertyMappings
     internal IReadOnlyDictionary<string, QueryKitPropertyInfo> DerivedPropertyMappings => _derivedPropertyMappings;
     internal IReadOnlyDictionary<string, QueryKitPropertyInfo> CustomOperationMappings => _customOperationMappings;
 
-    // Every query name of a property, a derived property, or a custom operation
-    internal IEnumerable<string> QueryNames
-        => _propertyMappings.Values.Concat(_derivedPropertyMappings.Values).Concat(_customOperationMappings.Values)
-            .Select(info => info.QueryName)
-            .Where(queryName => !string.IsNullOrEmpty(queryName))
-            .Select(queryName => queryName!)
-            .Distinct(StringComparer.InvariantCultureIgnoreCase);
-
     public QueryKitPropertyMapping<TModel> Property<TModel>(Expression<Func<TModel, object>>? propertySelector)
     {
         var fullPath = GetFullPropertyPath(propertySelector);
@@ -420,12 +412,11 @@ public class QueryKitPropertyMappings
         if (string.IsNullOrEmpty(propertyPath))
             return null;
 
-        // Check if the property path is, or is under, any configured property that has MaxDepth
+        // Check if the property path starts with any configured property that has MaxDepth
         foreach (var mapping in _propertyMappings.Values)
         {
-            if (mapping.MaxDepth.HasValue && !string.IsNullOrEmpty(mapping.Name) &&
-                (propertyPath.Equals(mapping.Name, StringComparison.OrdinalIgnoreCase) ||
-                 propertyPath.StartsWith(mapping.Name + ".", StringComparison.OrdinalIgnoreCase)))
+            if (mapping.MaxDepth.HasValue &&
+                propertyPath.StartsWith(mapping.Name ?? "", StringComparison.OrdinalIgnoreCase))
             {
                 return mapping.MaxDepth;
             }

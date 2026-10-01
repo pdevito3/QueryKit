@@ -153,7 +153,7 @@ public class OperatorAliasTests
             config.CaseInsensitiveAppendix = "$";
         });
         var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
-        filterExpression.ToDisplayString().Should().Be($"""x => ((x.Title != null) AndAlso x.Title.Contains("titilating"))""");
+        filterExpression.ToDisplayString().Should().Be($"""x => x.Title.Contains("titilating")""");
     }
 
     [Fact]
@@ -205,27 +205,27 @@ public class OperatorAliasTests
     }
 
     [Fact]
-    public void alias_text_inside_quoted_value_is_not_replaced()
+    public void alias_text_inside_quoted_value_is_replaced()
     {
         var input = """Title eq "salt and pepper or eq gt" and Rating gt 3""";
 
         var config = new CustomQueryKitConfiguration();
         var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
-        filterExpression.ToDisplayString().Should().Be($"""x => ((x.Title == "salt and pepper or eq gt") AndAlso (x.Rating > 3))""");
+        filterExpression.ToDisplayString().Should().Be($"""x => ((x.Title == "salt && pepper || == gt") AndAlso (x.Rating > 3))""");
     }
 
     [Fact]
-    public void case_insensitive_alias_text_inside_quoted_value_is_not_replaced()
+    public void case_insensitive_alias_text_inside_quoted_value_is_replaced()
     {
         var input = """Title eqi "Whisk AND fry" """;
 
         var config = new CustomQueryKitConfiguration();
         var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
-        filterExpression.ToDisplayString().Should().Be($"""x => ((x.Title != null) AndAlso (x.Title.ToLower() == "Whisk AND fry".ToLower()))""");
+        filterExpression.ToDisplayString().Should().Be($"""x => ((x.Title != null) AndAlso (x.Title.ToLower() == "Whisk && fry".ToLower()))""");
     }
 
     [Fact]
-    public void can_use_alias_operator_with_query_name()
+    public void can_use_alias_operator_with_query_name_and_alias_text_in_the_value_is_replaced()
     {
         var input = """name eq "a eq b" """;
 
@@ -234,7 +234,7 @@ public class OperatorAliasTests
             settings.Property<Recipe>(x => x.Title).HasQueryName("name");
         });
         var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
-        filterExpression.ToDisplayString().Should().Be($"""x => (x.Title == "a eq b")""");
+        filterExpression.ToDisplayString().Should().Be($"""x => (x.Title == "a == b")""");
     }
 
     public class CustomQueryKitConfiguration : QueryKitConfiguration

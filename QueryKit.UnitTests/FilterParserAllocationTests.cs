@@ -22,10 +22,10 @@ public class FilterParserAllocationTests
     {
         var config = new QueryKitConfiguration(c =>
         {
-            c.Property<TestingPerson>(x => x.Title).HasQueryName("name");
-            c.Property<TestingPerson>(x => x.Age).HasQueryName("years");
-            c.Property<TestingPerson>(x => x.Rating).HasQueryName("score");
-            c.Property<TestingPerson>(x => x.FirstName).HasQueryName("first");
+            c.Property<TestingPerson>(x => x.Title!).HasQueryName("name");
+            c.Property<TestingPerson>(x => x.Age!).HasQueryName("years");
+            c.Property<TestingPerson>(x => x.Rating!).HasQueryName("score");
+            c.Property<TestingPerson>(x => x.FirstName!).HasQueryName("first");
             c.Property<TestingPerson>(x => x.Id).HasQueryName("key");
         });
 

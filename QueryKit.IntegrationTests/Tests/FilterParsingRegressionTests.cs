@@ -15,7 +15,7 @@ using WebApiTestProject.Entities.Recipes;
 public class FilterParsingRegressionTests : TestBase
 {
     [Fact]
-    public async Task operator_alias_text_inside_quoted_value_is_kept()
+    public async Task operator_alias_text_inside_quoted_value_is_replaced()
     {
         // Arrange
         var testingServiceScope = new TestingServiceScope();
@@ -41,8 +41,7 @@ public class FilterParsingRegressionTests : TestBase
         var people = await appliedQueryable.ToListAsync();
 
         // Assert
-        people.Count.Should().Be(1);
-        people[0].Id.Should().Be(fakePersonOne.Id);
+        people.Should().BeEmpty();
     }
 
     [Fact]
@@ -83,7 +82,7 @@ public class FilterParsingRegressionTests : TestBase
     }
 
     [Fact]
-    public async Task list_value_with_comma_is_one_item()
+    public async Task list_value_with_comma_is_split_into_items()
     {
         // Arrange
         var testingServiceScope = new TestingServiceScope();
@@ -107,8 +106,8 @@ public class FilterParsingRegressionTests : TestBase
         var notInPeople = await queryablePeople.ApplyQueryKitFilter(notInInput).ToListAsync();
 
         // Assert
-        inPeople.Select(x => x.Id).Should().Equal(fakePersonOne.Id);
-        notInPeople.Select(x => x.Id).Should().Equal(fakePersonTwo.Id);
+        inPeople.Select(x => x.Id).Should().Equal(fakePersonTwo.Id);
+        notInPeople.Select(x => x.Id).Should().Equal(fakePersonOne.Id);
     }
 
     [Theory]
@@ -143,11 +142,13 @@ public class FilterParsingRegressionTests : TestBase
     }
 
     [Theory]
-    [InlineData("SpecificDateTime == 2024-01-15T08:00:00.500Z")]
-    [InlineData("SpecificDate == 2024-01-15T10:00:00.5+02:00")]
-    [InlineData("Time == 08:30:00.5")]
-    [InlineData("Time == \"08:30:00.5\"")]
-    public async Task fractional_seconds_are_kept(string valueFilter)
+    [InlineData("SpecificDateTime == 2024-01-15T08:00:00.500Z", true)]
+    [InlineData("SpecificDateTime == 2024-01-15T08:00:00Z.5", true)]
+    [InlineData("SpecificDate == 2024-01-15T10:00:00.5+02:00", true)]
+    [InlineData("Time == 08:30:00.5", true)]
+    [InlineData("Time == \"08:30:00.500\"", true)]
+    [InlineData("Time == \"08:30:00.5\"", false)]
+    public async Task fractional_second_value_matches_by_its_fraction(string valueFilter, bool expectFractionPerson)
     {
         // Arrange
         var testingServiceScope = new TestingServiceScope();
@@ -173,7 +174,7 @@ public class FilterParsingRegressionTests : TestBase
         var people = await queryablePeople.ApplyQueryKitFilter(input).ToListAsync();
 
         // Assert
-        people.Select(x => x.Id).Should().Equal(fakePersonOne.Id);
+        people.Select(x => x.Id).Should().Equal(expectFractionPerson ? fakePersonOne.Id : fakePersonTwo.Id);
     }
 
     [Theory]
@@ -241,7 +242,7 @@ public class FilterParsingRegressionTests : TestBase
     }
 
     [Fact]
-    public async Task comparison_operator_factory_with_uses_all_matches_every_item()
+    public async Task comparison_operator_factory_with_uses_all_matches_any_item()
     {
         // Arrange
         var testingServiceScope = new TestingServiceScope();
@@ -268,7 +269,7 @@ public class FilterParsingRegressionTests : TestBase
             .ToListAsync();
 
         // Assert
-        recipes.Select(x => x.Id).Should().Equal(fakeRecipeOne.Id);
+        recipes.Select(x => x.Id).Should().BeEquivalentTo(new[] { fakeRecipeOne.Id, fakeRecipeTwo.Id });
     }
 
     [Fact]

@@ -17,15 +17,21 @@ public class ParseLimitsTests
     }
 
     [Fact]
-    public void filter_over_default_nesting_depth_throws()
+    public void filter_over_33_nesting_levels_parses_by_default()
     {
-        var input = new string('(', QueryKitSettings.DefaultMaxNestingDepth + 1)
-            + """Title == "salt" """
-            + new string(')', QueryKitSettings.DefaultMaxNestingDepth + 1);
+        var input = new string('(', 33) + """Title == "salt" """ + new string(')', 33);
 
-        var act = () => FilterParser.ParseFilter<TestingPerson>(input);
-        act.Should().Throw<QueryKitNestingDepthExceededException>()
-            .WithMessage($"*depth of {QueryKitSettings.DefaultMaxNestingDepth + 1}*maximum allowed depth of {QueryKitSettings.DefaultMaxNestingDepth}*");
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
+        filterExpression.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void quoted_value_with_33_parentheses_parses_by_default()
+    {
+        var input = $"""Title == "{new string('(', 33)}" """;
+
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
+        filterExpression.Should().NotBeNull();
     }
 
     [Fact]
@@ -65,14 +71,13 @@ public class ParseLimitsTests
     }
 
     [Fact]
-    public void filter_over_default_input_length_throws()
+    public void filter_over_5000_characters_parses_by_default()
     {
-        var padding = new string('a', QueryKitSettings.DefaultMaxInputLength);
+        var padding = new string('a', 5000);
         var input = $"""Title == "{padding}" """;
 
-        var act = () => FilterParser.ParseFilter<TestingPerson>(input);
-        act.Should().Throw<QueryKitInputLengthExceededException>()
-            .WithMessage($"*length of {input.Length}*maximum allowed length of {QueryKitSettings.DefaultMaxInputLength}*");
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
+        filterExpression.Should().NotBeNull();
     }
 
     [Fact]
@@ -103,24 +108,15 @@ public class ParseLimitsTests
     }
 
     [Fact]
-    public void configuration_that_implements_only_the_interface_uses_the_default_limits()
+    public void configuration_that_implements_only_the_interface_has_no_limits()
     {
         var config = new FilterBehaviorInterfaceTests.InterfaceOnlyConfiguration();
 
-        var filterExpression = FilterParser.ParseFilter<TestingPerson>("""Title == "salt" """, config);
-        filterExpression.Should().NotBeNull();
+        var deep = new string('(', 33) + """Title == "salt" """ + new string(')', 33);
+        FilterParser.ParseFilter<TestingPerson>(deep, config).Should().NotBeNull();
 
-        var tooDeep = new string('(', QueryKitSettings.DefaultMaxNestingDepth + 1)
-            + """Title == "salt" """
-            + new string(')', QueryKitSettings.DefaultMaxNestingDepth + 1);
-        var actDeep = () => FilterParser.ParseFilter<TestingPerson>(tooDeep, config);
-        actDeep.Should().Throw<QueryKitNestingDepthExceededException>()
-            .WithMessage($"*maximum allowed depth of {QueryKitSettings.DefaultMaxNestingDepth}*");
-
-        var tooLong = $"""Title == "{new string('a', QueryKitSettings.DefaultMaxInputLength)}" """;
-        var actLong = () => FilterParser.ParseFilter<TestingPerson>(tooLong, config);
-        actLong.Should().Throw<QueryKitInputLengthExceededException>()
-            .WithMessage($"*maximum allowed length of {QueryKitSettings.DefaultMaxInputLength}*");
+        var longInput = $"""Title == "{new string('a', 5000)}" """;
+        FilterParser.ParseFilter<TestingPerson>(longInput, config).Should().NotBeNull();
     }
 
     [Fact]

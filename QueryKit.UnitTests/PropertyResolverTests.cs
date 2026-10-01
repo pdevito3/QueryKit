@@ -29,7 +29,7 @@ public class PropertyResolverTests
         var input = """FirstName == "Ann" || Title == "s" """;
         var config = new QueryKitConfiguration(config =>
         {
-            config.Property<TestingPerson>(x => x.Title).PreventFilter();
+            config.Property<TestingPerson>(x => x.Title!).PreventFilter();
         });
 
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
@@ -43,8 +43,8 @@ public class PropertyResolverTests
         var input = """(Title, FirstName) == "x" || Age > 100""";
         var config = new QueryKitConfiguration(config =>
         {
-            config.Property<TestingPerson>(x => x.Title).PreventFilter();
-            config.Property<TestingPerson>(x => x.FirstName).PreventFilter();
+            config.Property<TestingPerson>(x => x.Title!).PreventFilter();
+            config.Property<TestingPerson>(x => x.FirstName!).PreventFilter();
         });
 
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
@@ -84,53 +84,6 @@ public class PropertyResolverTests
     }
 
     [Fact]
-    public void prevented_property_in_arithmetic_is_true_equals_true()
-    {
-        var input = """(Age + 0) > 10 || Title == "a" """;
-        var config = new QueryKitConfiguration(config =>
-        {
-            config.IgnoredClauseBehavior = IgnoredClauseBehavior.ReplaceWithTrue;
-            config.Property<TestingPerson>(x => x.Age!).PreventFilter();
-        });
-
-        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
-
-        filterExpression.ToDisplayString().Should().Be(
-            """x => ((True == True) OrElse (x.Title == "a"))""");
-    }
-
-    [Fact]
-    public void prevented_property_on_the_right_side_of_arithmetic_is_true_equals_true()
-    {
-        var input = """(Age + 0) > (Rating * 2)""";
-        var config = new QueryKitConfiguration(config =>
-        {
-            config.IgnoredClauseBehavior = IgnoredClauseBehavior.ReplaceWithTrue;
-            config.Property<TestingPerson>(x => x.Rating!).PreventFilter();
-        });
-
-        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
-
-        filterExpression.ToDisplayString().Should().Be("x => (True == True)");
-    }
-
-    [Fact]
-    public void prevented_property_on_the_right_side_is_true_equals_true_when_replaced()
-    {
-        var input = """FirstName == Title || Age > 100""";
-        var config = new QueryKitConfiguration(config =>
-        {
-            config.IgnoredClauseBehavior = IgnoredClauseBehavior.ReplaceWithTrue;
-            config.Property<TestingPerson>(x => x.Title!).PreventFilter();
-        });
-
-        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
-
-        filterExpression.ToDisplayString().Should().Be(
-            "x => ((True == True) OrElse (x.Age > 100))");
-    }
-
-    [Fact]
     public void unknown_property_clause_is_removed_under_or()
     {
         var input = """Nope == "x" || Age > 100""";
@@ -167,7 +120,7 @@ public class PropertyResolverTests
         var config = new QueryKitConfiguration(config =>
         {
             config.IgnoredClauseBehavior = IgnoredClauseBehavior.Remove;
-            config.Property<TestingPerson>(x => x.Rating).PreventFilter();
+            config.Property<TestingPerson>(x => x.Rating!).PreventFilter();
         });
 
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
@@ -197,8 +150,8 @@ public class PropertyResolverTests
         var config = new QueryKitConfiguration(config =>
         {
             config.IgnoredClauseBehavior = IgnoredClauseBehavior.Remove;
-            config.Property<TestingPerson>(x => x.Title).PreventFilter();
-            config.Property<TestingPerson>(x => x.FirstName).PreventFilter();
+            config.Property<TestingPerson>(x => x.Title!).PreventFilter();
+            config.Property<TestingPerson>(x => x.FirstName!).PreventFilter();
         });
 
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
@@ -207,37 +160,37 @@ public class PropertyResolverTests
     }
 
     [Fact]
-    public void prevented_property_in_arithmetic_removes_the_clause()
+    public void prevented_property_in_arithmetic_is_still_filtered()
     {
         var input = """(Age + 0) > 10 || Title == "a" """;
         var config = new QueryKitConfiguration(config =>
         {
             config.IgnoredClauseBehavior = IgnoredClauseBehavior.Remove;
-            config.Property<TestingPerson>(x => x.Age).PreventFilter();
+            config.Property<TestingPerson>(x => x.Age!).PreventFilter();
         });
 
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
 
-        filterExpression.ToDisplayString().Should().Be("""x => (x.Title == "a")""");
+        filterExpression.ToDisplayString().Should().Be("""x => (((x.Age + Convert(0, Nullable`1)) > Convert(10, Nullable`1)) OrElse (x.Title == "a"))""");
     }
 
     [Fact]
-    public void prevented_property_on_the_right_side_of_arithmetic_removes_the_clause()
+    public void prevented_property_on_the_right_side_of_arithmetic_is_still_filtered()
     {
         var input = """(Age + 0) > (Rating * 2)""";
         var config = new QueryKitConfiguration(config =>
         {
             config.IgnoredClauseBehavior = IgnoredClauseBehavior.Remove;
-            config.Property<TestingPerson>(x => x.Rating).PreventFilter();
+            config.Property<TestingPerson>(x => x.Rating!).PreventFilter();
         });
 
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
 
-        filterExpression.ToDisplayString().Should().Be("x => True");
+        filterExpression.ToDisplayString().Should().Be("x => (Convert((x.Age + Convert(0, Nullable`1)), Nullable`1) > (x.Rating * Convert(2, Nullable`1)))");
     }
 
     [Fact]
-    public void arithmetic_property_obeys_max_property_depth()
+    public void arithmetic_property_skips_max_property_depth()
     {
         var input = """(Recipe.Rating + 0) > 1""";
         var config = new QueryKitConfiguration(config =>
@@ -247,51 +200,36 @@ public class PropertyResolverTests
 
         var act = () => FilterParser.ParseFilter<Ingredient>(input, config);
 
-        act.Should().Throw<QueryKitPropertyDepthExceededException>();
+        act.Should().NotThrow();
     }
 
     [Fact]
-    public void prevented_property_on_the_right_side_removes_the_clause()
+    public void prevented_property_on_the_right_side_is_still_compared()
     {
         var input = """FirstName == Title || Age > 100""";
         var config = new QueryKitConfiguration(config =>
         {
             config.IgnoredClauseBehavior = IgnoredClauseBehavior.Remove;
-            config.Property<TestingPerson>(x => x.Title).PreventFilter();
+            config.Property<TestingPerson>(x => x.Title!).PreventFilter();
         });
 
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
 
-        filterExpression.ToDisplayString().Should().Be("x => (x.Age > 100)");
+        filterExpression.ToDisplayString().Should().Be("x => ((x.FirstName == x.Title) OrElse (x.Age > 100))");
     }
 
     [Fact]
-    public void prevented_property_on_the_right_side_removes_the_clause_in_any_case()
-    {
-        var input = """FirstName == title || Age > 100""";
-        var config = new QueryKitConfiguration(config =>
-        {
-            config.IgnoredClauseBehavior = IgnoredClauseBehavior.Remove;
-            config.Property<TestingPerson>(x => x.Title).PreventFilter();
-        });
-
-        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
-
-        filterExpression.ToDisplayString().Should().Be("x => (x.Age > 100)");
-    }
-
-    [Fact]
-    public void prevented_property_in_a_list_is_skipped_in_any_case()
+    public void prevented_property_in_a_list_in_another_case_is_still_filtered()
     {
         var input = """(title, FirstName) == "x" """;
         var config = new QueryKitConfiguration(config =>
         {
-            config.Property<TestingPerson>(x => x.Title).PreventFilter();
+            config.Property<TestingPerson>(x => x.Title!).PreventFilter();
         });
 
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
 
-        filterExpression.ToDisplayString().Should().Be("""x => (x.FirstName == "x")""");
+        filterExpression.ToDisplayString().Should().Be("""x => ((x.Title == "x") OrElse (x.FirstName == "x"))""");
     }
 
     [Fact]
@@ -301,7 +239,7 @@ public class PropertyResolverTests
         var config = new QueryKitConfiguration(config =>
         {
             config.IgnoredClauseBehavior = IgnoredClauseBehavior.Remove;
-            config.Property<TestingPerson>(x => x.Title).PreventFilter();
+            config.Property<TestingPerson>(x => x.Title!).PreventFilter();
         });
 
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
@@ -310,18 +248,18 @@ public class PropertyResolverTests
     }
 
     [Fact]
-    public void prevented_property_with_a_query_name_removes_the_clause_when_written_by_its_member_name_in_any_case()
+    public void prevented_property_with_a_query_name_is_still_filtered_by_its_member_name_in_another_case()
     {
         var input = """title == "x" || Age > 100""";
         var config = new QueryKitConfiguration(config =>
         {
             config.IgnoredClauseBehavior = IgnoredClauseBehavior.Remove;
-            config.Property<TestingPerson>(x => x.Title).HasQueryName("t").PreventFilter();
+            config.Property<TestingPerson>(x => x.Title!).HasQueryName("t").PreventFilter();
         });
 
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
 
-        filterExpression.ToDisplayString().Should().Be("x => (x.Age > 100)");
+        filterExpression.ToDisplayString().Should().Be("""x => ((x.Title == "x") OrElse (x.Age > 100))""");
     }
 
     [Fact]
@@ -330,7 +268,7 @@ public class PropertyResolverTests
         var input = """(title) @=* "x" """;
         var config = new QueryKitConfiguration(config =>
         {
-            config.Property<TestingPerson>(x => x.Title).HasCaseInsensitiveMode(CaseInsensitiveMode.Upper);
+            config.Property<TestingPerson>(x => x.Title!).HasCaseInsensitiveMode(CaseInsensitiveMode.Upper);
         });
 
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
@@ -344,7 +282,7 @@ public class PropertyResolverTests
         var input = "title, Age desc";
         var config = new QueryKitConfiguration(config =>
         {
-            config.Property<TestingPerson>(x => x.Title).PreventSort();
+            config.Property<TestingPerson>(x => x.Title!).PreventSort();
         });
 
         var sortExpressions = SortParser.ParseSort<TestingPerson>(input, config);
@@ -354,21 +292,22 @@ public class PropertyResolverTests
     }
 
     [Fact]
-    public void prevented_sort_property_with_a_query_name_is_skipped_when_written_by_its_member_name()
+    public void prevented_sort_property_with_a_query_name_still_sorts_by_its_member_name_in_another_case()
     {
         var input = "title desc";
         var config = new QueryKitConfiguration(config =>
         {
-            config.Property<TestingPerson>(x => x.Title).HasQueryName("t").PreventSort();
+            config.Property<TestingPerson>(x => x.Title!).HasQueryName("t").PreventSort();
         });
 
         var sortExpressions = SortParser.ParseSort<TestingPerson>(input, config);
 
-        sortExpressions.Should().BeEmpty();
+        sortExpressions.Should().ContainSingle();
+        sortExpressions[0].Expression!.ToString().Should().Be("x => Convert(x.Title, Object)");
     }
 
     [Fact]
-    public void prevented_derived_property_removes_the_clause()
+    public void prevented_derived_property_is_still_filtered()
     {
         var input = """full == "x" || Age > 100""";
         var config = new QueryKitConfiguration(config =>
@@ -379,11 +318,11 @@ public class PropertyResolverTests
 
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
 
-        filterExpression.ToDisplayString().Should().Be("x => (x.Age > 100)");
+        filterExpression.ToDisplayString().Should().Be("""x => ((((x.FirstName + " ") + x.LastName) == "x") OrElse (x.Age > 100))""");
     }
 
     [Fact]
-    public void prevented_derived_property_in_a_list_is_skipped()
+    public void prevented_derived_property_in_a_list_is_still_filtered()
     {
         var input = """(full, FirstName) == "x" """;
         var config = new QueryKitConfiguration(config =>
@@ -393,11 +332,11 @@ public class PropertyResolverTests
 
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
 
-        filterExpression.ToDisplayString().Should().Be("""x => (x.FirstName == "x")""");
+        filterExpression.ToDisplayString().Should().Be("""x => ((((x.FirstName + " ") + x.LastName) == "x") OrElse (x.FirstName == "x"))""");
     }
 
     [Fact]
-    public void prevented_custom_operation_removes_the_clause()
+    public void prevented_custom_operation_is_still_applied()
     {
         var input = """adult == true || Age > 100""";
         var config = new QueryKitConfiguration(config =>
@@ -408,26 +347,11 @@ public class PropertyResolverTests
 
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
 
-        filterExpression.ToDisplayString().Should().Be("x => (x.Age > 100)");
+        filterExpression.ToDisplayString().Should().Be("x => (Invoke((entity, op, value) => (Convert(entity, TestingPerson).Age > Convert(17, Nullable`1)), Convert(x, Object), ==, True) OrElse (x.Age > 100))");
     }
 
     [Fact]
-    public void prevented_custom_operation_is_true_equals_true_when_replaced()
-    {
-        var input = """adult == true || Age > 100""";
-        var config = new QueryKitConfiguration(config =>
-        {
-            config.IgnoredClauseBehavior = IgnoredClauseBehavior.ReplaceWithTrue;
-            config.CustomOperation<TestingPerson>((x, op, value) => x.Age > 17).HasQueryName("adult").PreventFilter();
-        });
-
-        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
-
-        filterExpression.ToDisplayString().Should().Be("x => ((True == True) OrElse (x.Age > 100))");
-    }
-
-    [Fact]
-    public void prevented_derived_sort_property_is_skipped()
+    public void prevented_derived_sort_property_still_sorts()
     {
         var input = "full desc, Age";
         var config = new QueryKitConfiguration(config =>
@@ -437,36 +361,49 @@ public class PropertyResolverTests
 
         var sortExpressions = SortParser.ParseSort<TestingPerson>(input, config);
 
-        sortExpressions.Should().ContainSingle();
-        sortExpressions[0].Expression!.ToString().Should().Be("x => Convert(x.Age, Object)");
+        sortExpressions.Should().HaveCount(2);
     }
 
     [Fact]
-    public void query_name_in_a_property_list_resolves_to_its_property()
+    public void query_name_in_a_property_list_throws()
     {
         var input = """(name, FirstName) == "x" """;
         var config = new QueryKitConfiguration(config =>
         {
-            config.Property<TestingPerson>(x => x.Title).HasQueryName("name");
+            config.Property<TestingPerson>(x => x.Title!).HasQueryName("name");
         });
 
-        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+        var act = () => FilterParser.ParseFilter<TestingPerson>(input, config);
 
-        filterExpression.ToDisplayString().Should().Be("""x => ((x.Title == "x") OrElse (x.FirstName == "x"))""");
+        act.Should().ThrowExactly<UnknownFilterPropertyException>().WithMessage("*'name'*");
     }
 
     [Fact]
-    public void query_name_in_arithmetic_resolves_to_its_property()
+    public void query_name_of_a_prevented_property_in_a_property_list_throws()
+    {
+        var input = """(hidden, Title) == "x" """;
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.FirstName!).HasQueryName("hidden").PreventFilter().PreventSort();
+        });
+
+        var act = () => FilterParser.ParseFilter<TestingPerson>(input, config);
+
+        act.Should().ThrowExactly<UnknownFilterPropertyException>().WithMessage("*'hidden'*");
+    }
+
+    [Fact]
+    public void query_name_in_arithmetic_throws()
     {
         var input = """(stars + 0) > 3""";
         var config = new QueryKitConfiguration(config =>
         {
-            config.Property<TestingPerson>(x => x.Rating).HasQueryName("stars");
+            config.Property<TestingPerson>(x => x.Rating!).HasQueryName("stars");
         });
 
-        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+        var act = () => FilterParser.ParseFilter<TestingPerson>(input, config);
 
-        filterExpression.ToDisplayString().Should().Contain("x.Rating");
+        act.Should().ThrowExactly<ArgumentException>();
     }
 
     [Theory]
@@ -480,7 +417,7 @@ public class PropertyResolverTests
         var input = $"""{queryName} == "Ann" """;
         var config = new QueryKitConfiguration(config =>
         {
-            config.Property<TestingPerson>(x => x.FirstName).HasQueryName(queryName);
+            config.Property<TestingPerson>(x => x.FirstName!).HasQueryName(queryName);
         });
 
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
@@ -494,7 +431,7 @@ public class PropertyResolverTests
         var input = """FIRST-NAME == "Ann" """;
         var config = new QueryKitConfiguration(config =>
         {
-            config.Property<TestingPerson>(x => x.FirstName).HasQueryName("first-name");
+            config.Property<TestingPerson>(x => x.FirstName!).HasQueryName("first-name");
         });
 
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
@@ -503,17 +440,32 @@ public class PropertyResolverTests
     }
 
     [Fact]
-    public void query_name_with_a_hyphen_in_a_value_is_not_replaced()
+    public void query_name_with_a_hyphen_in_a_value_is_replaced()
     {
         var input = """Title == "first-name == x" """;
         var config = new QueryKitConfiguration(config =>
         {
-            config.Property<TestingPerson>(x => x.FirstName).HasQueryName("first-name");
+            config.Property<TestingPerson>(x => x.FirstName!).HasQueryName("first-name");
         });
 
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
 
-        filterExpression.ToDisplayString().Should().Be("""x => (x.Title == "first-name == x")""");
+        filterExpression.ToDisplayString().Should().Be("""x => (x.Title == "FirstName == x")""");
+    }
+
+    [Fact]
+    public void query_name_with_a_hyphen_before_an_operator_alias_filters_by_its_property()
+    {
+        var input = """first-name eq "Ann" """;
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.EqualsOperator = "eq";
+            config.Property<TestingPerson>(x => x.FirstName!).HasQueryName("first-name");
+        });
+
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+
+        filterExpression.ToDisplayString().Should().Be("""x => (x.FirstName == "Ann")""");
     }
 
     [Fact]
@@ -522,7 +474,7 @@ public class PropertyResolverTests
         var input = """Title == first""";
         var config = new QueryKitConfiguration(config =>
         {
-            config.Property<TestingPerson>(x => x.FirstName).HasQueryName("first");
+            config.Property<TestingPerson>(x => x.FirstName!).HasQueryName("first");
         });
 
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
@@ -536,7 +488,7 @@ public class PropertyResolverTests
         var input = "first-name desc";
         var config = new QueryKitConfiguration(config =>
         {
-            config.Property<TestingPerson>(x => x.FirstName).HasQueryName("first-name");
+            config.Property<TestingPerson>(x => x.FirstName!).HasQueryName("first-name");
         });
 
         var sortExpressions = SortParser.ParseSort<TestingPerson>(input, config);
@@ -552,8 +504,8 @@ public class PropertyResolverTests
         var input = """first name == "Ann" && first == "Lee" """;
         var config = new QueryKitConfiguration(config =>
         {
-            config.Property<TestingPerson>(x => x.FirstName).HasQueryName("first name");
-            config.Property<TestingPerson>(x => x.LastName).HasQueryName("first");
+            config.Property<TestingPerson>(x => x.FirstName!).HasQueryName("first name");
+            config.Property<TestingPerson>(x => x.LastName!).HasQueryName("first");
         });
 
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
@@ -567,7 +519,7 @@ public class PropertyResolverTests
         var input = """FirstName == "Ann" """;
         var config = new QueryKitConfiguration(config =>
         {
-            config.Property<TestingPerson>(x => x.Title).HasQueryName("first");
+            config.Property<TestingPerson>(x => x.Title!).HasQueryName("first");
         });
 
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
@@ -576,17 +528,17 @@ public class PropertyResolverTests
     }
 
     [Fact]
-    public void query_name_with_a_hyphen_in_a_property_list_resolves_to_its_property()
+    public void query_name_with_a_hyphen_in_a_property_list_throws()
     {
         var input = """(first-name, Title) == "x" """;
         var config = new QueryKitConfiguration(config =>
         {
-            config.Property<TestingPerson>(x => x.FirstName).HasQueryName("first-name");
+            config.Property<TestingPerson>(x => x.FirstName!).HasQueryName("first-name");
         });
 
-        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+        var act = () => FilterParser.ParseFilter<TestingPerson>(input, config);
 
-        filterExpression.ToDisplayString().Should().Be("""x => ((x.FirstName == "x") OrElse (x.Title == "x"))""");
+        act.Should().ThrowExactly<UnknownFilterPropertyException>().WithMessage("*'first'*");
     }
 
     [Fact]
@@ -604,32 +556,77 @@ public class PropertyResolverTests
     }
 
     [Fact]
-    public void query_name_in_a_value_is_not_replaced()
+    public void custom_operation_query_name_with_a_space_resolves_to_its_operation()
     {
-        var input = """FirstName == "name == x" """;
+        var input = """is adult == true""";
         var config = new QueryKitConfiguration(config =>
         {
-            config.Property<TestingPerson>(x => x.Title).HasQueryName("name");
+            config.CustomOperation<TestingPerson>((x, op, value) => x.Age > 17).HasQueryName("is adult");
         });
 
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
 
-        filterExpression.ToDisplayString().Should().Be("""x => (x.FirstName == "name == x")""");
+        filterExpression.ToDisplayString().Should().Be("x => Invoke((entity, op, value) => (Convert(entity, TestingPerson).Age > Convert(17, Nullable`1)), Convert(x, Object), ==, True)");
     }
 
     [Fact]
-    public void property_prevented_for_filter_and_sort_is_removed_by_its_query_name()
+    public void derived_property_query_name_does_not_match_the_start_of_a_longer_name()
+    {
+        var input = """FirstName == "Ann" """;
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.DerivedProperty<TestingPerson>(x => x.FirstName + " " + x.LastName).HasQueryName("first");
+        });
+
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+
+        filterExpression.ToDisplayString().Should().Be("""x => (x.FirstName == "Ann")""");
+    }
+
+    [Fact]
+    public void query_name_in_a_value_is_replaced()
+    {
+        var input = """FirstName == "name == x" """;
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.Title!).HasQueryName("name");
+        });
+
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+
+        filterExpression.ToDisplayString().Should().Be("""x => (x.FirstName == "Title == x")""");
+    }
+
+    [Fact]
+    public void property_prevented_for_filter_and_sort_throws_by_its_query_name()
     {
         var input = """name == "x" || Age > 100""";
         var config = new QueryKitConfiguration(config =>
         {
             config.IgnoredClauseBehavior = IgnoredClauseBehavior.Remove;
-            config.Property<TestingPerson>(x => x.Title).HasQueryName("name").PreventFilter().PreventSort();
+            config.Property<TestingPerson>(x => x.Title!).HasQueryName("name").PreventFilter().PreventSort();
         });
 
-        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+        var act = () => FilterParser.ParseFilter<TestingPerson>(input, config);
 
-        filterExpression.ToDisplayString().Should().Be("x => (x.Age > 100)");
+        act.Should().ThrowExactly<InvalidOperationException>()
+            .WithMessage("'Title' is not allowed for filtering or sorting.");
+    }
+
+    [Fact]
+    public void property_prevented_for_filter_and_sort_throws_by_its_query_name_before_an_operator_alias()
+    {
+        var input = """name eq "x" """;
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.EqualsOperator = "eq";
+            config.Property<TestingPerson>(x => x.Title!).HasQueryName("name").PreventFilter().PreventSort();
+        });
+
+        var act = () => FilterParser.ParseFilter<TestingPerson>(input, config);
+
+        act.Should().ThrowExactly<InvalidOperationException>()
+            .WithMessage("'Title' is not allowed for filtering or sorting.");
     }
 
     [Fact]
@@ -639,7 +636,7 @@ public class PropertyResolverTests
         var config = new QueryKitConfiguration(config =>
         {
             config.IgnoredClauseBehavior = IgnoredClauseBehavior.Remove;
-            config.Property<TestingPerson>(x => x.Title).HasQueryName("name").PreventFilter().PreventSort();
+            config.Property<TestingPerson>(x => x.Title!).HasQueryName("name").PreventFilter().PreventSort();
         });
 
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
@@ -661,46 +658,29 @@ public class PropertyResolverTests
     }
 
     [Fact]
-    public void property_path_on_the_right_side_is_compared()
+    public void property_path_on_the_right_side_throws()
     {
         var input = """Title == Author.Name""";
 
-        var filterExpression = FilterParser.ParseFilter<Recipe>(input);
+        var act = () => FilterParser.ParseFilter<Recipe>(input);
 
-        filterExpression.ToDisplayString().Should().Be("x => (x.Title == x.Author.Name)");
+        act.Should().Throw<ParsingException>()
+            .WithInnerException<InvalidOperationException>()
+            .WithMessage("*Equal is not defined for the types 'System.String' and*Author*");
     }
 
     [Fact]
-    public void property_path_on_the_right_side_obeys_max_property_depth()
+    public void unquoted_dotted_word_on_the_right_side_throws()
     {
-        var input = """Title == Author.Name""";
-        var config = new QueryKitConfiguration(config =>
-        {
-            config.MaxPropertyDepth = 0;
-        });
+        var input = """Title == foo.bar""";
 
-        var act = () => FilterParser.ParseFilter<Recipe>(input, config);
+        var act = () => FilterParser.ParseFilter<Recipe>(input);
 
-        act.Should().Throw<QueryKitPropertyDepthExceededException>();
+        act.Should().Throw<ParsingException>().WithMessage("*Line 1, Column 13*");
     }
 
     [Fact]
-    public void prevented_property_path_on_the_right_side_removes_the_clause()
-    {
-        var input = """Title == Author.Name || Directions == "x" """;
-        var config = new QueryKitConfiguration(config =>
-        {
-            config.IgnoredClauseBehavior = IgnoredClauseBehavior.Remove;
-            config.Property<Recipe>(x => x.Author.Name).PreventFilter();
-        });
-
-        var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
-
-        filterExpression.ToDisplayString().Should().Be("""x => (x.Directions == "x")""");
-    }
-
-    [Fact]
-    public void unknown_property_in_arithmetic_removes_the_clause_when_unknown_properties_are_allowed()
+    public void unknown_property_in_arithmetic_throws_when_unknown_properties_are_allowed()
     {
         var input = """(Nope + 1) > 3 || Age > 100""";
         var config = new QueryKitConfiguration(config =>
@@ -709,13 +689,14 @@ public class PropertyResolverTests
             config.AllowUnknownProperties = true;
         });
 
-        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+        var act = () => FilterParser.ParseFilter<TestingPerson>(input, config);
 
-        filterExpression.ToDisplayString().Should().Be("x => (x.Age > 100)");
+        act.Should().Throw<ArgumentException>()
+            .WithMessage("Property 'Nope' not found on type 'TestingPerson'");
     }
 
     [Fact]
-    public void unknown_property_on_the_right_side_of_arithmetic_removes_the_clause_when_unknown_properties_are_allowed()
+    public void unknown_property_on_the_right_side_of_arithmetic_throws_when_unknown_properties_are_allowed()
     {
         var input = """(Age + 0) > Nope || Title == "a" """;
         var config = new QueryKitConfiguration(config =>
@@ -724,19 +705,20 @@ public class PropertyResolverTests
             config.AllowUnknownProperties = true;
         });
 
-        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+        var act = () => FilterParser.ParseFilter<TestingPerson>(input, config);
 
-        filterExpression.ToDisplayString().Should().Be("""x => (x.Title == "a")""");
+        act.Should().Throw<ArgumentException>()
+            .WithMessage("Property 'Nope' not found on type 'TestingPerson'");
     }
 
     [Fact]
-    public void unknown_property_in_arithmetic_is_not_recognized()
+    public void unknown_property_in_arithmetic_throws_an_argument_exception()
     {
         var input = """(Nope + 1) > 3""";
 
         var act = () => FilterParser.ParseFilter<TestingPerson>(input);
 
-        act.Should().Throw<UnknownFilterPropertyException>()
-            .WithMessage("The filter property 'Nope' was not recognized.");
+        act.Should().Throw<ArgumentException>()
+            .WithMessage("Property 'Nope' not found on type 'TestingPerson'");
     }
 }

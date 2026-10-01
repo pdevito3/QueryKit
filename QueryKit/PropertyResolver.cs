@@ -36,10 +36,6 @@ internal sealed class PropertyReference
     /// <summary>The configuration of the member, the derived property, or the custom operation, if there is one.</summary>
     public QueryKitPropertyInfo? Mapping { get; }
 
-    public bool CanFilter => Mapping?.CanFilter ?? true;
-
-    public bool CanSort => Mapping?.CanSort ?? true;
-
     /// <summary>When the reference is not a member, the first path segment that did not resolve to a member.</summary>
     public string? UnknownSegment { get; }
 
@@ -57,11 +53,9 @@ internal static class PropertyResolver
 {
     internal static PropertyReference Resolve(Type rootType, string reference, IQueryKitConfiguration? config)
     {
-        // A query name resolves to the property path of its mapping first
-        var path = config?.PropertyMappings?.GetPropertyPathByQueryName(reference) ?? reference;
-        config?.ValidatePropertyDepth(path);
+        config?.ValidatePropertyDepth(reference);
 
-        var memberPath = ResolveMemberPath(rootType, path, out var unknownSegment);
+        var memberPath = ResolveMemberPath(rootType, reference, out var unknownSegment);
         if (memberPath != null)
         {
             return PropertyReference.Member(reference, memberPath, config?.PropertyMappings?.GetPropertyInfo(memberPath));
@@ -83,20 +77,35 @@ internal static class PropertyResolver
     }
 
     // Matches each segment to a public member, ignoring case. A segment after a collection resolves on the element type.
+    // After a collection, only properties match: the first segment in the exact case, a later segment in any case.
+    // A segment after a collection that does not match throws NullReferenceException.
     private static string? ResolveMemberPath(Type rootType, string path, out string? unknownSegment)
     {
         var memberNames = new List<string>();
         var currentType = rootType;
+        var afterCollection = false;
 
         foreach (var segment in path.Split('.'))
         {
+            var firstAfterCollection = !afterCollection && memberNames.Count > 0 && IsCollection(currentType);
             while (IsCollection(currentType))
             {
                 currentType = currentType.GetGenericArguments()[0];
             }
 
-            var member = (MemberInfo?)currentType.GetProperty(segment, MemberFlags)
+            MemberInfo? member;
+            if (firstAfterCollection || afterCollection)
+            {
+                member = (firstAfterCollection ? currentType.GetProperty(segment) : currentType.GetProperty(segment, MemberFlags))
+                         ?? throw new NullReferenceException();
+                afterCollection = true;
+            }
+            else
+            {
+                member = (MemberInfo?)currentType.GetProperty(segment, MemberFlags)
                          ?? currentType.GetField(segment, MemberFlags);
+            }
+
             if (member == null)
             {
                 unknownSegment = segment;

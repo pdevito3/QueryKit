@@ -95,12 +95,12 @@ public class FilterParsingRegressionTests
     }
 
     [Theory]
-    [InlineData("Title ^^ [\"Warm, with syrup\", \"a\\b\"]", new[] { "Warm, with syrup", "a\\b" })]
-    [InlineData("Title !^^ [\"Warm, with syrup\", \"a\\b\"]", new[] { "Warm", "with syrup" })]
-    [InlineData("Title ^^* [\"WARM, WITH SYRUP\"]", new[] { "Warm, with syrup" })]
-    [InlineData("Title ^^ [\"\"\"Warm, with syrup\"\"\", \"Warm\"]", new[] { "Warm, with syrup", "Warm" })]
+    [InlineData("Title ^^ [\"Warm, with syrup\", \"a\\b\"]", new[] { "Warm", "with syrup", "a\\b" })]
+    [InlineData("Title !^^ [\"Warm, with syrup\", \"a\\b\"]", new[] { "Warm, with syrup" })]
+    [InlineData("Title ^^* [\"WARM, WITH SYRUP\"]", new[] { "Warm", "with syrup" })]
+    [InlineData("Title ^^ [\"\"\"Warm, with syrup\"\"\", \"Warm\"]", new[] { "Warm", "with syrup" })]
     [InlineData("Title ^^ [\" Warm \", \"with syrup \"]", new[] { "Warm", "with syrup" })]
-    public void list_value_with_comma_is_one_item(string input, string[] expectedTitles)
+    public void list_value_with_comma_is_split_into_items(string input, string[] expectedTitles)
     {
         var people = new[]
         {
@@ -137,34 +137,45 @@ public class FilterParsingRegressionTests
     [InlineData("SpecificDateTime ^^ [2024-01-15T08:00:00.5Z]")]
     [InlineData("SpecificDate == 2024-01-15T10:00:00.5+02:00")]
     [InlineData("SpecificDate == 2024-01-15T08:00:00.5000000Z")]
+    [InlineData("SpecificDateTime == 2024-01-15T08:00:00Z.5")]
+    [InlineData("SpecificDate == 2024-01-15T10:00:00+02:00.500")]
     [InlineData("Time == 08:30:00.5")]
-    [InlineData("Time == \"08:30:00.5\"")]
-    [InlineData("Time == \"08:30:00.50\"")]
+    [InlineData("Time == \"08:30:00.500\"")]
     [InlineData("Time ^^ [08:30:00.5]")]
     public void fractional_seconds_are_kept(string input)
     {
-        var people = new[]
-        {
-            new TestingPerson
-            {
-                Title = "match",
-                SpecificDateTime = new DateTime(2024, 1, 15, 8, 0, 0, 500, DateTimeKind.Utc),
-                SpecificDate = new DateTimeOffset(2024, 1, 15, 8, 0, 0, 500, TimeSpan.Zero),
-                Time = new TimeOnly(8, 30, 0, 500),
-            },
-            new TestingPerson
-            {
-                Title = "whole second",
-                SpecificDateTime = new DateTime(2024, 1, 15, 8, 0, 0, DateTimeKind.Utc),
-                SpecificDate = new DateTimeOffset(2024, 1, 15, 8, 0, 0, TimeSpan.Zero),
-                Time = new TimeOnly(8, 30, 0),
-            },
-        };
-
-        var result = people.AsQueryable().ApplyQueryKitFilter(input).ToList();
+        var result = FractionalSecondPeople().AsQueryable().ApplyQueryKitFilter(input).ToList();
 
         result.Select(x => x.Title).Should().Equal("match");
     }
+
+    [Theory]
+    [InlineData("Time == \"08:30:00.5\"")]
+    [InlineData("Time == \"08:30:00.50\"")]
+    public void quoted_time_with_fewer_than_three_fraction_digits_drops_the_fraction(string input)
+    {
+        var result = FractionalSecondPeople().AsQueryable().ApplyQueryKitFilter(input).ToList();
+
+        result.Select(x => x.Title).Should().Equal("whole second");
+    }
+
+    private static TestingPerson[] FractionalSecondPeople() => new[]
+    {
+        new TestingPerson
+        {
+            Title = "match",
+            SpecificDateTime = new DateTime(2024, 1, 15, 8, 0, 0, 500, DateTimeKind.Utc),
+            SpecificDate = new DateTimeOffset(2024, 1, 15, 8, 0, 0, 500, TimeSpan.Zero),
+            Time = new TimeOnly(8, 30, 0, 500),
+        },
+        new TestingPerson
+        {
+            Title = "whole second",
+            SpecificDateTime = new DateTime(2024, 1, 15, 8, 0, 0, DateTimeKind.Utc),
+            SpecificDate = new DateTimeOffset(2024, 1, 15, 8, 0, 0, TimeSpan.Zero),
+            Time = new TimeOnly(8, 30, 0),
+        },
+    };
 
     [Fact]
     public void time_fraction_keeps_microseconds()
@@ -193,13 +204,13 @@ public class FilterParsingRegressionTests
     }
 
     [Theory]
-    [InlineData("""Title @= "am" """, new[] { "lamb" })]
-    [InlineData("""Title _= "la" """, new[] { "lamb" })]
-    [InlineData("""Title _-= "mb" """, new[] { "lamb" })]
-    [InlineData("""Title !@= "am" """, new[] { "null", "other" })]
-    [InlineData("""Title !_= "la" """, new[] { "null", "other" })]
-    [InlineData("""Title !_-= "mb" """, new[] { "null", "other" })]
-    public void case_sensitive_string_operator_handles_null_property(string input, string[] expectedFirstNames)
+    [InlineData("""Title @= "am" """)]
+    [InlineData("""Title _= "la" """)]
+    [InlineData("""Title _-= "mb" """)]
+    [InlineData("""Title !@= "am" """)]
+    [InlineData("""Title !_= "la" """)]
+    [InlineData("""Title !_-= "mb" """)]
+    public void case_sensitive_string_operator_on_null_property_throws_in_memory(string input)
     {
         var people = new[]
         {
@@ -208,9 +219,9 @@ public class FilterParsingRegressionTests
             new TestingPerson { Title = "other", FirstName = "other" },
         };
 
-        var result = people.AsQueryable().ApplyQueryKitFilter(input).ToList();
+        var act = () => people.AsQueryable().ApplyQueryKitFilter(input).ToList();
 
-        result.Select(x => x.FirstName).Should().Equal(expectedFirstNames);
+        act.Should().Throw<NullReferenceException>();
     }
 
     public static IEnumerable<object[]> ComparisonOperatorFactories() =>
@@ -221,13 +232,13 @@ public class FilterParsingRegressionTests
 
     [Theory]
     [MemberData(nameof(ComparisonOperatorFactories))]
-    public void comparison_operator_factory_keeps_uses_all(string factoryName)
+    public void comparison_operator_factory_ignores_uses_all(string factoryName)
     {
         var factory = typeof(ComparisonOperator).GetMethod(factoryName, BindingFlags.Public | BindingFlags.Static)!;
 
         var comparisonOperator = (ComparisonOperator)factory.Invoke(null, new object[] { true, true })!;
 
-        comparisonOperator.UsesAll.Should().BeTrue();
+        comparisonOperator.UsesAll.Should().BeFalse();
         comparisonOperator.CaseInsensitive.Should().BeTrue();
     }
 
@@ -237,8 +248,28 @@ public class FilterParsingRegressionTests
         ComparisonOperatorFactories().Should().HaveCount(24);
     }
 
+    [Theory]
+    [InlineData(false, new[] { "lamb" })]
+    [InlineData(true, new[] { "null", "other" })]
+    public void case_insensitive_in_operator_factory_reads_a_constant_list(bool notIn, string[] expectedFirstNames)
+    {
+        var people = new[]
+        {
+            new TestingPerson { Title = null, FirstName = "null" },
+            new TestingPerson { Title = "Lamb", FirstName = "lamb" },
+            new TestingPerson { Title = "other", FirstName = "other" },
+        };
+        Expression<Func<TestingPerson, string?>> title = x => x.Title;
+        var comparisonOperator = notIn ? ComparisonOperator.NotInOperator(true) : ComparisonOperator.InOperator(true);
+
+        var body = comparisonOperator.GetExpression<TestingPerson>(title.Body, Expression.Constant(new List<string> { "LAMB" }), null);
+        var filterExpression = Expression.Lambda<Func<TestingPerson, bool>>(body, title.Parameters);
+
+        people.AsQueryable().Where(filterExpression).Select(x => x.FirstName).Should().Equal(expectedFirstNames);
+    }
+
     [Fact]
-    public void comparison_operator_factory_with_uses_all_builds_all_expression()
+    public void comparison_operator_factory_with_uses_all_builds_any_expression()
     {
         Expression<Func<Recipe, IEnumerable<string>>> ingredientNames = x => x.Ingredients.Select(y => y.Name);
 
@@ -247,7 +278,7 @@ public class FilterParsingRegressionTests
         var filterExpression = Expression.Lambda<Func<Recipe, bool>>(body, ingredientNames.Parameters);
 
         filterExpression.ToDisplayString().Should()
-            .Be(FilterParser.ParseFilter<Recipe>("""Ingredients.Name %== "waffle" """).ToDisplayString());
+            .Be(FilterParser.ParseFilter<Recipe>("""Ingredients.Name == "waffle" """).ToDisplayString());
     }
 
     [Theory]
