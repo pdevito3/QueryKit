@@ -120,6 +120,8 @@ Here's an example for the `in` operator:
 var input = """(Age ^^ [20, 30, 40]) && (BirthMonth ^^* ["January", "February", "March"]) || (Id ^^ ["6d623e92-d2cf-4496-a2df-f49fa77328ee"])""";
 ```
 
+A quoted list item can hold a comma. For example, `Title ^^ ["Warm, with syrup", "Cold"]` has two items: `Warm, with syrup` and `Cold`.
+
 ### Property List Grouping
 
 Property list grouping allows you to apply a single comparison operation across multiple properties, making it easy to search for a value in any of several fields without writing repetitive conditions.
