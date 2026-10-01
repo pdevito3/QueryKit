@@ -2,6 +2,7 @@ namespace QueryKit.IntegrationTests.Tests;
 
 using Bogus;
 using Configuration;
+using Exceptions;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using SharedTestingHelper.Fakes;
@@ -182,42 +183,34 @@ public class PropertyResolverTests : TestBase
     }
 
     [Fact]
-    public async Task non_public_mapped_property_filters_in_the_database()
+    public void non_public_mapped_property_is_an_unknown_property()
     {
         // Arrange
         var testingServiceScope = new TestingServiceScope();
-        var nickname = new Faker().Lorem.Sentence();
-        var fakePerson = new FakeTestingPersonBuilder().Build();
-        fakePerson.Nickname = nickname;
-        var otherPerson = new FakeTestingPersonBuilder().Build();
-        otherPerson.Nickname = new Faker().Lorem.Sentence();
-        await testingServiceScope.InsertAsync(fakePerson, otherPerson);
-
-        var input = $"""nickname == "{nickname}" """;
+        var input = $"""nickname == "{new Faker().Lorem.Sentence()}" """;
 
         // Act
-        var queryable = testingServiceScope.DbContext().People.ApplyQueryKitFilter(input);
-        var people = await queryable.ToListAsync();
+        var act = () => testingServiceScope.DbContext().People.ApplyQueryKitFilter(input);
 
         // Assert
-        queryable.ToQueryString().Should().Contain("""p.nickname = """);
-        people.Should().ContainSingle();
-        people[0].Id.Should().Be(fakePerson.Id);
+        act.Should().ThrowExactly<UnknownFilterPropertyException>()
+            .WithMessage("The filter property 'nickname' was not recognized.");
     }
 
     [Fact]
-    public async Task non_public_mapped_property_filters_when_unknown_properties_are_allowed()
+    public async Task non_public_mapped_property_clause_does_not_filter_when_unknown_properties_are_allowed()
     {
         // Arrange
         var testingServiceScope = new TestingServiceScope();
+        var title = new Faker().Lorem.Sentence();
         var nickname = new Faker().Lorem.Sentence();
-        var fakePerson = new FakeTestingPersonBuilder().Build();
+        var fakePerson = new FakeTestingPersonBuilder().WithTitle(title).Build();
         fakePerson.Nickname = nickname;
-        var otherPerson = new FakeTestingPersonBuilder().Build();
+        var otherPerson = new FakeTestingPersonBuilder().WithTitle(title).Build();
         otherPerson.Nickname = new Faker().Lorem.Sentence();
         await testingServiceScope.InsertAsync(fakePerson, otherPerson);
 
-        var input = $"""Nickname == "{nickname}" """;
+        var input = $"""Nickname == "{nickname}" && Title == "{title}" """;
         var config = new QueryKitConfiguration(config =>
         {
             config.AllowUnknownProperties = true;
@@ -229,7 +222,6 @@ public class PropertyResolverTests : TestBase
             .ToListAsync();
 
         // Assert
-        people.Should().ContainSingle();
-        people[0].Id.Should().Be(fakePerson.Id);
+        people.Should().HaveCount(2);
     }
 }
