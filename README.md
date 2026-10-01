@@ -258,6 +258,7 @@ Property list grouping is particularly useful for:
   * `TimeOnly`: 
     * `var filterInput = """Time == "12:30:00" """;`
     * `var filterInput = """Time == "12:30:00.678722" """;`
+    * A time fraction keeps every digit. For example, `"12:30:00.5"` is 12:30:00 and 500 milliseconds.
 
 * `bool` properties need to use `== true`, `== false`, or the same using the `!=` operator. they can not be standalone properies: 
 
