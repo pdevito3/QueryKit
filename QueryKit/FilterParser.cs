@@ -20,7 +20,7 @@ public static class FilterParser
     /// <returns>Returns a Func delegate that represents a lambda expression that applies the filter defined by the input parameter.</returns>
     public static Expression<Func<T, bool>> ParseFilter<T>(string input, IQueryKitConfiguration? config = null)
     {
-        EnsureWithinParseLimits(input, config);
+        EnsureWithinInputLength(input, config);
 
         input = config?.ReplaceLogicalAliases(input) ?? input;
         input = config?.ReplaceComparisonAliases(input) ?? input;
@@ -30,6 +30,10 @@ public static class FilterParser
         Expression expr;
         var parameterizeBefore = FilterValue.Parameterize;
         FilterValue.Parameterize = config is IQueryKitFilterBehavior { ParameterizeFilterValues: true };
+        var maxNestingDepthBefore = _maxNestingDepth;
+        var nestingDepthBefore = _nestingDepth;
+        _maxNestingDepth = (config as IQueryKitParseLimits)?.MaxNestingDepth ?? QueryKitSettings.DefaultMaxNestingDepth;
+        _nestingDepth = 0;
         try
         {
             expr = ExprParser<T>(parameter, config).End().Parse(input);
@@ -53,6 +57,8 @@ public static class FilterParser
         finally
         {
             FilterValue.Parameterize = parameterizeBefore;
+            _maxNestingDepth = maxNestingDepthBefore;
+            _nestingDepth = nestingDepthBefore;
         }
 
         return Expression.Lambda<Func<T, bool>>(expr, parameter);
@@ -68,38 +74,46 @@ public static class FilterParser
         return new ParameterReplacer(parameter).Visit(expr);
     }
 
-    // Runs before the grammar sees the input, so a hostile filter (deeply nested parentheses,
-    // or an oversized `in` list) is rejected with a QueryKitException instead of overflowing the
-    // call stack or exhausting CPU and memory during parsing.
-    private static void EnsureWithinParseLimits(string input, IQueryKitConfiguration? config)
+    // Runs before the grammar sees the input, so an oversized filter is rejected with a
+    // QueryKitException instead of exhausting CPU and memory during parsing.
+    private static void EnsureWithinInputLength(string input, IQueryKitConfiguration? config)
     {
         var maxLength = (config as IQueryKitParseLimits)?.MaxInputLength ?? QueryKitSettings.DefaultMaxInputLength;
         if (input.Length > maxLength)
         {
             throw new QueryKitInputLengthExceededException(input.Length, maxLength);
         }
+    }
 
-        // Counts every '(' and ')', including ones inside quoted values. QueryKit supports several
-        // quoting styles (plain and raw-string style with 3+ quote marks), so a scanner that tries
-        // to skip "quoted" spans could misjudge one of them and undercount real nesting. Counting
-        // everything can only reject too much, never too little.
-        var maxDepth = (config as IQueryKitParseLimits)?.MaxNestingDepth ?? QueryKitSettings.DefaultMaxNestingDepth;
-        var depth = 0;
-        foreach (var c in input)
+    // The nesting depth limit of the parse on this thread, and the number of parenthesized groups
+    // that the parser is in now. Parsing is synchronous, so the values belong to the thread that parses.
+    [ThreadStatic] private static int _maxNestingDepth;
+    [ThreadStatic] private static int _nestingDepth;
+
+    // Parses '(' inner ')' and counts the group against MaxNestingDepth. The grammar does the count,
+    // so a '(' or ')' inside a quoted value cannot change it. The parser recurses once for each group,
+    // so the limit also limits the depth of the call stack.
+    private static Parser<TResult> Grouped<TResult>(Parser<TResult> inner)
+    {
+        Parser<TResult> counted = input =>
         {
-            if (c == '(')
+            try
             {
-                depth++;
-                if (depth > maxDepth)
+                _nestingDepth++;
+                if (_nestingDepth > _maxNestingDepth)
                 {
-                    throw new QueryKitNestingDepthExceededException(depth, maxDepth);
+                    throw new QueryKitNestingDepthExceededException(_nestingDepth, _maxNestingDepth);
                 }
+
+                return inner(input);
             }
-            else if (c == ')')
+            finally
             {
-                depth--;
+                _nestingDepth--;
             }
-        }
+        };
+
+        return counted.Contained(Parse.Char('('), Parse.Char(')'));
     }
 
     private static readonly Parser<string> Identifier =
@@ -113,10 +127,7 @@ public static class FilterParser
     private static Parser<IEnumerable<string>> PropertyListParser(Parser<string> propertyPathParser)
     {
         var propertiesParser = propertyPathParser.Token().DelimitedBy(Parse.Char(',').Token());
-        return from openParen in Parse.Char('(')
-               from properties in propertiesParser
-               from closeParen in Parse.Char(')')
-               select properties;
+        return Grouped(propertiesParser);
     }
 
     // Each parser is built once. A parser in a second or later `from` clause is built in a lambda
@@ -320,7 +331,7 @@ public static class FilterParser
     private static readonly Parser<ArithmeticExpression> ArithmeticTermParser =
         PropertyArithmeticParser
             .Or(LiteralArithmeticParser)
-            .Or(Parse.Ref(() => ArithmeticExpressionParser).Contained(Parse.Char('('), Parse.Char(')')).Select(expr => new GroupedArithmeticExpression(expr)));
+            .Or(Grouped(Parse.Ref(() => ArithmeticExpressionParser)).Select(expr => new GroupedArithmeticExpression(expr)));
 
     private static readonly Parser<ArithmeticExpression> ArithmeticFactorParser =
         Parse.ChainOperator(
@@ -672,7 +683,7 @@ public static class FilterParser
         var rightSideValueParser = RightSideValueParser.Token();
         
         // Only parse arithmetic expressions that are in parentheses and contain arithmetic operators
-        var parenthesizedArithmetic = ArithmeticExpressionParser.Contained(Parse.Char('('), Parse.Char(')')).Token();
+        var parenthesizedArithmetic = Grouped(ArithmeticExpressionParser).Token();
         
         // Ensure the arithmetic expression contains actual arithmetic operators
         var validArithmeticExpr = parenthesizedArithmetic.Where(expr => ContainsArithmeticOperator(expr));
@@ -1201,7 +1212,7 @@ public static class FilterParser
     
     private static Parser<Expression> AtomicExprParser<T>(ParameterExpression parameter, IQueryKitConfiguration? config = null)
         => ComparisonExprParser<T>(parameter, config)
-            .Or(Parse.Ref(() => ExprParser<T>(parameter, config)).Contained(Parse.Char('('), Parse.Char(')')));
+            .Or(Grouped(Parse.Ref(() => ExprParser<T>(parameter, config))));
 
     private static Parser<Expression> ExprParser<T>(ParameterExpression parameter, IQueryKitConfiguration? config = null)
         => OrExprParser<T>(parameter, config);
