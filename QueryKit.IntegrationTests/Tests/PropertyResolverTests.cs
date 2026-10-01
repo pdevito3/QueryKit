@@ -122,4 +122,56 @@ public class PropertyResolverTests : TestBase
         people.Should().ContainSingle();
         people[0].Id.Should().Be(fakePerson.Id);
     }
+
+    [Fact]
+    public async Task non_public_mapped_property_filters_in_the_database()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var nickname = new Faker().Lorem.Sentence();
+        var fakePerson = new FakeTestingPersonBuilder().Build();
+        fakePerson.Nickname = nickname;
+        var otherPerson = new FakeTestingPersonBuilder().Build();
+        otherPerson.Nickname = new Faker().Lorem.Sentence();
+        await testingServiceScope.InsertAsync(fakePerson, otherPerson);
+
+        var input = $"""nickname == "{nickname}" """;
+
+        // Act
+        var queryable = testingServiceScope.DbContext().People.ApplyQueryKitFilter(input);
+        var people = await queryable.ToListAsync();
+
+        // Assert
+        queryable.ToQueryString().Should().Contain("""p.nickname = """);
+        people.Should().ContainSingle();
+        people[0].Id.Should().Be(fakePerson.Id);
+    }
+
+    [Fact]
+    public async Task non_public_mapped_property_filters_when_unknown_properties_are_allowed()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var nickname = new Faker().Lorem.Sentence();
+        var fakePerson = new FakeTestingPersonBuilder().Build();
+        fakePerson.Nickname = nickname;
+        var otherPerson = new FakeTestingPersonBuilder().Build();
+        otherPerson.Nickname = new Faker().Lorem.Sentence();
+        await testingServiceScope.InsertAsync(fakePerson, otherPerson);
+
+        var input = $"""Nickname == "{nickname}" """;
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.AllowUnknownProperties = true;
+        });
+
+        // Act
+        var people = await testingServiceScope.DbContext().People
+            .ApplyQueryKitFilter(input, config)
+            .ToListAsync();
+
+        // Assert
+        people.Should().ContainSingle();
+        people[0].Id.Should().Be(fakePerson.Id);
+    }
 }
