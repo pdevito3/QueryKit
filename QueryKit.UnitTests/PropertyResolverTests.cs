@@ -721,4 +721,121 @@ public class PropertyResolverTests
         act.Should().Throw<ArgumentException>()
             .WithMessage("Property 'Nope' not found on type 'TestingPerson'");
     }
+
+    [Theory]
+    [InlineData("InternalScore > 30", "x => (x.InternalScore > 30)")]
+    [InlineData("internalscore > 30", "x => (x.InternalScore > 30)")]
+    [InlineData("""ProtectedNote == "a" """, """x => (x.ProtectedNote == "a")""")]
+    [InlineData("secretRank == 7", "x => (x.secretRank == 7)")]
+    [InlineData("""Owner.InternalAlias == "Ann" """, """x => (x.Owner.InternalAlias == "Ann")""")]
+    [InlineData("(InternalScore, Rating) > 3", "x => ((x.InternalScore > 3) OrElse (x.Rating > 3))")]
+    public void non_public_member_filters_like_a_public_member(string input, string expected)
+    {
+        var filterExpression = FilterParser.ParseFilter<MemberLookupModel>(input);
+
+        filterExpression.ToDisplayString().Should().Be(expected);
+    }
+
+    [Fact]
+    public void non_public_member_filters_the_rows()
+    {
+        var models = new List<MemberLookupModel>
+        {
+            new(internalScore: 50, rank: 7),
+            new(internalScore: 20, rank: 3),
+        };
+
+        var result = models.ApplyQueryKitFilter("InternalScore > 30 && secretRank == 7").ToList();
+
+        result.Should().ContainSingle().Which.Should().BeSameAs(models[0]);
+    }
+
+    [Fact]
+    public void non_public_member_filters_when_unknown_properties_are_allowed()
+    {
+        var input = """secretRank > 100 || Rating == 1""";
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.AllowUnknownProperties = true;
+        });
+
+        var filterExpression = FilterParser.ParseFilter<MemberLookupModel>(input, config);
+
+        filterExpression.ToDisplayString().Should().Be("x => ((x.secretRank > 100) OrElse (x.Rating == 1))");
+    }
+
+    [Fact]
+    public void query_name_on_a_non_public_member_filters_by_that_member()
+    {
+        var input = """score > 30""";
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<MemberLookupModel>(x => x.InternalScore).HasQueryName("score");
+        });
+
+        var filterExpression = FilterParser.ParseFilter<MemberLookupModel>(input, config);
+
+        filterExpression.ToDisplayString().Should().Be("x => (x.InternalScore > 30)");
+    }
+
+    [Fact]
+    public void public_property_matches_before_a_non_public_field_with_the_same_name()
+    {
+        var input = """rank == 1""";
+
+        var filterExpression = FilterParser.ParseFilter<MemberLookupModel>(input);
+
+        filterExpression.ToDisplayString().Should().Be("x => (x.Rank == 1)");
+    }
+
+    [Theory]
+    [InlineData("""Item == "x" """)]
+    [InlineData("""item == "x" """)]
+    [InlineData("""(Item, Rating) == "x" """)]
+    public void indexer_is_an_unknown_property(string input)
+    {
+        var act = () => FilterParser.ParseFilter<MemberLookupModel>(input);
+
+        act.Should().Throw<UnknownFilterPropertyException>()
+            .WithMessage("The filter property 'Item' was not recognized.");
+    }
+
+    [Fact]
+    public void indexer_clause_is_true_equals_true_when_unknown_properties_are_allowed()
+    {
+        var input = """Item == "x" """;
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.AllowUnknownProperties = true;
+        });
+
+        var filterExpression = FilterParser.ParseFilter<MemberLookupModel>(input, config);
+
+        filterExpression.ToDisplayString().Should().Be("x => (True == True)");
+    }
+
+    private class MemberLookupOwner
+    {
+        internal string InternalAlias { get; set; } = "";
+    }
+
+    private class MemberLookupModel
+    {
+        public MemberLookupModel() { }
+
+        public MemberLookupModel(int internalScore, int rank)
+        {
+            InternalScore = internalScore;
+            secretRank = rank;
+        }
+
+        public int Rating { get; set; }
+        public int Rank { get; set; }
+        public MemberLookupOwner Owner { get; set; } = new();
+        internal int InternalScore { get; set; }
+        protected string ProtectedNote { get; set; } = "";
+        private int secretRank;
+        private int rank;
+        public string this[string key] => key;
+    }
 }

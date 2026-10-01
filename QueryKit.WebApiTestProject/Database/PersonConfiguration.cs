@@ -14,6 +14,8 @@ public sealed class PersonConfiguration : IEntityTypeConfiguration<TestingPerson
             .HasConversion(x => x.Value, x => new EmailAddress(x))
             .HasColumnName("email")
             .IsRequired(false);
+
+        builder.Property(x => x.Nickname);
         
         builder.OwnsOne(x => x.PhysicalAddress, opts =>
         {

@@ -16,6 +16,7 @@ public class TestingPerson
     public Guid Id { get; set; } = Guid.NewGuid();
     public EmailAddress Email { get; set; } = null!;
     public Address PhysicalAddress { get; set; } = null!;
+    internal string? Nickname { get; set; }
 }
 
 public enum BirthMonthEnum
