@@ -722,6 +722,8 @@ var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
 > `Title @@$ "titilating"` ✅ 
 > `Title@@$"titilating"` ❌
 
+QueryKit reads a custom operator only where an operator can stand. Operator text inside a quoted value does not change. For example, `Title eq "salt and pepper"` compares `Title` with `salt and pepper`.
+
 #### Allow Unknown Properties
 
 By default, QueryKit will throw an error if it doesn't recognize a property name, If you want to loosen the reigns here a bit, you can set `AllowUnknownProperties` to `true` in your config. When active, unknown properties will be ignored in the expression resolution.
