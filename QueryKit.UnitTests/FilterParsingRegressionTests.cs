@@ -317,6 +317,31 @@ public class FilterParsingRegressionTests
         result.Select(x => x.Title).Should().BeEquivalentTo(expectedTitles);
     }
 
+    [Theory]
+    [InlineData("""(Title == "pancakes") """, """(Title == "pancakes")""")]
+    [InlineData("(Title == \"pancakes\")\t\n", """(Title == "pancakes")""")]
+    [InlineData("""((Title == "pancakes")) """, """((Title == "pancakes"))""")]
+    [InlineData("""((Title == "pancakes") ) """, """((Title == "pancakes"))""")]
+    [InlineData("""Title == "stew" || (Title == "pancakes") """, """Title == "stew" || (Title == "pancakes")""")]
+    [InlineData(""" (Title == "pancakes")""", """(Title == "pancakes")""")]
+    public void whitespace_around_a_group_gives_the_same_filter(string input, string inputWithoutWhitespace)
+    {
+        var recipes = new[]
+        {
+            new FakeRecipeBuilder().WithTitle("pancakes").Build(),
+            new FakeRecipeBuilder().WithTitle("stew").Build(),
+            new FakeRecipeBuilder().WithTitle("bread").Build(),
+        };
+
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input);
+        var expectedExpression = FilterParser.ParseFilter<Recipe>(inputWithoutWhitespace);
+        var result = recipes.AsQueryable().ApplyQueryKitFilter(input).ToList();
+        var expectedResult = recipes.AsQueryable().ApplyQueryKitFilter(inputWithoutWhitespace).ToList();
+
+        filterExpression.ToDisplayString().Should().Be(expectedExpression.ToDisplayString());
+        result.Should().Equal(expectedResult);
+    }
+
     private static TResult WithCulture<TResult>(string cultureName, Func<TResult> action)
     {
         var originalCulture = CultureInfo.CurrentCulture;
