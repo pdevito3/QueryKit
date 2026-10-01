@@ -24,7 +24,7 @@ public static class FilterParser
 
         input = config?.ReplaceLogicalAliases(input) ?? input;
         input = config?.ReplaceComparisonAliases(input) ?? input;
-        input = config?.PropertyMappings?.ReplaceAliasesWithPropertyPaths(input) ?? input;
+        input = config?.PropertyMappings?.ReplaceAliasesWithPropertyPaths(input, replaceAfterDot: true) ?? input;
         
         var parameter = Expression.Parameter(typeof(T), "x");
         Expression expr;
