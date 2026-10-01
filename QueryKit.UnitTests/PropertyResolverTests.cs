@@ -835,7 +835,9 @@ public class PropertyResolverTests
         internal int InternalScore { get; set; }
         protected string ProtectedNote { get; set; } = "";
         private int secretRank;
+#pragma warning disable CS0169 // Never read - the field only tests that the public Rank property matches first
         private int rank;
+#pragma warning restore CS0169
         public string this[string key] => key;
     }
 }
