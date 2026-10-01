@@ -794,6 +794,8 @@ var config = new QueryKitConfiguration(config =>
 
 Setting `MaxPropertyDepth = 0` only allows root-level properties. A `null` value (default) allows unlimited depth.
 
+The limit applies to every property path in a filter, also to a property path inside an arithmetic expression. For example, `(Author.Rating + 0) > 1` throws when `MaxPropertyDepth = 0`.
+
 #### Parameterize Filter Values
 
 By default (`ParameterizeFilterValues = false`), QueryKit writes each filter value into the SQL as a literal constant. Set `ParameterizeFilterValues` to `true` to send filter values as SQL parameters instead. Parameters let EF Core reuse one compiled query and one database plan across calls that differ only in their filter values.
