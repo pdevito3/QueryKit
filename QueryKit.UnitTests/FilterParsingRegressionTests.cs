@@ -341,6 +341,16 @@ public class FilterParsingRegressionTests
         act.Should().Throw<QueryKitParsingException>().WithMessage("Operator xor is not supported");
     }
 
+    [Theory]
+    [InlineData("Age sideways")]
+    [InlineData("Title, Age up")]
+    public void invalid_sort_direction_throws_query_kit_parsing_exception(string input)
+    {
+        var act = () => SortParser.ParseSort<TestingPerson>(input);
+
+        act.Should().Throw<QueryKitParsingException>().WithMessage("Invalid direction: *");
+    }
+
     private static TResult WithCulture<TResult>(string cultureName, Func<TResult> action)
     {
         var originalCulture = CultureInfo.CurrentCulture;
