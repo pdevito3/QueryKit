@@ -1,0 +1,57 @@
+name: Release
+
+# Publishes the QueryKit package to nuget.org at the version a git tag sets. MinVer turns an
+# annotated tag `v1.14.2` into package version 1.14.2 (see QueryKit/QueryKit.csproj), so releasing
+# is `git tag -a v1.14.2 -m ... && git push origin v1.14.2`. Tag a commit that already passed CI on
+# main. workflow_dispatch is a manual re-run; --skip-duplicate makes a re-push a no-op.
+#
+# Auth is NuGet Trusted Publishing (OIDC) - no long-lived API key secret. This job mints a GitHub
+# OIDC token, NuGet/login exchanges it for a 1-hour nuget.org key that matches a Trusted Publishing
+# policy configured on nuget.org (owner pdevito3, repo QueryKit, workflow file release.yml). The
+# only config on GitHub is the non-secret NUGET_USER (your nuget.org profile name).
+
+on:
+  push:
+    tags: [ 'v*' ]
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write # mint the OIDC token NuGet exchanges for a short-lived key
+      contents: read  # checkout
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # MinVer needs full history + tags to compute the version
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore -c Release
+
+      # Pack only the shipped package by explicit path - never the unit tests, integration tests,
+      # WebApiTestProject, or SharedTestingHelper projects, even though they build.
+      - name: Pack
+        run: dotnet pack QueryKit/QueryKit.csproj --no-restore -c Release -o "${{ runner.temp }}/nupkgs"
+
+      # Exchange the job's OIDC token for a short-lived nuget.org API key (valid 1 hour). Done right
+      # before the push so it can't expire mid-run. `user` is your nuget.org profile name, not email.
+      - name: NuGet login (OIDC -> short-lived key)
+        uses: NuGet/login@v1
+        id: nuget-login
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
+      - name: Push to nuget.org
+        run: >
+          dotnet nuget push "${{ runner.temp }}/nupkgs/*.nupkg"
+          --api-key ${{ steps.nuget-login.outputs.NUGET_API_KEY }}
+          --source https://api.nuget.org/v3/index.json
+          --skip-duplicate
