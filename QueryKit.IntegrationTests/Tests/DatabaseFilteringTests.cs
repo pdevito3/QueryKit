@@ -76,7 +76,10 @@ public class DatabaseFilteringTests() : TestBase
     {
         // Arrange
         var testingServiceScope = new TestingServiceScope();
-        var fakePersonOne = new FakeTestingPersonBuilder().Build();
+        var uniqueLastName = $"ComboMultiValueTest{Guid.NewGuid()}";
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithLastName(uniqueLastName)
+            .Build();
         var fakePersonTwo = new FakeTestingPersonBuilder()
             .WithFirstName(fakePersonOne.FirstName)
             .Build();
@@ -103,14 +106,16 @@ public class DatabaseFilteringTests() : TestBase
     {
         // Arrange
         var testingServiceScope = new TestingServiceScope();
+        var uniqueLastName = $"ComboComplexTest{Guid.NewGuid()}";
         var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithLastName(uniqueLastName)
             .WithAge(8888)
             .Build();
         var fakePersonTwo = new FakeTestingPersonBuilder()
             .WithFirstName(fakePersonOne.FirstName)
             .Build();
         await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
-        
+
         var input = $"""(fullname @=* "{fakePersonOne.FirstName} {fakePersonOne.LastName}") && age >= {fakePersonOne.Age}""";
         var config = new QueryKitConfiguration(config =>
         {
@@ -290,7 +295,10 @@ public class DatabaseFilteringTests() : TestBase
         var fakeIngredientOne = new FakeIngredientBuilder()
             .WithName(faker.Lorem.Sentence())
             .Build();
-        var fakeRecipeOne = new FakeRecipeBuilder().Build();
+        var uniqueTitle = $"CollectionWithCountTest{Guid.NewGuid()}";
+        var fakeRecipeOne = new FakeRecipeBuilder()
+            .WithTitle(uniqueTitle)
+            .Build();
         fakeRecipeOne.AddIngredient(fakeIngredientOne);
         
         var fakeIngredientTwo = new FakeIngredientBuilder()
@@ -1345,8 +1353,11 @@ public class DatabaseFilteringTests() : TestBase
     {
         // Arrange
         var testingServiceScope = new TestingServiceScope();
+        var uniqueTitle = $"ProjectionTest{Guid.NewGuid()}";
         var fakeAuthorOne = new FakeAuthorBuilder().Build();
-        var fakeRecipeOne = new FakeRecipeBuilder().Build();
+        var fakeRecipeOne = new FakeRecipeBuilder()
+            .WithTitle(uniqueTitle)
+            .Build();
         fakeRecipeOne.SetAuthor(fakeAuthorOne);
         
         var fakeAuthorTwo = new FakeAuthorBuilder().Build();
@@ -1718,8 +1729,11 @@ public class DatabaseFilteringTests() : TestBase
     {
         // Arrange
         var testingServiceScope = new TestingServiceScope();
+        var uniqueTitle = $"DerivedPropCollectionTest{Guid.NewGuid()}";
         var ingredient = new FakeIngredientBuilder().Build();
-        var recipe = new FakeRecipeBuilder().Build();
+        var recipe = new FakeRecipeBuilder()
+            .WithTitle(uniqueTitle)
+            .Build();
         recipe.AddIngredient(ingredient);
         await testingServiceScope.InsertAsync(recipe);
         
@@ -1743,8 +1757,11 @@ public class DatabaseFilteringTests() : TestBase
     {
         // Arrange
         var testingServiceScope = new TestingServiceScope();
+        var uniqueTitle = $"CustomPropCollectionTest{Guid.NewGuid()}";
         var ingredient = new FakeIngredientBuilder().Build();
-        var recipe = new FakeRecipeBuilder().Build();
+        var recipe = new FakeRecipeBuilder()
+            .WithTitle(uniqueTitle)
+            .Build();
         recipe.AddIngredient(ingredient);
         await testingServiceScope.InsertAsync(recipe);
         
@@ -2579,12 +2596,15 @@ public class DatabaseFilteringTests() : TestBase
             .WithQualityLevel(3)
             .Build();
         
-        var recipe = new FakeRecipeBuilder().Build();
+        var uniqueTitle = $"RecipeIngredientQualityTest{Guid.NewGuid()}";
+        var recipe = new FakeRecipeBuilder()
+            .WithTitle(uniqueTitle)
+            .Build();
         recipe.AddIngredient(highQualityIngredient);
         recipe.AddIngredient(lowQualityIngredient);
-        
+
         await testingServiceScope.InsertAsync(recipe);
-        
+
         var input = $"""avgQuality > 5 && Title == "{recipe.Title}" """;
         
         var config = new QueryKitConfiguration(config =>
