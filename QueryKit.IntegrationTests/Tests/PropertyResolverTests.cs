@@ -13,7 +13,7 @@ using WebApiTestProject.Entities.Recipes;
 public class PropertyResolverTests : TestBase
 {
     [Fact]
-    public async Task unknown_property_clause_under_or_is_true_by_default()
+    public async Task unknown_property_clause_under_or_is_true_when_replaced_with_true()
     {
         // Arrange
         var testingServiceScope = new TestingServiceScope();
@@ -27,6 +27,7 @@ public class PropertyResolverTests : TestBase
         var input = $"""Title == "{title}" && (Nope == "x" || Age > 100)""";
         var config = new QueryKitConfiguration(config =>
         {
+            config.IgnoredClauseBehavior = IgnoredClauseBehavior.ReplaceWithTrue;
             config.AllowUnknownProperties = true;
         });
 
@@ -54,7 +55,6 @@ public class PropertyResolverTests : TestBase
         var input = $"""Title == "{title}" && (Nope == "x" || Age > 100)""";
         var config = new QueryKitConfiguration(config =>
         {
-            config.IgnoredClauseBehavior = IgnoredClauseBehavior.Remove;
             config.AllowUnknownProperties = true;
         });
 
@@ -83,7 +83,6 @@ public class PropertyResolverTests : TestBase
         var input = $"""Title == "{title}" && (Rating == 1 || Age > 100)""";
         var config = new QueryKitConfiguration(config =>
         {
-            config.IgnoredClauseBehavior = IgnoredClauseBehavior.Remove;
             config.Property<TestingPerson>(x => x.Rating!).PreventFilter();
         });
 
