@@ -257,7 +257,7 @@ public class PropertyDepthTests
     }
 
     [Fact]
-    public void filter_per_property_max_depth_applies_to_a_property_that_starts_with_its_name()
+    public void filter_per_property_max_depth_does_not_apply_to_a_property_that_starts_with_its_name()
     {
         var input = """AddressBackup.State == "x" """;
         var config = new QueryKitConfiguration(settings =>
@@ -267,11 +267,12 @@ public class PropertyDepthTests
         });
 
         var act = () => FilterParser.ParseFilter<Owner>(input, config);
-        act.Should().NotThrow();
+        act.Should().Throw<QueryKitPropertyDepthExceededException>()
+            .WithMessage("*AddressBackup.State*depth of 1*maximum allowed depth of 0*");
     }
 
     [Fact]
-    public void sort_per_property_max_depth_applies_to_a_property_that_starts_with_its_name()
+    public void sort_per_property_max_depth_does_not_apply_to_a_property_that_starts_with_its_name()
     {
         var input = "AddressBackup.State";
         var config = new QueryKitConfiguration(settings =>
@@ -281,7 +282,7 @@ public class PropertyDepthTests
         });
 
         var act = () => SortParser.ParseSort<Owner>(input, config);
-        act.Should().NotThrow();
+        act.Should().Throw<QueryKitPropertyDepthExceededException>();
     }
 
     private class Owner
