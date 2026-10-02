@@ -24,6 +24,7 @@ public abstract class ArithmeticOperator
     public static ArithmeticOperator Divide => new DivideOperator();
     public static ArithmeticOperator Modulo => new ModuloOperator();
 
+    [Obsolete("QueryKit does not use FromSymbol. The next major version removes it.")]
     public static ArithmeticOperator? FromSymbol(string symbol) => symbol switch
     {
         "+" => Add,
