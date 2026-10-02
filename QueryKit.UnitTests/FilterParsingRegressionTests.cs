@@ -343,6 +343,22 @@ public class FilterParsingRegressionTests
         act.Should().Throw<QueryKitParsingException>().WithMessage("Invalid direction: *");
     }
 
+    [Theory]
+    [InlineData("Title @= null")]
+    [InlineData("Title _= null")]
+    [InlineData("Title _-= null")]
+    [InlineData("Title !@= null")]
+    [InlineData("Title !_= null")]
+    [InlineData("Title !_-= null")]
+    [InlineData("Title @=* null")]
+    [InlineData("Title !_-=* null")]
+    public void string_operator_with_null_value_throws_querykit_exception(string input)
+    {
+        var act = () => FilterParser.ParseFilter<TestingPerson>(input);
+
+        act.Should().Throw<QueryKitParsingException>();
+    }
+
     private static TResult WithCulture<TResult>(string cultureName, Func<TResult> action)
     {
         var originalCulture = CultureInfo.CurrentCulture;

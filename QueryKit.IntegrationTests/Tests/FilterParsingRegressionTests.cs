@@ -3,6 +3,7 @@ namespace QueryKit.IntegrationTests.Tests;
 using System.Globalization;
 using System.Linq.Expressions;
 using Configuration;
+using Exceptions;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Operators;
@@ -323,5 +324,19 @@ public class FilterParsingRegressionTests : TestBase
 
         // Assert
         recipes.Select(x => x.Title[prefix.Length..]).Should().BeEquivalentTo(expectedTitles);
+    }
+
+    [Fact]
+    public void string_operator_with_null_value_throws_querykit_exception()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var queryablePeople = testingServiceScope.DbContext().People;
+
+        // Act
+        var act = () => queryablePeople.ApplyQueryKitFilter("Title @= null");
+
+        // Assert
+        act.Should().Throw<QueryKitParsingException>();
     }
 }
