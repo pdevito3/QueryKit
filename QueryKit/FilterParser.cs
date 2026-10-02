@@ -1384,9 +1384,11 @@ public static class FilterParser
         );
 
     private static bool RemovesIgnoredClauses(IQueryKitConfiguration? config)
-        => config is IQueryKitFilterBehavior { IgnoredClauseBehavior: IgnoredClauseBehavior.Remove };
+        => ((config as IQueryKitFilterBehavior)?.IgnoredClauseBehavior ?? IgnoredClauseBehavior.Remove)
+            == IgnoredClauseBehavior.Remove;
 
-    // A clause on a prevented or unknown property. By default it becomes true == true, the same as v1.14.2.
+    // A clause on a prevented or unknown property. By default the parser removes it. With ReplaceWithTrue
+    // it becomes true == true, the same as v1.14.2.
     private static Expression IgnoredClause(IQueryKitConfiguration? config)
         => RemovesIgnoredClauses(config)
             ? RemovedClauseExpression.Instance
