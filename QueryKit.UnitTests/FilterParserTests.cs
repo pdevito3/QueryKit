@@ -70,6 +70,34 @@ public class FilterParserTests
         filterExpression.ToDisplayString().Should().Be("x => (x.Title == null)");
     }
 
+    [Theory]
+    [InlineData("""Title == "null" """, "x => (x.Title == \"null\")")]
+    [InlineData("""Title != "null" """, "x => (x.Title != \"null\")")]
+    [InlineData("""Title @= "null" """, "x => ((x.Title != null) AndAlso x.Title.Contains(\"null\"))")]
+    [InlineData("""Title !@= "null" """, "x => ((x.Title == null) OrElse Not(x.Title.Contains(\"null\")))")]
+    [InlineData("""Title ==* "null" """, "x => ((x.Title != null) AndAlso (x.Title.ToLower() == \"null\".ToLower()))")]
+    public void quoted_null_is_text_for_a_string(string input, string expected)
+    {
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
+        filterExpression.ToDisplayString().Should().Be(expected);
+    }
+
+    [Fact]
+    public void unquoted_null_is_null_for_a_string_not_equal()
+    {
+        var input = "Title != null";
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
+        filterExpression.ToDisplayString().Should().Be("x => (x.Title != null)");
+    }
+
+    [Fact]
+    public void quoted_null_is_null_for_a_type_that_has_no_text()
+    {
+        var input = """Age == "null" """;
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
+        filterExpression.ToDisplayString().Should().Be("x => (x.Age == null)");
+    }
+
     [Fact]
     public void can_handle_guid_with_double_quotes()
     {
