@@ -12,7 +12,7 @@ public class QueryNameOverUnknownTests
 {
     private static readonly QueryKitConfiguration Config = new(config =>
     {
-        config.DerivedProperty<TestingPerson>(x => x.Age * 2).HasQueryName("double age");
+        config.DerivedProperty<TestingPerson>(x => (x.Age * 2)!).HasQueryName("double age");
         config.DerivedProperty<TestingPerson>(x => x.FirstName + " " + x.LastName).HasQueryName("full-name");
         config.CustomOperation<TestingPerson>((x, op, value) => x.Age > 17).HasQueryName("is adult");
     });
