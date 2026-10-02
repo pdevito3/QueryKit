@@ -24,7 +24,7 @@ public class AliasCultureTests
         turkish.Should().Throw<UnknownFilterPropertyException>();
 
         var filterExpression = WithCulture("en-US", () => FilterParser.ParseFilter<Recipe>(input, config));
-        filterExpression.ToString().Should().Be("x => (x.Rating > 3)");
+        filterExpression.ToDisplayString().Should().Be("x => (x.Rating > 3)");
     }
 
     [Fact]
@@ -37,7 +37,7 @@ public class AliasCultureTests
         var input = "TIPBETA > 3";
 
         var filterExpression = WithCulture("en-US", () => FilterParser.ParseFilter<Recipe>(input, config));
-        filterExpression.ToString().Should().Be("x => (x.Rating > 3)");
+        filterExpression.ToDisplayString().Should().Be("x => (x.Rating > 3)");
 
         var turkish = () => WithCulture("tr-TR", () => FilterParser.ParseFilter<Recipe>(input, config));
         turkish.Should().Throw<UnknownFilterPropertyException>();
@@ -53,7 +53,7 @@ public class AliasCultureTests
         var input = """Title EŞITGAMMA "Pancakes" """;
 
         var filterExpression = WithCulture("en-US", () => FilterParser.ParseFilter<Recipe>(input, config));
-        filterExpression.ToString().Should().Be("""x => (x.Title == "Pancakes")""");
+        filterExpression.ToDisplayString().Should().Be("""x => (x.Title == "Pancakes")""");
 
         var turkish = () => WithCulture("tr-TR", () => FilterParser.ParseFilter<Recipe>(input, config));
         turkish.Should().Throw<ParsingException>();

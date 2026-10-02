@@ -47,7 +47,7 @@ public class DotNumberCultureTests
     {
         var filterExpression = WithCulture("de-DE", () => FilterParser.ParseFilter<Recipe>("Rating > 4"));
 
-        filterExpression.ToString().Should().Be("x => (x.Rating > 4)");
+        filterExpression.ToDisplayString().Should().Be("x => (x.Rating > 4)");
     }
 
     private static TResult WithCulture<TResult>(string cultureName, Func<TResult> action)

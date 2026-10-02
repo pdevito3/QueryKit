@@ -4,11 +4,12 @@ using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Caching.Memory;
+using QueryKit.Configuration;
 using SharedTestingHelper.Fakes;
 using WebApiTestProject.Database;
 
-// In the default constant mode, EF Core finds a compiled query for an in-list with Equals and
-// GetHashCode on the list constant. These tests use one DbContextOptions with its own query cache.
+// In the constant mode (ParameterizeFilterValues = false), EF Core finds a compiled query for an in-list
+// with Equals and GetHashCode on the list constant. These tests use one DbContextOptions with its own query cache.
 public class InListQueryCacheTests() : TestBase
 {
     [Theory]
@@ -100,6 +101,7 @@ public class InListQueryCacheTests() : TestBase
 
     private sealed class QueryCache
     {
+        private static readonly QueryKitConfiguration ConstantMode = new(settings => settings.ParameterizeFilterValues = false);
         private readonly DbContextOptions<TestingDbContext> _options;
         private readonly RecordingMemoryCache _memoryCache = new();
         private int _compilations;
@@ -124,13 +126,13 @@ public class InListQueryCacheTests() : TestBase
         public string QueryString(string input)
         {
             using var context = new TestingDbContext(_options);
-            return context.People.ApplyQueryKitFilter(input).ToQueryString();
+            return context.People.ApplyQueryKitFilter(input, ConstantMode).ToQueryString();
         }
 
         public async Task<List<Guid>> Ids(string input)
         {
             await using var context = new TestingDbContext(_options);
-            return await context.People.ApplyQueryKitFilter(input).Select(x => x.Id).ToListAsync();
+            return await context.People.ApplyQueryKitFilter(input, ConstantMode).Select(x => x.Id).ToListAsync();
         }
     }
 
