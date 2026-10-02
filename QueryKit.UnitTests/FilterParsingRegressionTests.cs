@@ -283,9 +283,12 @@ public class FilterParsingRegressionTests
 
     [Theory]
     [InlineData("""Tags ^$ "sweet" """, new[] { "pancakes" })]
+    [InlineData("""Tags !^$ "sweet" """, new[] { "stew", "bread", "water" })]
     [InlineData("""Tags ^$* "WINNER" """, new[] { "bread" })]
+    [InlineData("""Tags !^$* "WINNER" """, new[] { "pancakes", "stew", "water" })]
     [InlineData("""Tags %^$ "dinner" """, new[] { "stew", "water" })]
-    public void has_returns_matching_rows(string input, string[] expectedTitles)
+    [InlineData("""Tags %!^$ "dinner" """, new[] { "pancakes", "bread" })]
+    public void has_and_does_not_have_return_matching_rows(string input, string[] expectedTitles)
     {
         var recipes = new[]
         {
