@@ -132,22 +132,14 @@ public class FilterParsingRegressionTests
     [InlineData("SpecificDate == 2024-01-15T10:00:00+02:00.500")]
     [InlineData("Time == 08:30:00.5")]
     [InlineData("Time == \"08:30:00.500\"")]
+    [InlineData("Time == \"08:30:00.5\"")]
+    [InlineData("Time == \"08:30:00.50\"")]
     [InlineData("Time ^^ [08:30:00.5]")]
     public void fractional_seconds_are_kept(string input)
     {
         var result = FractionalSecondPeople().AsQueryable().ApplyQueryKitFilter(input).ToList();
 
         result.Select(x => x.Title).Should().Equal("match");
-    }
-
-    [Theory]
-    [InlineData("Time == \"08:30:00.5\"")]
-    [InlineData("Time == \"08:30:00.50\"")]
-    public void quoted_time_with_fewer_than_three_fraction_digits_drops_the_fraction(string input)
-    {
-        var result = FractionalSecondPeople().AsQueryable().ApplyQueryKitFilter(input).ToList();
-
-        result.Select(x => x.Title).Should().Equal("whole second");
     }
 
     private static TestingPerson[] FractionalSecondPeople() => new[]
