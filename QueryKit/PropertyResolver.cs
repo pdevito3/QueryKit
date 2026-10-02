@@ -78,37 +78,23 @@ internal static class PropertyResolver
 
     // Matches each segment to a member, ignoring case, in the order of Expression.PropertyOrField like v1.14.2:
     // a public property, a public field, a non-public property, and then a non-public field. An indexer does not match.
-    // A segment after a collection resolves on the element type.
-    // After a collection, only public properties match: the first segment in the exact case, a later segment in any case.
-    // A segment after a collection that does not match throws NullReferenceException.
+    // A segment after a collection resolves on the element type, with the same rules.
     private static string? ResolveMemberPath(Type rootType, string path, out string? unknownSegment)
     {
         var memberNames = new List<string>();
         var currentType = rootType;
-        var afterCollection = false;
 
         foreach (var segment in path.Split('.'))
         {
-            var firstAfterCollection = !afterCollection && memberNames.Count > 0 && IsCollection(currentType);
             while (IsCollection(currentType))
             {
                 currentType = currentType.GetGenericArguments()[0];
             }
 
-            MemberInfo? member;
-            if (firstAfterCollection || afterCollection)
-            {
-                member = (firstAfterCollection ? currentType.GetProperty(segment) : currentType.GetProperty(segment, PublicMemberFlags))
-                         ?? throw new NullReferenceException();
-                afterCollection = true;
-            }
-            else
-            {
-                member = (MemberInfo?)currentType.GetProperty(segment, PublicMemberFlags)
+            var member = (MemberInfo?)currentType.GetProperty(segment, PublicMemberFlags)
                          ?? (MemberInfo?)currentType.GetField(segment, PublicMemberFlags)
                          ?? (MemberInfo?)currentType.GetProperty(segment, NonPublicMemberFlags)
                          ?? currentType.GetField(segment, NonPublicMemberFlags);
-            }
 
             if (member == null || member is PropertyInfo indexer && indexer.GetIndexParameters().Length > 0)
             {
