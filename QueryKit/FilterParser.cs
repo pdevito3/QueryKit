@@ -442,7 +442,7 @@ public static class FilterParser
         { typeof(sbyte), value => sbyte.Parse(value, CultureInfo.InvariantCulture) },
     };
 
-    private static Expression CreateRightExpr(Expression leftExpr, string right, bool rightIsQuotedLiteral, ComparisonOperator op,
+    private static Expression CreateRightExpr(Expression leftExpr, string right, ComparisonOperator op,
         IQueryKitConfiguration? config = null, string? propertyPath = null, string? memberPath = null)
     {
         var targetType = leftExpr.Type;
@@ -524,11 +524,11 @@ public static class FilterParser
             {
                 // The lookup by query name above misses a property with a different query name. v1.14.2 then threw,
                 // because it can not read a value of this type, so find the conversion by the property path instead.
-                return CreateStringConversionRightExpr(leftExpr.Type, right) ?? CreateRightExprFromType(targetType, right, rightIsQuotedLiteral, op);
+                return CreateStringConversionRightExpr(leftExpr.Type, right) ?? CreateRightExprFromType(targetType, right, op);
             }
         }
 
-        return CreateRightExprFromType(targetType, right, rightIsQuotedLiteral, op);
+        return CreateRightExprFromType(targetType, right, op);
     }
 
     // Builds the right side for a property with HasConversion<string>() from a constructor that takes a string.
@@ -558,7 +558,7 @@ public static class FilterParser
         return IsEnumerable(type) || TypeConversionFunctions.ContainsKey(targetType) || targetType.IsEnum || targetType == typeof(object);
     }
 
-    private static Expression CreateRightExprFromType(Type leftExprType, string right, bool rightIsQuotedLiteral, ComparisonOperator op)
+    private static Expression CreateRightExprFromType(Type leftExprType, string right, ComparisonOperator op)
     {
         var isEnumerable = IsEnumerable(leftExprType);
         var targetType = leftExprType;
@@ -569,7 +569,7 @@ public static class FilterParser
                 return FilterValue.Create(intVal, typeof(int));
             }
             targetType = targetType.GetGenericArguments()[0];
-            return CreateRightExprFromType(targetType, right, rightIsQuotedLiteral, op);
+            return CreateRightExprFromType(targetType, right, op);
         }
         
         var rawType = targetType;
@@ -648,30 +648,9 @@ public static class FilterParser
             {
                 var time = TimeOnly.Parse(right, CultureInfo.InvariantCulture);
 
-                int millisecond = 0, microsecond = 0;
-                if (rightIsQuotedLiteral)
-                {
-                    // Like v1.14.2, the milliseconds of a quoted value need at least 3 fraction digits and the microseconds need at least 6.
-                    if (right.Contains('.'))
-                    {
-                        var fractionalSeconds = right.Split('.')[1];
-                        if (fractionalSeconds.Length >= 3)
-                        {
-                            millisecond = int.Parse(fractionalSeconds.Substring(0, 3));
-                        }
-                        if (fractionalSeconds.Length >= 6)
-                        {
-                            microsecond = int.Parse(fractionalSeconds.Substring(3, 3));
-                        }
-                    }
-                }
-                else
-                {
-                    // v1.14.2 did not accept an unquoted fraction, so an unquoted value keeps its full fraction.
-                    var fractionalTicks = time.Ticks % TimeSpan.TicksPerSecond;
-                    millisecond = (int)(fractionalTicks / TimeSpan.TicksPerMillisecond);
-                    microsecond = (int)(fractionalTicks % TimeSpan.TicksPerMillisecond / 10);
-                }
+                var fractionalTicks = time.Ticks % TimeSpan.TicksPerSecond;
+                var millisecond = (int)(fractionalTicks / TimeSpan.TicksPerMillisecond);
+                var microsecond = (int)(fractionalTicks % TimeSpan.TicksPerMillisecond / 10);
 
                 // One microsecond is 10 ticks. The TimeOnly constructor with microseconds needs .NET 7.
                 var value = new TimeOnly(time.Hour, time.Minute, time.Second, millisecond)
@@ -935,12 +914,12 @@ public static class FilterParser
                         var leftExprForRightSide = guidConfig?.UsesConversion == true && guidConfig.ConversionTargetType == typeof(string)
                             ? guidStringExpr
                             : leftExpr;
-                        return temp.op.GetExpression<T>(guidStringExpr, CreateRightExpr(leftExprForRightSide, temp.right, temp.rightIsQuotedLiteral, temp.op, config, guidPropertyPath),
+                        return temp.op.GetExpression<T>(guidStringExpr, CreateRightExpr(leftExprForRightSide, temp.right, temp.op, config, guidPropertyPath),
                             config?.DbContextType, ResolveCaseMode(guidPropertyPath, config));
                     }
 
                     // For non-string operators, use direct GUID comparison
-                    return temp.op.GetExpression<T>(leftExpr, CreateRightExpr(leftExpr, temp.right, temp.rightIsQuotedLiteral, temp.op, config, guidPropertyPath),
+                    return temp.op.GetExpression<T>(leftExpr, CreateRightExpr(leftExpr, temp.right, temp.op, config, guidPropertyPath),
                         config?.DbContextType);
                 }
 
@@ -1050,7 +1029,7 @@ public static class FilterParser
                     }
                 }
 
-                var rightExpr = CreateRightExpr(leftExprForComparison, temp.right, temp.rightIsQuotedLiteral, temp.op, config, propertyPath);
+                var rightExpr = CreateRightExpr(leftExprForComparison, temp.right, temp.op, config, propertyPath);
 
                 // Handle nested collection filtering
                 if (leftExprForComparison is MethodCallExpression methodCall && IsNestedCollectionExpression(methodCall))
@@ -1271,7 +1250,7 @@ public static class FilterParser
             .SelectMany(properties => comparisonOperatorParser,
                 (properties, op) => new { properties, op })
             .SelectMany(temp => rightSideValueParser,
-                (temp, rightValue) => new { temp.properties, temp.op, right = rightValue.Value, rightIsQuotedLiteral = rightValue.IsQuotedLiteral, cultureNumberPrefix = rightValue.CultureNumberPrefix })
+                (temp, rightValue) => new { temp.properties, temp.op, right = rightValue.Value, cultureNumberPrefix = rightValue.CultureNumberPrefix })
             .Select(clause => BuildClauseLikeV1142(clause.cultureNumberPrefix, clause.right, right =>
             {
                 var temp = clause with { right = right };
@@ -1319,7 +1298,7 @@ public static class FilterParser
                         leftExpr = HandleGuidConversion(leftExpr, leftExpr.Type);
                     }
 
-                    var rightExpr = CreateRightExpr(leftExpr, temp.right, temp.rightIsQuotedLiteral, temp.op, config, fullPropPath, reference.Path);
+                    var rightExpr = CreateRightExpr(leftExpr, temp.right, temp.op, config, fullPropPath, reference.Path);
                     var comparison = temp.op.GetExpression<T>(leftExpr, rightExpr, config?.DbContextType, ResolveCaseMode(fullPropPath, config));
 
                     // Combine with AND for negative operators, OR for positive operators

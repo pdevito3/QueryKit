@@ -147,7 +147,7 @@ public class FilterParsingRegressionTests : TestBase
     [InlineData("SpecificDate == 2024-01-15T10:00:00.5+02:00", true)]
     [InlineData("Time == 08:30:00.5", true)]
     [InlineData("Time == \"08:30:00.500\"", true)]
-    [InlineData("Time == \"08:30:00.5\"", false)]
+    [InlineData("Time == \"08:30:00.5\"", true)]
     public async Task fractional_second_value_matches_by_its_fraction(string valueFilter, bool expectFractionPerson)
     {
         // Arrange
