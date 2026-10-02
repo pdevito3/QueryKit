@@ -1330,18 +1330,53 @@ public static class FilterParser
         => OrExprParser<T>(parameter, config);
     
     private static Parser<Expression> AndExprParser<T>(ParameterExpression parameter, IQueryKitConfiguration? config = null)
-        => Parse.ChainOperator(
+        => ChainLeft(
             LogicalOperatorParserWithAliases(config).Where(x => x.Name == LogicalOperator.AndOperator.Operator()),
             AtomicExprParser<T>(parameter, config),
             CombineClauses<T>
         );
 
     private static Parser<Expression> OrExprParser<T>(ParameterExpression parameter, IQueryKitConfiguration? config = null)
-        => Parse.ChainOperator(
+        => ChainLeft(
             LogicalOperatorParserWithAliases(config).Where(x => x.Name == LogicalOperator.OrOperator.Operator()),
             AndExprParser<T>(parameter, config),
             CombineClauses<T>
         );
+
+    // The same left-associative chain as Parse.ChainOperator, read in a loop. Parse.ChainOperator recurses
+    // once for each operator, so a long flat chain such as a && b && ... overflowed the stack.
+    // When an operator has no operand after it, the chain ends before that operator, the same as Parse.ChainOperator.
+    private static Parser<TResult> ChainLeft<TResult, TOp>(Parser<TOp> op, Parser<TResult> operand, Func<TOp, TResult, TResult, TResult> apply)
+        => input =>
+        {
+            var first = operand(input);
+            if (!first.WasSuccessful)
+            {
+                return first;
+            }
+
+            var result = first.Value;
+            var remainder = first.Remainder;
+            while (true)
+            {
+                var opResult = op(remainder);
+                if (!opResult.WasSuccessful)
+                {
+                    break;
+                }
+
+                var next = operand(opResult.Remainder);
+                if (!next.WasSuccessful)
+                {
+                    break;
+                }
+
+                result = apply(opResult.Value, result, next.Value);
+                remainder = next.Remainder;
+            }
+
+            return Result.Success(result, remainder);
+        };
 
     private static bool RemovesIgnoredClauses(IQueryKitConfiguration? config)
         => config is IQueryKitFilterBehavior { IgnoredClauseBehavior: IgnoredClauseBehavior.Remove };

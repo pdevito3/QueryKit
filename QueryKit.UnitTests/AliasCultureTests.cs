@@ -16,7 +16,7 @@ public class AliasCultureTests
     {
         var config = new QueryKitConfiguration(settings =>
         {
-            settings.Property<Recipe>(x => x.Rating).HasQueryName("tipalpha");
+            settings.Property<Recipe>(x => x.Rating!).HasQueryName("tipalpha");
         });
         var input = "TIPALPHA > 3";
 
@@ -32,7 +32,7 @@ public class AliasCultureTests
     {
         var config = new QueryKitConfiguration(settings =>
         {
-            settings.Property<Recipe>(x => x.Rating).HasQueryName("tipbeta");
+            settings.Property<Recipe>(x => x.Rating!).HasQueryName("tipbeta");
         });
         var input = "TIPBETA > 3";
 
