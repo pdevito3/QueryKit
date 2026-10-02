@@ -1,5 +1,6 @@
 namespace QueryKit.UnitTests;
 
+using System.Linq.Expressions;
 using QueryKit.Configuration;
 using QueryKit.Exceptions;
 using FluentAssertions;
@@ -247,6 +248,93 @@ public class ParseLimitsTests
         thrown.Should().BeOfType<QueryKitNestingDepthExceededException>()
             .Which.Message.Should().Contain("depth of 11");
     }
+
+    // A 256 KB stack overflowed on main at 212 clauses. A stack overflow ends the test process.
+    [Theory]
+    [InlineData("&&")]
+    [InlineData("||")]
+    public void long_flat_chain_parses_on_a_small_stack(string logicalOperator)
+    {
+        var input = string.Join($" {logicalOperator} ", Enumerable.Repeat("Age > 1", 20_000));
+
+        var (filterExpression, thrown) = ParseOnSmallStack(input, NoLengthLimit());
+
+        thrown.Should().BeNull();
+        filterExpression.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void long_flat_chain_with_aliases_and_a_query_name_parses_on_a_small_stack()
+    {
+        var input = string.Join(" and ", Enumerable.Repeat("age > 1", 20_000));
+        var config = new QueryKitConfiguration(settings =>
+        {
+            settings.AndOperator = "and";
+            settings.MaxInputLength = int.MaxValue;
+            settings.Property<TestingPerson>(x => x.Age!).HasQueryName("age");
+        });
+
+        var (filterExpression, thrown) = ParseOnSmallStack(input, config);
+
+        thrown.Should().BeNull();
+        // Compile recurses once for each operator, so this compiles the first and the last clause of the chain
+        var chain = (BinaryExpression)filterExpression!.Body;
+        Expression first = chain;
+        while (first is BinaryExpression { NodeType: ExpressionType.AndAlso } binary)
+        {
+            first = binary.Left;
+        }
+        foreach (var clause in new[] { first, chain.Right })
+        {
+            var compiled = Expression.Lambda<Func<TestingPerson, bool>>(clause, filterExpression.Parameters).Compile();
+            compiled(new TestingPerson { Age = 2 }).Should().BeTrue();
+            compiled(new TestingPerson { Age = 1 }).Should().BeFalse();
+        }
+    }
+
+    [Fact]
+    public void flat_chain_keeps_and_before_or_and_groups_from_the_left()
+    {
+        var input = "Age > 1 && Age > 2 && Age > 3 || Age > 4 || Age > 5 && Age > 6";
+
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
+
+        filterExpression.ToDisplayString().Should().Be(
+            "x => (((((x.Age > 1) AndAlso (x.Age > 2)) AndAlso (x.Age > 3)) OrElse (x.Age > 4)) OrElse ((x.Age > 5) AndAlso (x.Age > 6)))");
+    }
+
+    [Fact]
+    public void flat_chain_that_ends_with_an_operator_throws_a_parsing_exception()
+    {
+        var act = () => FilterParser.ParseFilter<TestingPerson>("Age > 1 && Age > 2 &&");
+
+        act.Should().Throw<ParsingException>().WithMessage("*Column 20*");
+    }
+
+    private static (Expression<Func<TestingPerson, bool>>? Expression, Exception? Thrown) ParseOnSmallStack(
+        string input, QueryKitConfiguration? config)
+    {
+        Expression<Func<TestingPerson, bool>>? filterExpression = null;
+        Exception? thrown = null;
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                filterExpression = FilterParser.ParseFilter<TestingPerson>(input, config);
+            }
+            catch (Exception e)
+            {
+                thrown = e;
+            }
+        }, maxStackSize: 256 * 1024);
+        thread.Start();
+        thread.Join();
+
+        return (filterExpression, thrown);
+    }
+
+    private static QueryKitConfiguration NoLengthLimit()
+        => new(settings => settings.MaxInputLength = int.MaxValue);
 
     private static QueryKitConfiguration DepthLimit(int maxNestingDepth)
         => new(settings => settings.MaxNestingDepth = maxNestingDepth);
