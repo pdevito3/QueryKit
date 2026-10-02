@@ -248,26 +248,6 @@ public class FilterParsingRegressionTests
         ComparisonOperatorFactories().Should().HaveCount(24);
     }
 
-    [Theory]
-    [InlineData(false, new[] { "lamb" })]
-    [InlineData(true, new[] { "null", "other" })]
-    public void case_insensitive_in_operator_factory_reads_a_constant_list(bool notIn, string[] expectedFirstNames)
-    {
-        var people = new[]
-        {
-            new TestingPerson { Title = null, FirstName = "null" },
-            new TestingPerson { Title = "Lamb", FirstName = "lamb" },
-            new TestingPerson { Title = "other", FirstName = "other" },
-        };
-        Expression<Func<TestingPerson, string?>> title = x => x.Title;
-        var comparisonOperator = notIn ? ComparisonOperator.NotInOperator(true) : ComparisonOperator.InOperator(true);
-
-        var body = comparisonOperator.GetExpression<TestingPerson>(title.Body, Expression.Constant(new List<string> { "LAMB" }), null);
-        var filterExpression = Expression.Lambda<Func<TestingPerson, bool>>(body, title.Parameters);
-
-        people.AsQueryable().Where(filterExpression).Select(x => x.FirstName).Should().Equal(expectedFirstNames);
-    }
-
     [Fact]
     public void comparison_operator_factory_with_uses_all_builds_any_expression()
     {

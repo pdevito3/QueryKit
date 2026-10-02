@@ -588,8 +588,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
                 var listType = typeof(List<string>);
                 var caseList = Activator.CreateInstance(listType);
 
-                // A caller can pass the list as a constant, like v1.14.2.
-                var originalList = (values ?? ((ConstantExpression)right).Value) as IEnumerable<string>;
+                var originalList = values as IEnumerable<string>;
                 foreach (var value in originalList!)
                 {
                     listType.GetMethod("Add")!.Invoke(caseList, new[] { caseMode == CaseInsensitiveMode.Upper ? value.ToUpper() : value.ToLower() });
@@ -834,8 +833,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
                 var listType = typeof(List<string>);
                 var caseList = Activator.CreateInstance(listType);
 
-                // A caller can pass the list as a constant, like v1.14.2.
-                var originalList = (values ?? ((ConstantExpression)right).Value) as IEnumerable<string>;
+                var originalList = values as IEnumerable<string>;
                 foreach (var value in originalList!)
                 {
                     listType.GetMethod("Add")!.Invoke(caseList, new[] { caseMode == CaseInsensitiveMode.Upper ? value.ToUpper() : value.ToLower() });
