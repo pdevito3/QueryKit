@@ -816,7 +816,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
                  left.Type.GetGenericTypeDefinition() == typeof(IList<>) ||
                  typeof(IEnumerable<>).IsAssignableFrom(left.Type.GetGenericTypeDefinition())))
             {
-                return GetCollectionExpression(left, right, Expression.NotEqual, UsesAll);
+                return Expression.Not(GetCollectionExpression(left, right, Expression.Equal, UsesAll));
             }
             
             throw new QueryKitParsingException("DoesNotHaveType is only supported for collections");
