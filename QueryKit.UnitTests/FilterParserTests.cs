@@ -42,7 +42,7 @@ public class FilterParserTests
 
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
         filterExpression.ToDisplayString().Should()
-            .Be(""""x => (((((((((x.Title != null) AndAlso x.Title.ToLower().Contains("waffle & chicken".ToLower())) AndAlso (x.Age > 30)) OrElse (x.Id == aa648248-cb69-4217-ac95-d7484795afb2)) OrElse (x.Title == "lamb")) OrElse (x.Title == null)) AndAlso ((x.Age < 18) OrElse ((x.BirthMonth == new Nullable`1(January)) AndAlso x.Title.StartsWith("ally")))) OrElse (x.Rating > 3.5)) OrElse ((x.SpecificDate == new Nullable`1(new DateTimeOffset(637922304030000000, 00:00:00))) AndAlso ((x.Date == new Nullable`1(new DateOnly(2022, 7, 1))) OrElse (x.Time == new Nullable`1(new TimeOnly(0, 0, 3, 0, 0))))))"""");
+            .Be(""""x => (((((((((x.Title != null) AndAlso x.Title.ToLower().Contains("waffle & chicken".ToLower())) AndAlso (x.Age > 30)) OrElse (x.Id == aa648248-cb69-4217-ac95-d7484795afb2)) OrElse (x.Title == "lamb")) OrElse (x.Title == null)) AndAlso ((x.Age < 18) OrElse ((x.BirthMonth == new Nullable`1(January)) AndAlso ((x.Title != null) AndAlso x.Title.StartsWith("ally"))))) OrElse (x.Rating > 3.5)) OrElse ((x.SpecificDate == new Nullable`1(new DateTimeOffset(637922304030000000, 00:00:00))) AndAlso ((x.Date == new Nullable`1(new DateOnly(2022, 7, 1))) OrElse (x.Time == new Nullable`1(new TimeOnly(0, 0, 3, 0, 0))))))"""");
     }
 
     [Fact]
@@ -173,7 +173,7 @@ public class FilterParserTests
     {
         var input = """Title _= "lam" """;
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToDisplayString().Should().Be("x => x.Title.StartsWith(\"lam\")");
+        filterExpression.ToDisplayString().Should().Be("x => ((x.Title != null) AndAlso x.Title.StartsWith(\"lam\"))");
     }
 
     [Fact]
@@ -189,7 +189,7 @@ public class FilterParserTests
     {
         var input = """Title _-= "b" """;
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToDisplayString().Should().Be("x => x.Title.EndsWith(\"b\")");
+        filterExpression.ToDisplayString().Should().Be("x => ((x.Title != null) AndAlso x.Title.EndsWith(\"b\"))");
     }
 
     [Fact]
@@ -372,7 +372,7 @@ public class FilterParserTests
     {
         var input = """Title _= "lamb" && Age >= 25 && Rating < 4.5 && SpecificDate <= 2022-07-01T00:00:03Z && Time == 00:00:03""";
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToDisplayString().Should().Be("x => ((((x.Title.StartsWith(\"lamb\") AndAlso (x.Age >= 25)) AndAlso (x.Rating < 4.5)) AndAlso (x.SpecificDate <= new Nullable`1(new DateTimeOffset(637922304030000000, 00:00:00)))) AndAlso (x.Time == new Nullable`1(new TimeOnly(0, 0, 3, 0, 0))))");
+        filterExpression.ToDisplayString().Should().Be("x => ((((((x.Title != null) AndAlso x.Title.StartsWith(\"lamb\")) AndAlso (x.Age >= 25)) AndAlso (x.Rating < 4.5)) AndAlso (x.SpecificDate <= new Nullable`1(new DateTimeOffset(637922304030000000, 00:00:00)))) AndAlso (x.Time == new Nullable`1(new TimeOnly(0, 0, 3, 0, 0))))");
     }
 
     [Fact]
@@ -380,7 +380,7 @@ public class FilterParserTests
     {
         var input = """(Title == "lamb" && ((Age >= 25 && Rating < 4.5) || (SpecificDate <= 2022-07-01T00:00:03Z && Time == 00:00:03)) && (Favorite == true || Email.Value _= "example"))""";
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToDisplayString().Should().Be("""x => (((x.Title == "lamb") AndAlso (((x.Age >= 25) AndAlso (x.Rating < 4.5)) OrElse ((x.SpecificDate <= new Nullable`1(new DateTimeOffset(637922304030000000, 00:00:00))) AndAlso (x.Time == new Nullable`1(new TimeOnly(0, 0, 3, 0, 0)))))) AndAlso ((x.Favorite == True) OrElse x.Email.Value.StartsWith("example")))""");
+        filterExpression.ToDisplayString().Should().Be("""x => (((x.Title == "lamb") AndAlso (((x.Age >= 25) AndAlso (x.Rating < 4.5)) OrElse ((x.SpecificDate <= new Nullable`1(new DateTimeOffset(637922304030000000, 00:00:00))) AndAlso (x.Time == new Nullable`1(new TimeOnly(0, 0, 3, 0, 0)))))) AndAlso ((x.Favorite == True) OrElse ((x.Email.Value != null) AndAlso x.Email.Value.StartsWith("example"))))""");
     }
 
     [Fact]
@@ -412,7 +412,7 @@ public class FilterParserTests
     {
         var input = """Title _-= "lamb" """;
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToDisplayString().Should().Be("x => x.Title.EndsWith(\"lamb\")");
+        filterExpression.ToDisplayString().Should().Be("x => ((x.Title != null) AndAlso x.Title.EndsWith(\"lamb\"))");
     }
 
     [Fact]
@@ -428,7 +428,7 @@ public class FilterParserTests
     {
         var input = """Title @= "lamb" """;
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToDisplayString().Should().Be("x => x.Title.Contains(\"lamb\")");
+        filterExpression.ToDisplayString().Should().Be("x => ((x.Title != null) AndAlso x.Title.Contains(\"lamb\"))");
     }
 
     [Fact]
@@ -436,7 +436,7 @@ public class FilterParserTests
     {
         var input = """Title !@= "lamb" """;
         var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
-        filterExpression.ToDisplayString().Should().Be("x => Not(x.Title.Contains(\"lamb\"))");
+        filterExpression.ToDisplayString().Should().Be("x => ((x.Title == null) OrElse Not(x.Title.Contains(\"lamb\")))");
     }
 
     [Fact]
