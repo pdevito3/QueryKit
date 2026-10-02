@@ -6,14 +6,14 @@ using QueryKit.Operators;
 public class QueryKitSettings
 {
     /// <summary>
-    /// The default nesting depth limit is off. Set <see cref="MaxNestingDepth"/> to turn the limit on.
+    /// The default nesting depth limit. Set <see cref="MaxNestingDepth"/> to int.MaxValue to turn the limit off.
     /// </summary>
-    public const int DefaultMaxNestingDepth = int.MaxValue;
+    public const int DefaultMaxNestingDepth = 32;
 
     /// <summary>
-    /// The default input length limit is off. Set <see cref="MaxInputLength"/> to turn the limit on.
+    /// The default input length limit. Set <see cref="MaxInputLength"/> to int.MaxValue to turn the limit off.
     /// </summary>
-    public const int DefaultMaxInputLength = int.MaxValue;
+    public const int DefaultMaxInputLength = 5000;
 
     public QueryKitPropertyMappings PropertyMappings { get; set; } = new QueryKitPropertyMappings();
     public string EqualsOperator { get; set; } = ComparisonOperator.EqualsOperator().Operator();
