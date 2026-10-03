@@ -36,6 +36,10 @@ internal sealed class PropertyReference
     /// <summary>The configuration of the member, the derived property, or the custom operation, if there is one.</summary>
     public QueryKitPropertyInfo? Mapping { get; }
 
+    public bool CanFilter => Mapping?.CanFilter ?? true;
+
+    public bool CanSort => Mapping?.CanSort ?? true;
+
     /// <summary>When the reference is not a member, the first path segment that did not resolve to a member.</summary>
     public string? UnknownSegment { get; }
 
