@@ -567,7 +567,7 @@ public enum BirthMonthEnum
 Filtering is set up to create an expression using the property names you have on your entity, but you can pass in a config to customize things a bit when needed.
 
 * `HasQueryName()` to create a custom alias for a property. For exmaple, we can make `FirstName` aliased to `first`.
-* `PreventFilter()` to prevent filtering on a given property
+* `PreventFilter()` to prevent filtering on a given property. The setting applies in every place that a filter can use the property: the left side, the right side, arithmetic, and a property list, in any letter case. It also applies to derived properties and custom operations.
 
 ```c#
 var input = $"""first == "Jane" || Age > 10""";
@@ -967,7 +967,7 @@ var input = "Title, -Age";
 Sorting is set up to create an expression using the property names you have on your entity, but you can pass in a config to customize things a bit when needed.
 
 * Just as with filtering, `HasQueryName()` to create a custom alias for a property. For exmaple, we can make `FirstName` aliased to `first`.
-* `PreventSort()` to prevent filtering on a given property
+* `PreventSort()` to prevent sorting on a given property. The setting applies in any letter case, also when the sort uses the member name of a property that has a query name. It also applies to derived properties.
 
 ```c#
 var input = "Age desc, first";
