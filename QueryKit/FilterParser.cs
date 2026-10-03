@@ -367,7 +367,8 @@ public static class FilterParser
     // This is needed to disambiguate a literal from a bare property reference (property-to-property
     // comparison) once the surrounding quotes have been stripped, since both are otherwise identical strings.
     // CultureNumberPrefix is set when the value holds a number that only the '.' decimal point reads (see BuildClauseLikeV1142).
-    private readonly record struct RightSideValue(string Value, bool IsQuotedLiteral, string? CultureNumberPrefix = null);
+    // IsPropertyPath is set for unquoted identifiers joined with '.', which must resolve to a property path.
+    private readonly record struct RightSideValue(string Value, bool IsQuotedLiteral, string? CultureNumberPrefix = null, bool IsPropertyPath = false);
 
     private static readonly Parser<IEnumerable<(string Value, bool IsDotOnlyNumber)>> SquareBracketValuesParser =
         Parse.String("null").Text()
@@ -395,7 +396,7 @@ public static class FilterParser
             .XOr(NumberParser.Select(v => new RightSideValue(v, false, CultureNumberPrefix(v))))
             .XOr((RawStringLiteralParser.Or(DoubleQuoteParser)).Select(v => new RightSideValue(v, true)))
             .XOr(SquareBracketParser)
-            .XOr(Identifier.Select(v => new RightSideValue(v, false))); // Keep this last to try property paths only if nothing else matches
+            .XOr(Identifier.DelimitedBy(Parse.Char('.')).Select(v => v.ToList()).Select(v => new RightSideValue(string.Join(".", v), false, IsPropertyPath: v.Count > 1))); // Keep this last to try property paths only if nothing else matches
 
     private static readonly Parser<RightSideValue> RightSideValueParser =
         from atSign in Parse.Char('@').Optional()
@@ -944,7 +945,7 @@ public static class FilterParser
 
         var regularComparison = CreateLeftExprParser(parameter.Type, config)
             .SelectMany(reference => comparisonOperatorParser, (reference, op) => new { reference, op })
-            .SelectMany(temp => rightSideValueParser, (temp, rightValue) => new { temp.reference, temp.op, right = rightValue.Value, rightIsQuotedLiteral = rightValue.IsQuotedLiteral, cultureNumberPrefix = rightValue.CultureNumberPrefix })
+            .SelectMany(temp => rightSideValueParser, (temp, rightValue) => new { temp.reference, temp.op, right = rightValue.Value, rightIsQuotedLiteral = rightValue.IsQuotedLiteral, cultureNumberPrefix = rightValue.CultureNumberPrefix, rightIsPropertyPath = rightValue.IsPropertyPath })
             .Select(clause => BuildClauseLikeV1142(clause.cultureNumberPrefix, clause.right, right =>
             {
                 var temp = clause with { right = right };
@@ -1000,7 +1001,8 @@ public static class FilterParser
 
                 // Check if the right side is a property path for property-to-property comparison.
                 // A quoted string literal is always a value, even when its text matches a property name.
-                if (!temp.rightIsQuotedLiteral && IsPropertyPath(temp.right, parameter.Type))
+                // A dotted path must resolve to a property. A single identifier that is not a property stays a value.
+                if (temp.rightIsPropertyPath || !temp.rightIsQuotedLiteral && IsPropertyPath(temp.right, parameter.Type))
                 {
                     // Build the right side from the resolved path, so that the checked property is the compared property.
                     var rightReference = PropertyResolver.ResolveWithoutQueryName(parameter.Type, temp.right, config);
@@ -1012,6 +1014,11 @@ public static class FilterParser
                     var rightPropertyExpr = rightReference.Kind == PropertyReferenceKind.Member
                         ? CreateRightPropertyExpr<T>(parameter, rightReference.Path, config)
                         : null;
+                    if (rightPropertyExpr == null && temp.rightIsPropertyPath)
+                    {
+                        // A path through a collection resolves to a member, but it is not one value to compare with.
+                        throw new UnknownFilterPropertyException(rightReference.UnknownSegment ?? temp.right);
+                    }
                     if (rightPropertyExpr != null)
                     {
                         // Handle GUID conversion for property-to-property comparisons
@@ -1300,7 +1307,8 @@ public static class FilterParser
         return PropertyListParser(PropertyPathParser(config))
             .SelectMany(properties => comparisonOperatorParser,
                 (properties, op) => new { properties, op })
-            .SelectMany(temp => rightSideValueParser,
+            // A property list compares with a value, so a property path on the right side does not parse.
+            .SelectMany(temp => rightSideValueParser.Where(rightValue => !rightValue.IsPropertyPath),
                 (temp, rightValue) => new { temp.properties, temp.op, right = rightValue.Value, rightIsQuotedLiteral = rightValue.IsQuotedLiteral, cultureNumberPrefix = rightValue.CultureNumberPrefix })
             .Select(clause => BuildClauseLikeV1142(clause.cultureNumberPrefix, clause.right, right =>
             {

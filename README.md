@@ -314,6 +314,8 @@ Child property comparisons work with:
 - **Type Conversion**: Automatic conversion between compatible types
 - **Complex Expressions**: Can be combined with logical operators and parentheses
 
+An unquoted dotted name on the right side is always a property path. If it does not resolve to a property, the filter throws `UnknownFilterPropertyException`. A path through a collection (`Ingredients.Name`) also throws. To compare with the literal text, quote it: `Title == "foo.bar"`.
+
 ### Arithmetic Expressions
 
 QueryKit supports arithmetic expressions in filters, allowing you to perform calculations directly within your queries. This enables powerful filtering capabilities based on computed values.
