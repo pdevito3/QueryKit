@@ -342,4 +342,102 @@ public class FilterParsingRegressionTests : TestBase
         // Assert
         act.Should().Throw<QueryKitParsingException>();
     }
+
+    // Npgsql needs a Utc DateTime for a timestamptz column. A value without an offset is UTC by default.
+    [Theory]
+    [InlineData("SpecificDateTime == 2024-01-15T08:00:00", false)]
+    [InlineData("SpecificDateTime == 2024-01-15T08:00:00", true)]
+    [InlineData("SpecificDateTime == \"2024-01-15T08:00:00\"", false)]
+    [InlineData("SpecificDateTime == \"2024-01-15T08:00:00\"", true)]
+    [InlineData("SpecificDateTime == 2024-01-15T10:00:00+02:00", false)]
+    [InlineData("SpecificDateTime == 2024-01-15T10:00:00+02:00", true)]
+    [InlineData("SpecificDateTime ^^ [2024-01-15T08:00:00]", false)]
+    [InlineData("SpecificDateTime ^^ [2024-01-15T08:00:00]", true)]
+    [InlineData("SpecificDateTime ^^ [\"2024-01-15T08:00:00\"]", false)]
+    [InlineData("SpecificDateTime ^^ [\"2024-01-15T08:00:00\"]", true)]
+    [InlineData("SpecificDateTime ^^ [2024-01-15T10:00:00+02:00]", false)]
+    [InlineData("SpecificDateTime ^^ [2024-01-15T10:00:00+02:00]", true)]
+    [InlineData("SpecificDate == 2024-01-15T08:00:00", false)]
+    [InlineData("SpecificDate == 2024-01-15T08:00:00", true)]
+    [InlineData("SpecificDate == \"2024-01-15T08:00:00\"", false)]
+    [InlineData("SpecificDate == \"2024-01-15T08:00:00\"", true)]
+    [InlineData("SpecificDate == 2024-01-15T10:00:00+02:00", false)]
+    [InlineData("SpecificDate == 2024-01-15T10:00:00+02:00", true)]
+    [InlineData("SpecificDate ^^ [2024-01-15T08:00:00]", false)]
+    [InlineData("SpecificDate ^^ [2024-01-15T08:00:00]", true)]
+    [InlineData("SpecificDate ^^ [\"2024-01-15T08:00:00\"]", false)]
+    [InlineData("SpecificDate ^^ [\"2024-01-15T08:00:00\"]", true)]
+    [InlineData("SpecificDate ^^ [2024-01-15T10:00:00+02:00]", false)]
+    [InlineData("SpecificDate ^^ [2024-01-15T10:00:00+02:00]", true)]
+    public async Task timestamptz_value_without_offset_is_utc_by_default(string valueFilter, bool parameterize)
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var title = $"utc {Guid.NewGuid()}";
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithTitle(title)
+            .WithSpecificDateTime(new DateTime(2024, 1, 15, 8, 0, 0, DateTimeKind.Utc))
+            .WithSpecificDate(new DateTimeOffset(2024, 1, 15, 8, 0, 0, TimeSpan.Zero))
+            .Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder()
+            .WithTitle(title)
+            .WithSpecificDateTime(new DateTime(2024, 1, 15, 9, 0, 0, DateTimeKind.Utc))
+            .WithSpecificDate(new DateTimeOffset(2024, 1, 15, 9, 0, 0, TimeSpan.Zero))
+            .Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+
+        var input = $"""{nameof(TestingPerson.Title)} == "{title}" && {valueFilter}""";
+        var config = new QueryKitConfiguration(settings => settings.ParameterizeFilterValues = parameterize);
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var people = await queryablePeople.ApplyQueryKitFilter(input, config).ToListAsync();
+
+        // Assert
+        people.Select(x => x.Id).Should().Equal(fakePersonOne.Id);
+    }
+
+    // Npgsql rejects a Utc DateTime for a timestamp without time zone column. Unspecified keeps the wall-clock time.
+    [Theory]
+    [InlineData("LocalDateTime == 2024-01-15T08:00:00", false)]
+    [InlineData("LocalDateTime == 2024-01-15T08:00:00", true)]
+    [InlineData("LocalDateTime == \"2024-01-15T08:00:00\"", false)]
+    [InlineData("LocalDateTime == \"2024-01-15T08:00:00\"", true)]
+    [InlineData("LocalDateTime == 2024-01-15T10:00:00+02:00", false)]
+    [InlineData("LocalDateTime == 2024-01-15T10:00:00+02:00", true)]
+    [InlineData("LocalDateTime ^^ [2024-01-15T08:00:00]", false)]
+    [InlineData("LocalDateTime ^^ [2024-01-15T08:00:00]", true)]
+    [InlineData("LocalDateTime ^^ [\"2024-01-15T08:00:00\"]", false)]
+    [InlineData("LocalDateTime ^^ [\"2024-01-15T08:00:00\"]", true)]
+    [InlineData("LocalDateTime ^^ [2024-01-15T10:00:00+02:00]", false)]
+    [InlineData("LocalDateTime ^^ [2024-01-15T10:00:00+02:00]", true)]
+    public async Task timestamp_without_time_zone_value_matches_with_unspecified_kind(string valueFilter, bool parameterize)
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var title = $"unspecified {Guid.NewGuid()}";
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithTitle(title)
+            .WithLocalDateTime(new DateTime(2024, 1, 15, 8, 0, 0, DateTimeKind.Unspecified))
+            .Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder()
+            .WithTitle(title)
+            .WithLocalDateTime(new DateTime(2024, 1, 15, 9, 0, 0, DateTimeKind.Unspecified))
+            .Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+
+        var input = $"""{nameof(TestingPerson.Title)} == "{title}" && {valueFilter}""";
+        var config = new QueryKitConfiguration(settings =>
+        {
+            settings.ParameterizeFilterValues = parameterize;
+            settings.DateTimeKindForValuesWithoutOffset = DateTimeKind.Unspecified;
+        });
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var people = await queryablePeople.ApplyQueryKitFilter(input, config).ToListAsync();
+
+        // Assert
+        people.Select(x => x.Id).Should().Equal(fakePersonOne.Id);
+    }
 }

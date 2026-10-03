@@ -362,6 +362,49 @@ public class FilterParsingRegressionTests
         act.Should().Throw<QueryKitParsingException>();
     }
 
+    [Theory]
+    [InlineData("SpecificDateTime == 2024-01-15T08:00:00", "x => (x.SpecificDateTime == new DateTime(638409024000000000, Utc))")]
+    [InlineData("SpecificDateTime == \"2024-01-15T08:00:00\"", "x => (x.SpecificDateTime == new DateTime(638409024000000000, Utc))")]
+    [InlineData("SpecificDateTime == 2024-01-15T10:00:00+02:00", "x => (x.SpecificDateTime == new DateTime(638409024000000000, Utc))")]
+    [InlineData("SpecificDateTime == 2024-01-15T08:00:00Z", "x => (x.SpecificDateTime == new DateTime(638409024000000000, Utc))")]
+    [InlineData("SpecificDate == 2024-01-15T08:00:00", "x => (x.SpecificDate == new Nullable`1(new DateTimeOffset(638409024000000000, 00:00:00)))")]
+    public void date_time_without_offset_is_utc(string input, string expected)
+    {
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
+
+        filterExpression.ToDisplayString().Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData("SpecificDateTime ^^ [2024-01-15T08:00:00]")]
+    [InlineData("SpecificDateTime ^^ [2024-01-15T10:00:00+02:00]")]
+    [InlineData("SpecificDate ^^ [2024-01-15T08:00:00]")]
+    [InlineData("SpecificDate ^^ [2024-01-15T10:00:00+02:00]")]
+    public void date_time_list_value_matches_scalar_value(string input)
+    {
+        var people = new[]
+        {
+            new TestingPerson
+            {
+                Title = "match",
+                SpecificDateTime = new DateTime(2024, 1, 15, 8, 0, 0, DateTimeKind.Utc),
+                SpecificDate = new DateTimeOffset(2024, 1, 15, 8, 0, 0, TimeSpan.Zero),
+            },
+            new TestingPerson
+            {
+                Title = "other",
+                SpecificDateTime = new DateTime(2024, 1, 15, 9, 0, 0, DateTimeKind.Utc),
+                SpecificDate = new DateTimeOffset(2024, 1, 15, 9, 0, 0, TimeSpan.Zero),
+            },
+        };
+
+        var result = people.AsQueryable().ApplyQueryKitFilter(input).ToList();
+        var scalarResult = people.AsQueryable().ApplyQueryKitFilter(input.Replace("^^ [", "== ").TrimEnd(']')).ToList();
+
+        result.Select(x => x.Title).Should().Equal("match");
+        scalarResult.Select(x => x.Title).Should().Equal("match");
+    }
+
     private static TResult WithCulture<TResult>(string cultureName, Func<TResult> action)
     {
         var originalCulture = CultureInfo.CurrentCulture;

@@ -21,6 +21,8 @@ The driver model is `Recipe`. Every recipe has one `Author` and zero or more `In
 | Salt Bread | Julia Child | 4 | 3.25 | true | Private (2) | 2024-06-10 12:00 | 1950-05-20 | 003 | Sliced | 12:15:30.25 | Knead and bake | bread, Winner | salt:5, flour:3 |
 | Plain Water | Anonymous | 1 | 0.00 | true | Private (2) | 2023-12-31 23:59 | null | 004 | null | null | null | (none) | (none) |
 
+`CreatedAt` is a `timestamp with time zone` column. `LocalCreatedAt` holds the same wall-clock time as `CreatedAt` in a `timestamp without time zone` column.
+
 ## Driving conventions
 
 - Start every recipe from the baseline. The driver only reads data, so no recipe changes the seed rows.

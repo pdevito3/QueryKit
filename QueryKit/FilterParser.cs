@@ -33,10 +33,12 @@ public static class FilterParser
         var nestingDepthBefore = _nestingDepth;
         var queryNameOverUnknownBefore = _queryNameOverUnknown;
         var queryNameFallbackOffBefore = _queryNameFallbackOff;
+        var dateTimeKindBefore = _dateTimeKindForValuesWithoutOffset;
         _maxNestingDepth = (config as IQueryKitParseLimits)?.MaxNestingDepth ?? QueryKitSettings.DefaultMaxNestingDepth;
         _nestingDepth = 0;
         _queryNameOverUnknown = false;
         _queryNameFallbackOff = false;
+        _dateTimeKindForValuesWithoutOffset = (config as IQueryKitFilterBehavior)?.DateTimeKindForValuesWithoutOffset;
         try
         {
             try
@@ -75,6 +77,7 @@ public static class FilterParser
             _nestingDepth = nestingDepthBefore;
             _queryNameOverUnknown = queryNameOverUnknownBefore;
             _queryNameFallbackOff = queryNameFallbackOffBefore;
+            _dateTimeKindForValuesWithoutOffset = dateTimeKindBefore;
         }
 
         return Expression.Lambda<Func<T, bool>>(expr, parameter);
@@ -110,6 +113,9 @@ public static class FilterParser
     // When the fallback is off, the parser throws for the unknown identifier like v1.14.2.
     [ThreadStatic] private static bool _queryNameOverUnknown;
     [ThreadStatic] private static bool _queryNameFallbackOff;
+
+    // The kind of a DateTime value without an offset in the parse on this thread. Null means the default, UTC.
+    [ThreadStatic] private static DateTimeKind? _dateTimeKindForValuesWithoutOffset;
 
     // Parses '(' inner ')' and counts the group against MaxNestingDepth. The grammar does the count,
     // so a '(' or ')' inside a quoted value cannot change it. The parser recurses once for each group,
@@ -458,6 +464,37 @@ public static class FilterParser
                 select LogicalOperator.GetByOperatorString(match.Operator)));
     }
 
+    private static DateTimeKind DateTimeKindForValuesWithoutOffset => _dateTimeKindForValuesWithoutOffset ?? DateTimeKind.Utc;
+
+    // A date and time value without an offset gets the kind from DateTimeKindForValuesWithoutOffset. Utc, the default,
+    // does not depend on the server time zone. Unspecified keeps the wall-clock time for a timestamp without time zone
+    // column, and a value with an offset becomes its UTC time. Local reads the value in the server time zone.
+    private static DateTime ParseDateTime(string value)
+        => ToKindForValuesWithoutOffset(DateTime.Parse(value, CultureInfo.InvariantCulture, DateTimeStylesForValuesWithoutOffset()));
+
+    private static bool TryParseDateTime(string value, out DateTime result)
+    {
+        var parsed = DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStylesForValuesWithoutOffset(), out result);
+        result = ToKindForValuesWithoutOffset(result);
+        return parsed;
+    }
+
+    private static DateTimeStyles DateTimeStylesForValuesWithoutOffset() => DateTimeKindForValuesWithoutOffset switch
+    {
+        DateTimeKind.Local => DateTimeStyles.AssumeLocal,
+        DateTimeKind.Unspecified => DateTimeStyles.AdjustToUniversal,
+        _ => DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal
+    };
+
+    private static DateTime ToKindForValuesWithoutOffset(DateTime value)
+        => DateTimeKindForValuesWithoutOffset == DateTimeKind.Unspecified ? DateTime.SpecifyKind(value, DateTimeKind.Unspecified) : value;
+
+    // Npgsql only accepts a DateTimeOffset parameter with offset 0. The UTC value is the same instant.
+    private static DateTimeOffset ParseDateTimeOffset(string value)
+        => DateTimeOffset.Parse(value, CultureInfo.InvariantCulture,
+            DateTimeKindForValuesWithoutOffset == DateTimeKind.Local ? DateTimeStyles.AssumeLocal : DateTimeStyles.AssumeUniversal)
+            .ToUniversalTime();
+
     private static readonly Dictionary<Type, Func<string, object>> TypeConversionFunctions = new()
     {
         { typeof(string), value => value },
@@ -471,8 +508,8 @@ public static class FilterParser
         { typeof(long), value => long.Parse(value, CultureInfo.InvariantCulture) },
         { typeof(short), value => short.Parse(value, CultureInfo.InvariantCulture) },
         { typeof(byte), value => byte.Parse(value, CultureInfo.InvariantCulture) },
-        { typeof(DateTime), value => DateTime.Parse(value, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal) },
-        { typeof(DateTimeOffset), value => DateTimeOffset.Parse(value, CultureInfo.InvariantCulture).ToUniversalTime() },
+        { typeof(DateTime), value => ParseDateTime(value) },
+        { typeof(DateTimeOffset), value => ParseDateTimeOffset(value) },
         { typeof(DateOnly), value => DateOnly.Parse(value, CultureInfo.InvariantCulture) },
         { typeof(TimeOnly), value => TimeOnly.Parse(value, CultureInfo.InvariantCulture) },
         { typeof(TimeSpan), value => TimeSpan.Parse(value) },
@@ -662,22 +699,16 @@ public static class FilterParser
             
             if (targetType == typeof(DateTime))
             {
-                var dtStyle = right.EndsWith("Z") ? DateTimeStyles.AdjustToUniversal : DateTimeStyles.AssumeLocal;
-                var dt = DateTime.Parse(right, CultureInfo.InvariantCulture, dtStyle);
-                if (right.EndsWith("Z"))
-                {
-                    dt = DateTime.SpecifyKind(dt, DateTimeKind.Utc);
-                }
+                var dt = ParseDateTime(right);
 
                 return FilterValue.Create(dt, rawType);
             }
 
             if (targetType == typeof(DateTimeOffset))
             {
-                var dtStyle = right.EndsWith("Z") ? DateTimeStyles.AdjustToUniversal : DateTimeStyles.AssumeLocal;
-                var dto = DateTimeOffset.Parse(right, CultureInfo.InvariantCulture, dtStyle);
-                // Npgsql only accepts a DateTimeOffset parameter with offset 0. The UTC value is the same instant.
-                return FilterValue.Create(dto.ToUniversalTime(), rawType);
+                var dto = ParseDateTimeOffset(right);
+
+                return FilterValue.Create(dto, rawType);
             }
 
             if (targetType == typeof(DateOnly))
@@ -1723,7 +1754,7 @@ public static class FilterParser
             return doubleValue;
 
         // Try DateTime
-        if (DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal, out var dateTimeValue))
+        if (TryParseDateTime(value, out var dateTimeValue))
             return dateTimeValue;
 
         // Try Guid
