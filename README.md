@@ -968,6 +968,8 @@ var people = _dbContext.People
 
 This allows you to use `Email == "value"` syntax instead of `Email.Value == "value"` when the property is configured with HasConversion in EF Core. The `HasConversion<TTarget>()` method tells QueryKit what the conversion target type is so it can handle the type conversion properly.
 
+QueryKit finds the conversion by the property, with or without a query name. A `null` value, such as `email == null`, compares the property against null. A nullable struct property also uses the conversion. QueryKit reads a number, an enum, or a Guid by its own type, so `HasConversion<string>()` on these properties does not change the filter.
+
 > **Important:** When using `HasConversion` in EF Core, you MUST configure the property in QueryKit using `x => x.Email`, not `x => x.Email.Value`. The conversion is on the parent property, so pointing to the nested `.Value` property will cause EF Core translation errors. Use `x => x.Email.Value` only when using `ComplexProperty` or `OwnsOne` without HasConversion.
 
 ## Sorting
