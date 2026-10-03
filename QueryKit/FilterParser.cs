@@ -21,9 +21,6 @@ public static class FilterParser
     public static Expression<Func<T, bool>> ParseFilter<T>(string input, IQueryKitConfiguration? config = null)
     {
         EnsureWithinInputLength(input, config);
-
-        input = config?.ReplaceLogicalAliases(input) ?? input;
-        input = config?.ReplaceComparisonAliases(input) ?? input;
         
         var parameter = Expression.Parameter(typeof(T), "x");
         Expression expr;
@@ -238,13 +235,12 @@ public static class FilterParser
 
     private static Parser<ComparisonOperator> ComparisonOperatorParser(IQueryKitConfiguration? config)
     {
-        var operatorParser = CanonicalComparisonOperatorParser.Or(ComparisonOperatorAliasParser(config));
+        var operatorParser = ComparisonOperatorAliasParser(config).Or(CanonicalComparisonOperatorParser);
         return Parse.Char(ComparisonOperator.AllPrefix).Optional().Select(opt => opt.IsDefined)
             .Then(hasHash => operatorParser.Select(x => ComparisonOperator.GetByOperatorString(x.Operator, x.CaseInsensitive, hasHash)));
     }
 
-    // The rewrite before the parse replaces each alias that stands between whitespace, like v1.14.2.
-    // The grammar reads an alias that the rewrite did not replace, for example `(Age)eq 3`.
+    // Aliases are matched in the grammar (not by rewriting the input) so text inside quoted values is never changed.
     // Longer aliases are tried first so an alias that starts with another alias (e.g. `@@$$` and `@@$`) still matches.
     private static Parser<(string Operator, bool CaseInsensitive)> ComparisonOperatorAliasParser(IQueryKitConfiguration? config)
     {
