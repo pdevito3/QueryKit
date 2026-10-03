@@ -857,25 +857,99 @@ public class PropertyResolverTests
     }
 
     [Fact]
-    public void property_path_on_the_right_side_throws()
+    public void property_path_on_the_right_side_is_compared()
     {
         var input = """Title == Author.Name""";
 
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input);
+
+        filterExpression.ToDisplayString().Should().Be("x => (x.Title == x.Author.Name)");
+    }
+
+    [Theory]
+    [InlineData("Author.Nmae", "Nmae")]
+    [InlineData("foo.bar", "foo")]
+    [InlineData("Ingredients.Name", "Ingredients.Name")]
+    public void unresolved_property_path_on_the_right_side_throws(string path, string unknownProperty)
+    {
+        var input = $"""Title == {path}""";
+
         var act = () => FilterParser.ParseFilter<Recipe>(input);
 
-        act.Should().Throw<ParsingException>()
-            .WithInnerException<InvalidOperationException>()
-            .WithMessage("*Equal is not defined for the types 'System.String' and*Author*");
+        act.Should().Throw<UnknownFilterPropertyException>()
+            .WithMessage($"The filter property '{unknownProperty}' was not recognized.");
     }
 
     [Fact]
-    public void unquoted_dotted_word_on_the_right_side_throws()
+    public void unresolved_property_path_on_the_right_side_throws_when_unknown_properties_are_allowed()
     {
         var input = """Title == foo.bar""";
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.AllowUnknownProperties = true;
+        });
+
+        var act = () => FilterParser.ParseFilter<Recipe>(input, config);
+
+        act.Should().Throw<UnknownFilterPropertyException>();
+    }
+
+    [Fact]
+    public void property_path_on_the_right_side_obeys_max_property_depth()
+    {
+        var input = """Title == Author.Name""";
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.MaxPropertyDepth = 0;
+        });
+
+        var act = () => FilterParser.ParseFilter<Recipe>(input, config);
+
+        act.Should().Throw<QueryKitPropertyDepthExceededException>();
+    }
+
+    [Fact]
+    public void prevented_property_path_on_the_right_side_removes_the_clause()
+    {
+        var input = """Title == Author.Name || Rating > 3""";
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<Recipe>(x => x.Author.Name).PreventFilter();
+        });
+
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
+
+        filterExpression.ToDisplayString().Should().Be("x => (x.Rating > 3)");
+    }
+
+    [Fact]
+    public void property_path_on_the_right_side_of_a_property_list_throws()
+    {
+        var input = """(Title, Directions) == Author.Name""";
 
         var act = () => FilterParser.ParseFilter<Recipe>(input);
 
-        act.Should().Throw<ParsingException>().WithMessage("*Line 1, Column 13*");
+        act.Should().Throw<ParsingException>();
+    }
+
+    [Fact]
+    public void number_with_a_dot_on_the_right_side_is_a_value()
+    {
+        var input = """Rating == 3.5""";
+
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
+
+        filterExpression.ToDisplayString().Should().Be("x => (x.Rating == 3.5)");
+    }
+
+    [Theory]
+    [InlineData("""Title == "Author.Name" """, "x => (x.Title == \"Author.Name\")")]
+    [InlineData("""Title == "foo.bar" """, "x => (x.Title == \"foo.bar\")")]
+    public void quoted_value_with_a_dot_on_the_right_side_is_a_value(string input, string expected)
+    {
+        var filterExpression = FilterParser.ParseFilter<Recipe>(input);
+
+        filterExpression.ToDisplayString().Should().Be(expected);
     }
 
     [Fact]
