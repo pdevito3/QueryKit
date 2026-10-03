@@ -391,6 +391,37 @@ public class PropertyResolverTests
     }
 
     [Fact]
+    public void property_on_the_right_side_is_compared_by_its_resolved_path()
+    {
+        var input = """FirstName == title""";
+
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
+
+        filterExpression.ToDisplayString().Should().Be("x => (x.FirstName == x.Title)");
+    }
+
+    [Fact]
+    public void sort_property_is_sorted_by_its_resolved_path()
+    {
+        var input = "title desc";
+
+        var sortExpressions = SortParser.ParseSort<TestingPerson>(input);
+
+        sortExpressions.Should().ContainSingle();
+        sortExpressions[0].Expression!.ToString().Should().Be("x => Convert(x.Title, Object)");
+    }
+
+    [Fact]
+    public void sort_on_a_collection_member_path_throws_a_sort_parsing_exception()
+    {
+        var input = "Ingredients.name asc";
+
+        var act = () => SortParser.ParseSort<Recipe>(input);
+
+        act.Should().Throw<SortParsingException>();
+    }
+
+    [Fact]
     public void prevented_derived_property_removes_the_clause()
     {
         var input = """full == "x" || Age > 100""";

@@ -930,12 +930,16 @@ public static class FilterParser
                 // A quoted string literal is always a value, even when its text matches a property name.
                 if (!temp.rightIsQuotedLiteral && IsPropertyPath(temp.right, parameter.Type))
                 {
-                    if (!PropertyResolver.Resolve(parameter.Type, temp.right, config).CanFilter)
+                    // Build the right side from the resolved path, so that the checked property is the compared property.
+                    var rightReference = PropertyResolver.Resolve(parameter.Type, temp.right, config);
+                    if (!rightReference.CanFilter)
                     {
                         return IgnoredClause(config);
                     }
 
-                    var rightPropertyExpr = CreateRightPropertyExpr<T>(parameter, temp.right, config);
+                    var rightPropertyExpr = rightReference.Kind == PropertyReferenceKind.Member
+                        ? CreateRightPropertyExpr<T>(parameter, rightReference.Path, config)
+                        : null;
                     if (rightPropertyExpr != null)
                     {
                         // Handle GUID conversion for property-to-property comparisons

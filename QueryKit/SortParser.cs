@@ -67,7 +67,7 @@ public static class SortParser
         }
 
         var parameter = Expression.Parameter(typeof(T), "x");
-        var sortExpressionBody = CreateSortExpressionBody(parameter, propertyName, config);
+        var sortExpressionBody = CreateSortExpressionBody(parameter, propertyName, reference, config);
         
         if (sortExpressionBody == null)
         {
@@ -86,7 +86,7 @@ public static class SortParser
         };
     }
 
-    private static Expression? CreateSortExpressionBody(Expression parameter, string propertyName, IQueryKitConfiguration? config)
+    private static Expression? CreateSortExpressionBody(Expression parameter, string propertyName, PropertyReference reference, IQueryKitConfiguration? config)
     {
         // First check if this is a derived property
         var derivedPropertyInfo = config?.PropertyMappings?.GetDerivedPropertyInfoByQueryName(propertyName);
@@ -97,8 +97,11 @@ public static class SortParser
             return parameterReplacer.Visit(derivedPropertyInfo.DerivedExpression);
         }
 
-        // Handle regular properties with null-safe navigation
-        var propertyPath = config?.GetPropertyPathByQueryName(propertyName) ?? propertyName;
+        // Handle regular properties with null-safe navigation.
+        // Sort by the resolved path, so that the checked property is the sorted property.
+        var propertyPath = reference.Kind == PropertyReferenceKind.Member
+            ? reference.Path
+            : config?.GetPropertyPathByQueryName(propertyName) ?? propertyName;
 
         // Validate property depth before processing
         config?.ValidatePropertyDepth(propertyPath);
