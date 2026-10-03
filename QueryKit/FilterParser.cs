@@ -345,6 +345,19 @@ public static class FilterParser
     private static string EscapeListItem(string item)
         => item.Replace(@"\", @"\\").Replace(",", @"\,");
 
+    private static string UnescapeListText(string list)
+    {
+        var text = new StringBuilder(list.Length);
+        for (var i = 0; i < list.Length; i++)
+        {
+            if (list[i] == '\\' && i + 1 < list.Length)
+                i++;
+            text.Append(list[i]);
+        }
+
+        return text.ToString();
+    }
+
     private static List<string> SplitListItems(string list)
     {
         var items = new List<string>();
@@ -1693,6 +1706,10 @@ public static class FilterParser
 
         // For custom operations, we need to convert the string value to the appropriate basic type
         // instead of trying to match it to the entity type
+        // A custom operation gets the list as text, so remove the escapes that EscapeListItem added
+        if (rightValue.StartsWith("[") && rightValue.EndsWith("]"))
+            rightValue = UnescapeListText(rightValue);
+
         object? convertedValue = ConvertStringToBasicType(rightValue);
         
         // Create the parameter expressions for the custom operation
