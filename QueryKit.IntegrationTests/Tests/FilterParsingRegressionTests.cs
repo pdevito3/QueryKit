@@ -343,4 +343,24 @@ public class FilterParsingRegressionTests : TestBase
         // Assert
         act.Should().Throw<QueryKitParsingException>();
     }
+
+    [Theory]
+    [InlineData("""Age == "abc" """)]
+    [InlineData("""Age == abc""")]
+    [InlineData("""Rating > "abc" """)]
+    [InlineData("""Rating > abc""")]
+    [InlineData("""BirthMonth ^^ ["Bogus"]""")]
+    [InlineData("""BirthMonth ^^ [Bogus]""")]
+    public async Task invalid_value_throws_parsing_exception(string input)
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var act = async () => await queryablePeople.ApplyQueryKitFilter(input).ToListAsync();
+
+        // Assert
+        await act.Should().ThrowAsync<ParsingException>();
+    }
 }

@@ -832,7 +832,7 @@ public class FilterParserTests
         var input = $"""BirthMonth == invalid""";
         var act = () => FilterParser.ParseFilter<TestingPerson>(input);
         act.Should().Throw<ParsingException>()
-        .WithMessage("There was a parsing failure, likely due to an invalid comparison or logical operator. You may also be missing double quotes surrounding a string or guid.*");
+        .WithMessage("The value 'invalid' is not a valid BirthMonthEnum for the filter property 'BirthMonth'.");
     }
 
     [Fact]
