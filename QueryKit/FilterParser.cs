@@ -24,7 +24,6 @@ public static class FilterParser
 
         input = config?.ReplaceLogicalAliases(input) ?? input;
         input = config?.ReplaceComparisonAliases(input) ?? input;
-        EnsureNoQueryNameOfAPropertyPreventedForFilterAndSort(input, config);
         
         var parameter = Expression.Parameter(typeof(T), "x");
         Expression expr;
@@ -79,12 +78,6 @@ public static class FilterParser
         }
 
         return Expression.Lambda<Func<T, bool>>(expr, parameter);
-    }
-    
-    // A property that can not be filtered or sorted throws InvalidOperationException when the filter uses its query name.
-    private static void EnsureNoQueryNameOfAPropertyPreventedForFilterAndSort(string input, IQueryKitConfiguration? config)
-    {
-        config?.PropertyMappings?.ReplaceAliasesWithPropertyPaths(input);
     }
     
     private static Expression ReplaceDerivedProperties(Expression expr, IQueryKitConfiguration? config, ParameterExpression parameter)
@@ -155,20 +148,19 @@ public static class FilterParser
     // A property is a configured query name or a path of identifiers. Query names are matched in the grammar,
     // so a query name can hold any text (e.g. `first-name`, `_first`, or `first name`) and text inside quoted values is never changed.
     // Longer query names are tried first so a query name that starts with another query name (e.g. `first` and `first name`) still matches.
-    // A property query name matches with the case rules of the current culture, like the alias regex of v1.14.2, and gives its configured text.
-    // A derived property or custom operation query name ignores case with the invariant rules.
+    // Every query name ignores case with the rules of the invariant culture, so the result does not depend on the culture of the parse.
     private static Parser<string> PropertyPathParser(IQueryKitConfiguration? config)
     {
         Parser<string> parser = i => Result.Failure<string>(i, "no query name", Array.Empty<string>());
         var mappings = config?.PropertyMappings;
         if (mappings != null)
         {
-            var queryNames = mappings.PropertyQueryNames.Select(queryName => (queryName, text: PropertyQueryNameText(queryName)))
-                .Concat(mappings.DerivedOrCustomOperationQueryNames.Select(queryName => (queryName, text: Parse.IgnoreCase(queryName).Text())))
-                .OrderByDescending(x => x.queryName.Length);
-            foreach (var (queryName, text) in queryNames)
+            var queryNames = mappings.PropertyQueryNames
+                .Concat(mappings.DerivedOrCustomOperationQueryNames)
+                .OrderByDescending(queryName => queryName.Length);
+            foreach (var queryName in queryNames)
             {
-                parser = parser.Or(QueryName(queryName, text));
+                parser = parser.Or(QueryName(queryName));
             }
         }
 
@@ -176,27 +168,22 @@ public static class FilterParser
     }
 
     // A query name is a whole name: the next character can not continue a property path.
-    private static Parser<string> QueryName(string queryName, Parser<string> textParser) => input =>
+    private static Parser<string> QueryName(string queryName) => input =>
     {
-        var result = textParser(input);
-        if (!result.WasSuccessful || result.Remainder.AtEnd || !IsPropertyPathChar(result.Remainder.Current))
-            return result;
-
-        return Result.Failure<string>(input, $"Query name '{queryName}' must not be followed by '{result.Remainder.Current}'", new[] { queryName });
-    };
-
-    private static Parser<string> PropertyQueryNameText(string queryName) => input =>
-    {
-        var culture = CultureInfo.CurrentCulture;
         var remainder = input;
         foreach (var c in queryName)
         {
-            if (remainder.AtEnd || char.ToLower(remainder.Current, culture) != char.ToLower(c, culture))
+            if (remainder.AtEnd || char.ToLowerInvariant(remainder.Current) != char.ToLowerInvariant(c))
             {
                 return Result.Failure<string>(input, $"Query name '{queryName}' expected", new[] { queryName });
             }
 
             remainder = remainder.Advance();
+        }
+
+        if (!remainder.AtEnd && IsPropertyPathChar(remainder.Current))
+        {
+            return Result.Failure<string>(input, $"Query name '{queryName}' must not be followed by '{remainder.Current}'", new[] { queryName });
         }
 
         return Result.Success(queryName, remainder);
@@ -989,7 +976,7 @@ public static class FilterParser
                 if (!temp.rightIsQuotedLiteral && IsPropertyPath(temp.right, parameter.Type))
                 {
                     // Build the right side from the resolved path, so that the checked property is the compared property.
-                    var rightReference = PropertyResolver.Resolve(parameter.Type, temp.right, config);
+                    var rightReference = PropertyResolver.ResolveWithoutQueryName(parameter.Type, temp.right, config);
                     if (!rightReference.CanFilter)
                     {
                         return IgnoredClause(config);
@@ -1167,9 +1154,7 @@ public static class FilterParser
         }
 
         // Check if this property uses HasConversion
-        var propertyConfig = config?.PropertyMappings?.GetPropertyInfoByQueryName(
-            config.PropertyMappings.GetPropertyPathByQueryName(reference.Text) ?? reference.Text);
-        if (propertyConfig?.UsesConversion == true)
+        if (reference.Mapping?.UsesConversion == true)
         {
             // For HasConversion properties, return the property expression as-is
             // EF Core will handle the type conversion automatically when it translates the expression to SQL

@@ -1,6 +1,5 @@
 namespace QueryKit;
 
-using System.Globalization;
 using System.Linq.Expressions;
 using System.Text.RegularExpressions;
 using Configuration;
@@ -421,19 +420,6 @@ public class QueryKitPropertyMappings
 
     public string? GetPropertyPathByQueryName(string? queryName)
         => GetPropertyInfoByQueryName(queryName)?.Name ?? null;
-
-    // A query name in the filter text matches with the case rules of the current culture, like the alias regex of v1.14.2.
-    internal QueryKitPropertyInfo? GetPropertyInfoByQueryNameInCurrentCulture(string? queryName)
-        => queryName == null
-            ? null
-            : _propertyMappings.Values.FirstOrDefault(info => info.QueryName != null && MatchesInCurrentCulture(info.QueryName, queryName));
-
-    internal static bool MatchesInCurrentCulture(string queryName, string text)
-    {
-        var culture = CultureInfo.CurrentCulture;
-        return queryName.Length == text.Length
-               && queryName.Zip(text, (a, b) => char.ToLower(a, culture) == char.ToLower(b, culture)).All(match => match);
-    }
 
     public int? GetMaxDepthForProperty(string? propertyPath)
     {

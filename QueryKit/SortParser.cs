@@ -55,8 +55,7 @@ public static class SortParser
             throw new QueryKitParsingException($"Invalid direction: {direction}. Allowed values are '{Ascending}' and '{Descending}'.");
         }
 
-        var propertyPath = config?.GetPropertyPathByQueryName(propertyName) ?? propertyName;
-        var reference = PropertyResolver.Resolve(typeof(T), propertyPath, config);
+        var reference = PropertyResolver.Resolve(typeof(T), propertyName, config);
         if (reference.Kind != PropertyReferenceKind.CustomOperation && !reference.CanSort)
         {
             return new SortExpressionInfo<T>

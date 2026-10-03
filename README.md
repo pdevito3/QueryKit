@@ -580,7 +580,7 @@ var config = new QueryKitConfiguration(config =>
 });
 ```
 
-You can use a query name on the left side of a comparison, in a property list, and in an arithmetic expression. For example, `(first, LastName) == "Jane"` compares `FirstName` and `LastName` with `Jane`. QueryKit does not change text inside a quoted value. For example, `LastName == "first == x"` compares `LastName` with the text `first == x`.
+You can use a query name on the left side of a comparison, in a property list, and in an arithmetic expression. For example, `(first, LastName) == "Jane"` compares `FirstName` and `LastName` with `Jane`. QueryKit does not change text inside a quoted value. For example, `LastName == "first == x"` compares `LastName` with the text `first == x`. A query name ignores case with the rules of the invariant culture, so `FIRST` matches `first` in every culture, also in `tr-TR`.
 
 #### Derived Properties
 
