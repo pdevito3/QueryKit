@@ -57,6 +57,14 @@ public class QueryKitSettings
     public bool ParameterizeFilterValues { get; set; }
 
     /// <summary>
+    /// The kind of a <see cref="DateTime"/> filter value that has no offset, for example <c>2024-01-15T08:00:00</c>.
+    /// The default is <see cref="DateTimeKind.Utc"/>, which Npgsql needs for a <c>timestamp with time zone</c> column.
+    /// Use <see cref="DateTimeKind.Unspecified"/> for a <c>timestamp without time zone</c> column. Then a value with
+    /// an offset becomes its UTC time. <see cref="DateTimeKind.Local"/> reads the value in the time zone of the server.
+    /// </summary>
+    public DateTimeKind DateTimeKindForValuesWithoutOffset { get; set; } = DateTimeKind.Utc;
+
+    /// <summary>
     /// What the filter parser does with a clause on a prevented or unknown property. The default is
     /// <see cref="Configuration.IgnoredClauseBehavior.Remove"/>. Use
     /// <see cref="Configuration.IgnoredClauseBehavior.ReplaceWithTrue"/> for the v1.14.2 behavior.

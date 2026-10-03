@@ -761,7 +761,6 @@ public class PropertyResolverTests
         var input = """name eq "x" || Age > 100""";
         var config = new QueryKitConfiguration(config =>
         {
-            config.IgnoredClauseBehavior = IgnoredClauseBehavior.Remove;
             config.EqualsOperator = "eq";
             config.Property<TestingPerson>(x => x.Title!).HasQueryName("name").PreventFilter().PreventSort();
         });
@@ -806,7 +805,6 @@ public class PropertyResolverTests
         var input = $"""Directions {op} Title || Rating > 3""";
         var config = new QueryKitConfiguration(config =>
         {
-            config.IgnoredClauseBehavior = IgnoredClauseBehavior.Remove;
             config.Property<Recipe>(x => x.Directions).HasQueryName("title");
             config.Property<Recipe>(x => x.Title).PreventFilter();
         });
@@ -929,7 +927,6 @@ public class PropertyResolverTests
         var input = """Title == Author.Name || Rating > 3""";
         var config = new QueryKitConfiguration(config =>
         {
-            config.IgnoredClauseBehavior = IgnoredClauseBehavior.Remove;
             config.Property<Recipe>(x => x.Author.Name).PreventFilter();
         });
 

@@ -29,40 +29,26 @@ public class InListQueryCacheTests() : TestBase
         cache.Compilations.Should().Be(1);
     }
 
-    // DateTime.Equals ignores Kind. If one cache entry served both requests, the first request would
-    // decide the result of the second.
+    // A list value without a zone is read as UTC, so it is the same value as a list value with the UTC zone.
+    // Both requests filter, and they share one compiled query.
     [Theory]
-    [InlineData("^^", true)]
-    [InlineData("^^*", true)]
-    [InlineData("!^^", true)]
-    [InlineData("!^^*", true)]
-    [InlineData("^^", false)]
-    [InlineData("^^*", false)]
-    [InlineData("!^^", false)]
-    [InlineData("!^^*", false)]
-    public async Task datetime_in_lists_that_differ_only_in_kind_do_not_share_a_query(string op, bool utcFirst)
+    [InlineData("^^")]
+    [InlineData("^^*")]
+    [InlineData("!^^")]
+    [InlineData("!^^*")]
+    public async Task datetime_in_list_without_a_zone_filters_like_the_utc_zone(string op)
     {
         var testingServiceScope = new TestingServiceScope();
         var when = new DateTime(2001, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddSeconds(Random.Shared.Next(1, 900_000_000));
         var person = new FakeTestingPersonBuilder().WithSpecificDateTime(when).Build();
         await testingServiceScope.InsertAsync(person);
         var iso = when.ToString("yyyy-MM-ddTHH:mm:ss");
-        var utc = $"""SpecificDateTime {op} ["{iso}Z"]""";
-        var noZone = $"""SpecificDateTime {op} ["{iso}"]""";
         var cache = new QueryCache(testingServiceScope);
 
-        if (utcFirst)
-        {
-            await UtcRequestFilters(cache, utc, op, person.Id);
-            await NoZoneRequestFails(cache, noZone);
-        }
-        else
-        {
-            await NoZoneRequestFails(cache, noZone);
-            await UtcRequestFilters(cache, utc, op, person.Id);
-        }
+        await RequestFilters(cache, $"""SpecificDateTime {op} ["{iso}"]""", op, person.Id);
+        await RequestFilters(cache, $"""SpecificDateTime {op} ["{iso}Z"]""", op, person.Id);
 
-        cache.Compilations.Should().Be(2);
+        cache.Compilations.Should().Be(1);
     }
 
     // The hash of an array covers only its last 8 items. Lists that differ before the last 8 items
@@ -84,18 +70,11 @@ public class InListQueryCacheTests() : TestBase
         cache.KeyHashCodes.Distinct().Should().HaveCount(2);
     }
 
-    private static async Task UtcRequestFilters(QueryCache cache, string input, string op, Guid personId)
+    private static async Task RequestFilters(QueryCache cache, string input, string op, Guid personId)
     {
         var ids = await cache.Ids(input);
 
         ids.Contains(personId).Should().Be(!op.StartsWith('!'));
-    }
-
-    private static async Task NoZoneRequestFails(QueryCache cache, string input)
-    {
-        var act = () => cache.Ids(input);
-
-        await act.Should().ThrowAsync<ArgumentException>().WithMessage("*Unspecified DateTime*");
     }
 
     private sealed class QueryCache

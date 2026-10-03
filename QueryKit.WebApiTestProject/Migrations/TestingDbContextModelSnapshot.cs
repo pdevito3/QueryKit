@@ -225,6 +225,10 @@ namespace QueryKit.WebApiTestProject.Migrations
                         .HasColumnType("text")
                         .HasColumnName("last_name");
 
+                    b.Property<DateTime?>("LocalDateTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("local_date_time");
+
                     b.Property<string>("Nickname")
                         .HasColumnType("text")
                         .HasColumnName("nickname");

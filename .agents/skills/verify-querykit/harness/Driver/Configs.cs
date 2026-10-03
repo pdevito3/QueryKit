@@ -80,6 +80,16 @@ public static class Configs
         ["parameterized"] = ("ParameterizeFilterValues = true.",
             () => new QueryKitConfiguration(s => s.ParameterizeFilterValues = true)),
 
+        ["unspecified-datetime"] = ("DateTimeKindForValuesWithoutOffset = Unspecified.",
+            () => new QueryKitConfiguration(s => s.DateTimeKindForValuesWithoutOffset = DateTimeKind.Unspecified)),
+
+        ["unspecified-datetime-parameterized"] = ("DateTimeKindForValuesWithoutOffset = Unspecified, ParameterizeFilterValues = true.",
+            () => new QueryKitConfiguration(s =>
+            {
+                s.DateTimeKindForValuesWithoutOffset = DateTimeKind.Unspecified;
+                s.ParameterizeFilterValues = true;
+            })),
+
         ["remove-ignored"] = ("IgnoredClauseBehavior = Remove, AllowUnknownProperties = true, Rating PreventFilter.",
             () => new QueryKitConfiguration(s =>
             {

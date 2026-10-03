@@ -14,6 +14,7 @@ A developer passes a `QueryKitConfiguration` to change how QueryKit reads the in
 - `config-max-depth` limits the depth of dotted paths with `MaxPropertyDepth`.
 - `config-upper` uses `ToUpper()` for case-insensitive operators with `CaseInsensitiveComparison = CaseInsensitiveMode.Upper`.
 - `config-parameterized` sends filter values as SQL parameters with `ParameterizeFilterValues = true`.
+- `config-datetime-kind` reads a `DateTime` value without an offset as `Unspecified` with `DateTimeKindForValuesWithoutOffset`.
 - `config-remove-ignored` drops an ignored clause instead of replacing it with `True == True`, with `IgnoredClauseBehavior = IgnoredClauseBehavior.Remove`.
 - `config-small-limits` lowers the parse limits with `MaxInputLength` and `MaxNestingDepth`.
 - `config-nesting-depth` counts each parenthesized group against `MaxNestingDepth`. A `(` or `)` inside a quoted value does not change the count.
@@ -29,7 +30,7 @@ Preconditions:
 
 - A run is up and `qk doctor` prints only `ok` lines.
 - The seed data matches `features/README.md`.
-- `qk configs` lists `aliases`, `loose-names`, `derived`, `custom-operation`, `word-operators`, `hidden-price`, `allow-unknown`, `max-depth-0`, `upper`, `parameterized`, `remove-ignored`, `small-limits`, and `depth-10`.
+- `qk configs` lists `aliases`, `loose-names`, `derived`, `custom-operation`, `word-operators`, `hidden-price`, `allow-unknown`, `max-depth-0`, `upper`, `parameterized`, `unspecified-datetime`, `unspecified-datetime-parameterized`, `remove-ignored`, `small-limits`, and `depth-10`.
 
 - **Query names.** Run `qk run configuration-query-name --config aliases --filter 'chef == "Julia Child" && name _= "S"'`. Both targets give `["Salt Bread"]`.
 - **Query names that are not identifiers.** Run `qk run configuration-loose-query-names --config loose-names --filter 'recipe-title == "Pancakes" || _stars > 4 || chef name == "Gordon Ramsay"'`. Both targets give `["Pancakes", "Beef Stew"]`.
@@ -42,6 +43,8 @@ Preconditions:
 - **Max depth.** Run `qk run configuration-max-depth --config max-depth-0 --filter 'Author.Name == "Julia Child"'`. Exit `2`. Both targets have `error.type` `QueryKit.Exceptions.QueryKitPropertyDepthExceededException`.
 - **Upper mode.** Run `qk run configuration-upper --config upper --filter 'Title @=* "bread"'`. Both targets give `["Salt Bread"]`. The `sql` contains `upper(r."Title")`.
 - **Parameterized values.** Run `qk run configuration-parameterized --config parameterized --filter 'Title == "Pancakes"'`. Both targets give `["Pancakes"]`. The `sql` contains a `@` parameter instead of the literal `'Pancakes'`.
+- **Date without an offset, default.** Run `qk run configuration-datetime-utc --filter 'CreatedAt ^^ [2024-01-15T08:00:00]'`. Both targets give `["Pancakes"]`. The same filter on `LocalCreatedAt` fails on Postgres with an Npgsql `ArgumentException`, because the value is `Utc`.
+- **Date without an offset, unspecified.** Run `qk run configuration-datetime-unspecified --config unspecified-datetime --filter 'LocalCreatedAt == "2024-01-15T08:00:00"'`. Both targets give `["Pancakes"]`. The `sql` contains `TIMESTAMP '2024-01-15T08:00:00'`. Repeat with `--config unspecified-datetime-parameterized` and with `'LocalCreatedAt ^^ [2024-01-15T10:00:00+02:00]'`. Both give `["Pancakes"]`.
 - **Remove ignored clauses.** Run `qk run configuration-remove-ignored --config remove-ignored --filter 'Rating > 1 && Nope == 1'`. Exit `0`. Both targets give all four recipes. The `expression` has no `True == True`.
 - **Small parse limits.** Run `qk run configuration-small-limits --config small-limits --filter '((((Title == "Pancakes"))))'`. Exit `2`. Both targets have `error.type` `QueryKit.Exceptions.QueryKitNestingDepthExceededException`.
 - **Quoted parentheses and the nesting depth.** Run `qk run configuration-nesting-depth --config depth-10 --filter 'Title == "))))))))))))))))))))" || ((((((((((((((((((((Title == "Pancakes"))))))))))))))))))))'`. Exit `2`. Both targets have `error.type` `QueryKit.Exceptions.QueryKitNestingDepthExceededException` with the message `The filter has a nesting depth of 11, which exceeds the maximum allowed depth of 10.`

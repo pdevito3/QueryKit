@@ -196,7 +196,6 @@ public class PropertyResolverTests : TestBase
         var input = $"""Title == "{name}" && (Title == Author.Name || Rating > 100)""";
         var config = new QueryKitConfiguration(config =>
         {
-            config.IgnoredClauseBehavior = IgnoredClauseBehavior.Remove;
             config.Property<Recipe>(x => x.Author.Name).PreventFilter();
         });
 
@@ -283,7 +282,6 @@ public class PropertyResolverTests : TestBase
         var input = $"""Title == "{title}" && (FirstName == LastName || Age > 100)""";
         var config = new QueryKitConfiguration(config =>
         {
-            config.IgnoredClauseBehavior = IgnoredClauseBehavior.Remove;
             config.Property<TestingPerson>(x => x.FirstName!).HasQueryName("lastname");
             config.Property<TestingPerson>(x => x.LastName!).PreventFilter();
         });
