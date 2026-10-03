@@ -32,6 +32,10 @@ public class Recipe
     public bool IsVegetarian { get; set; }
     public Visibility Visibility { get; set; }
     public DateTime CreatedAt { get; set; }
+
+    // The same wall-clock time as CreatedAt, in a column without a time zone.
+    [System.ComponentModel.DataAnnotations.Schema.Column(TypeName = "timestamp without time zone")]
+    public DateTime LocalCreatedAt { get; set; }
     public DateOnly? DateOfOrigin { get; set; }
     public string Sku { get; set; } = "";
     public string? Serving { get; set; }
@@ -99,6 +103,7 @@ public static class Seed
             IsVegetarian = vegetarian,
             Visibility = visibility,
             CreatedAt = created,
+            LocalCreatedAt = DateTime.SpecifyKind(created, DateTimeKind.Unspecified),
             DateOfOrigin = origin,
             Sku = sku,
             Serving = serving,
