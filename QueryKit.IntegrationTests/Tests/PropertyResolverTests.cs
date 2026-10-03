@@ -443,6 +443,35 @@ public class PropertyResolverTests : TestBase
         people.Should().ContainSingle(x => x.Id == fakePerson.Id);
     }
 
+    [Fact]
+    public async Task prevented_property_clause_by_its_query_name_under_or_does_not_return_every_row()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var title = new Faker().Lorem.Sentence();
+        var fakePerson = new FakeTestingPersonBuilder()
+            .WithTitle(title)
+            .WithFirstName("Paul")
+            .WithAge(30)
+            .Build();
+        await testingServiceScope.InsertAsync(fakePerson);
+
+        var input = $"""Title == "{title}" && (first == "Paul" || Age > 100)""";
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.IgnoredClauseBehavior = IgnoredClauseBehavior.Remove;
+            config.Property<TestingPerson>(x => x.FirstName!).HasQueryName("first").PreventFilter().PreventSort();
+        });
+
+        // Act
+        var people = await testingServiceScope.DbContext().People
+            .ApplyQueryKitFilter(input, config)
+            .ToListAsync();
+
+        // Assert
+        people.Should().BeEmpty();
+    }
+
     [Theory]
     [InlineData("first-name")]
     [InlineData("_first")]
