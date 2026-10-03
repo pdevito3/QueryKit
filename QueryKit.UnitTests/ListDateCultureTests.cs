@@ -36,7 +36,7 @@ public class ListDateCultureTests
 
         var matches = WithCulture(cultureName, () => Matches(person, "SpecificDate ^^ [2024-01-15T10:00:00+02:00, 2024-01-16]"));
         var dateOnlyMatches = WithCulture(cultureName, () => Matches(
-            new TestingPerson { SpecificDate = DateTimeOffset.Parse("2024-01-16", CultureInfo.InvariantCulture) },
+            new TestingPerson { SpecificDate = new DateTimeOffset(2024, 1, 16, 0, 0, 0, TimeSpan.Zero) },
             "SpecificDate ^^ [2024-01-16]"));
 
         matches.Should().BeTrue();
