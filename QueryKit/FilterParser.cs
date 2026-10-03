@@ -533,11 +533,11 @@ public static class FilterParser
     // A value that does not convert to the property type throws ParsingException with the value, the type, and the
     // property name as the caller wrote it (the query name, not the member path).
     private static Expression CreateRightExpr(Expression leftExpr, string right, bool rightIsQuotedLiteral, ComparisonOperator op,
-        string propertyName, IQueryKitConfiguration? config = null, string? propertyPath = null, string? memberPath = null)
+        string propertyName, IQueryKitConfiguration? config = null, string? propertyPath = null)
     {
         try
         {
-            return CreateRightExprForProperty(leftExpr, right, rightIsQuotedLiteral, op, config, propertyPath, memberPath);
+            return CreateRightExprForProperty(leftExpr, right, rightIsQuotedLiteral, op, config, propertyPath);
         }
         catch (InvalidFilterValueException e)
         {
@@ -546,7 +546,7 @@ public static class FilterParser
     }
 
     private static Expression CreateRightExprForProperty(Expression leftExpr, string right, bool rightIsQuotedLiteral, ComparisonOperator op,
-        IQueryKitConfiguration? config, string? propertyPath, string? memberPath)
+        IQueryKitConfiguration? config, string? propertyPath)
     {
         var targetType = leftExpr.Type;
 
@@ -594,64 +594,39 @@ public static class FilterParser
             }
         }
 
-        // Check if this property uses HasConversion
-        if (config?.PropertyMappings != null && !string.IsNullOrEmpty(propertyPath))
+        // Check if this property uses HasConversion. QueryKit reads a type that it knows (a number, an enum, a Guid) by its own type,
+        // like v1.14.2 did for a property with a query name, so the conversion applies only to a type that it can not read.
+        if (config?.PropertyMappings != null && !string.IsNullOrEmpty(propertyPath) && !CanCreateRightExprFromType(targetType))
         {
-            var propertyConfig = config.PropertyMappings.GetPropertyInfoByQueryName(propertyPath);
+            var propertyConfig = config.PropertyMappings.GetPropertyInfo(propertyPath);
             if (propertyConfig?.UsesConversion == true && propertyConfig.ConversionTargetType != null)
             {
                 // For HasConversion properties, try to create a constant of the original type
                 // by constructing it from the string value using a constructor that takes the target type
                 if (propertyConfig.ConversionTargetType == typeof(string))
                 {
-                    var stringCtor = leftExpr.Type.GetConstructor(new[] { typeof(string) });
-                    if (stringCtor != null)
+                    // A null literal compares against null instead of being passed to the constructor
+                    var underlyingType = Nullable.GetUnderlyingType(leftExpr.Type);
+                    if (right == "null" && (!leftExpr.Type.IsValueType || underlyingType != null))
                     {
-                        return Expression.New(stringCtor, FilterValue.Create(right, typeof(string)));
+                        return Expression.Constant(null, leftExpr.Type);
                     }
 
-                    // v1.14.2 compared a nullable struct with a string here and threw, so construct the underlying type instead.
-                    // A null literal keeps the v1.14.2 result.
-                    if (right != "null" && CreateStringConversionRightExpr(leftExpr.Type, right) is { } nullableStructExpr)
+                    // Nullable structs are constructed from their underlying type, then converted back
+                    var stringCtor = (underlyingType ?? leftExpr.Type).GetConstructor(new[] { typeof(string) });
+                    if (stringCtor != null)
                     {
-                        return nullableStructExpr;
+                        Expression constructed = Expression.New(stringCtor, FilterValue.Create(right, typeof(string)));
+                        return underlyingType == null ? constructed : Expression.Convert(constructed, leftExpr.Type);
                     }
                 }
 
                 // For other conversion types, fall back to using the conversion target type
                 targetType = propertyConfig.ConversionTargetType;
             }
-            else if (!CanCreateRightExprFromType(targetType) &&
-                     config.PropertyMappings.GetPropertyInfo(memberPath ?? propertyPath) is { UsesConversion: true } pathConfig &&
-                     pathConfig.ConversionTargetType == typeof(string))
-            {
-                // The lookup by query name above misses a property with a different query name. v1.14.2 then threw,
-                // because it can not read a value of this type, so find the conversion by the property path instead.
-                return CreateStringConversionRightExpr(leftExpr.Type, right) ?? CreateRightExprFromType(targetType, right, rightIsQuotedLiteral, op);
-            }
         }
 
         return CreateRightExprFromType(targetType, right, rightIsQuotedLiteral, op);
-    }
-
-    // Builds the right side for a property with HasConversion<string>() from a constructor that takes a string.
-    // A null literal compares against null, and a nullable struct is constructed from its underlying type.
-    private static Expression? CreateStringConversionRightExpr(Type leftType, string right)
-    {
-        var underlyingType = Nullable.GetUnderlyingType(leftType);
-        if (right == "null" && (!leftType.IsValueType || underlyingType != null))
-        {
-            return Expression.Constant(null, leftType);
-        }
-
-        var stringCtor = (underlyingType ?? leftType).GetConstructor(new[] { typeof(string) });
-        if (stringCtor == null)
-        {
-            return null;
-        }
-
-        Expression constructed = Expression.New(stringCtor, FilterValue.Create(right, typeof(string)));
-        return underlyingType == null ? constructed : Expression.Convert(constructed, leftType);
     }
 
     // True when CreateRightExprFromType can read a value of the type. For other types it throws.
@@ -1038,7 +1013,7 @@ public static class FilterParser
                         var guidStringExpr = HandleGuidConversion(leftExpr, leftExpr.Type);
 
                         // For a Guid with HasConversion<string>(), v1.14.2 built the right side as a Guid and threw, so build it for the string.
-                        var guidConfig = config?.PropertyMappings?.GetPropertyInfoByQueryName(guidPropertyPath);
+                        var guidConfig = config?.PropertyMappings?.GetPropertyInfo(guidPropertyPath);
                         var leftExprForRightSide = guidConfig?.UsesConversion == true && guidConfig.ConversionTargetType == typeof(string)
                             ? guidStringExpr
                             : leftExpr;
@@ -1253,7 +1228,7 @@ public static class FilterParser
             nestedMemberExpression.Expression is MemberExpression parentExpression)
         {
             var parentPropertyPath = GetPropertyPath(parentExpression, parameter);
-            var parentPropertyConfig = config?.PropertyMappings?.GetPropertyInfoByQueryName(parentPropertyPath);
+            var parentPropertyConfig = config?.PropertyMappings?.GetPropertyInfo(parentPropertyPath);
             
             if (parentPropertyConfig?.UsesConversion == true)
             {
@@ -1406,7 +1381,7 @@ public static class FilterParser
                         leftExpr = HandleGuidConversion(leftExpr, leftExpr.Type);
                     }
 
-                    var rightExpr = CreateRightExpr(leftExpr, temp.right, temp.rightIsQuotedLiteral, temp.op, fullPropPath, config, fullPropPath, reference.Path);
+                    var rightExpr = CreateRightExpr(leftExpr, temp.right, temp.rightIsQuotedLiteral, temp.op, fullPropPath, config, reference.Path);
                     var comparison = temp.op.GetExpression<T>(leftExpr, rightExpr, config?.DbContextType, ResolveCaseMode(reference.Path, config));
 
                     // Combine with AND for negative operators, OR for positive operators
