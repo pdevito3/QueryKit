@@ -42,6 +42,15 @@ public class DotNumberCultureTests
     }
 
     [Fact]
+    public void dot_number_on_an_integer_property_names_the_value_in_a_comma_culture()
+    {
+        var act = () => WithCulture("de-DE", () => FilterParser.ParseFilter<Recipe>("Rating > 4.4"));
+
+        act.Should().ThrowExactly<ParsingException>()
+            .WithMessage("The value '4.4' is not a valid Int32 for the filter property 'Rating'.");
+    }
+
+    [Fact]
     public void integer_value_still_filters_in_a_comma_culture()
     {
         var filterExpression = WithCulture("de-DE", () => FilterParser.ParseFilter<Recipe>("Rating > 4"));

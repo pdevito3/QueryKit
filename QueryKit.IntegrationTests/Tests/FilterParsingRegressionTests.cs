@@ -447,6 +447,8 @@ public class FilterParsingRegressionTests : TestBase
     [InlineData("""Age == abc""")]
     [InlineData("""Rating > "abc" """)]
     [InlineData("""Rating > abc""")]
+    [InlineData("""BirthMonth ^^ ["Bogus"]""")]
+    [InlineData("""BirthMonth ^^ [Bogus]""")]
     public async Task invalid_value_throws_parsing_exception(string input)
     {
         // Arrange

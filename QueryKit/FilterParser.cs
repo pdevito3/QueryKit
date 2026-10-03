@@ -358,6 +358,12 @@ public static class FilterParser
                 buildClause(cultureNumberPrefix);
             }
 
+            // A value that does not convert already has a ParsingException that names the value.
+            if (exception is ParsingException)
+            {
+                throw;
+            }
+
             throw new ParsingException(exception);
         }
     }
@@ -524,8 +530,23 @@ public static class FilterParser
         { typeof(sbyte), value => sbyte.Parse(value, CultureInfo.InvariantCulture) },
     };
 
+    // A value that does not convert to the property type throws ParsingException with the value, the type, and the
+    // property name as the caller wrote it (the query name, not the member path).
     private static Expression CreateRightExpr(Expression leftExpr, string right, bool rightIsQuotedLiteral, ComparisonOperator op,
-        IQueryKitConfiguration? config = null, string? propertyPath = null, string? memberPath = null)
+        string propertyName, IQueryKitConfiguration? config = null, string? propertyPath = null, string? memberPath = null)
+    {
+        try
+        {
+            return CreateRightExprForProperty(leftExpr, right, rightIsQuotedLiteral, op, config, propertyPath, memberPath);
+        }
+        catch (InvalidFilterValueException e)
+        {
+            throw new ParsingException(e.Value, propertyName, e.TargetType, e.InnerException!);
+        }
+    }
+
+    private static Expression CreateRightExprForProperty(Expression leftExpr, string right, bool rightIsQuotedLiteral, ComparisonOperator op,
+        IQueryKitConfiguration? config, string? propertyPath, string? memberPath)
     {
         var targetType = leftExpr.Type;
 
@@ -689,7 +710,7 @@ public static class FilterParser
                         x = x.Trim('"');
                     }
 
-                    var convertedValue = TypeConversionFunctions[elementType](x);
+                    var convertedValue = ConvertValue(x, elementType, () => TypeConversionFunctions[elementType](x));
                     return Expression.Constant(convertedValue, elementType);
                 }).ToArray();
 
@@ -704,27 +725,27 @@ public static class FilterParser
             
             if (targetType == typeof(DateTime))
             {
-                var dt = ParseDateTime(right);
+                var dt = ConvertValue(right, targetType, () => ParseDateTime(right));
 
                 return FilterValue.Create(dt, rawType);
             }
 
             if (targetType == typeof(DateTimeOffset))
             {
-                var dto = ParseDateTimeOffset(right);
+                var dto = ConvertValue(right, targetType, () => ParseDateTimeOffset(right));
 
                 return FilterValue.Create(dto, rawType);
             }
 
             if (targetType == typeof(DateOnly))
             {
-                var date = DateOnly.Parse(right, CultureInfo.InvariantCulture);
+                var date = ConvertValue(right, targetType, () => DateOnly.Parse(right, CultureInfo.InvariantCulture));
                 return FilterValue.Create(date, rawType);
             }
 
             if (targetType == typeof(TimeOnly))
             {
-                var time = TimeOnly.Parse(right, CultureInfo.InvariantCulture);
+                var time = ConvertValue(right, targetType, () => TimeOnly.Parse(right, CultureInfo.InvariantCulture));
 
                 var fractionalTicks = time.Ticks % TimeSpan.TicksPerSecond;
                 var millisecond = (int)(fractionalTicks / TimeSpan.TicksPerMillisecond);
@@ -746,11 +767,11 @@ public static class FilterParser
                 }
 
                 // Parse the GUID for direct comparison
-                var guidValue = Guid.Parse(right);
+                var guidValue = ConvertValue(right, targetType, () => Guid.Parse(right));
                 return FilterValue.Create(guidValue, typeof(Guid));
             }
 
-            var convertedValue = conversionFunction(right);
+            var convertedValue = ConvertValue(right, targetType, () => conversionFunction(right));
             return FilterValue.Create(convertedValue, leftExprType);
         }
 
@@ -775,7 +796,7 @@ public static class FilterParser
                         x = x.Trim('"');
                     }
             
-                    var enumValue = Enum.Parse(enumType, x);
+                    var enumValue = ConvertValue(x, enumType, () => Enum.Parse(enumType, x));
                     var constant = Expression.Constant(enumValue, enumType);
             
                     return constant;
@@ -785,11 +806,7 @@ public static class FilterParser
                 return newArrayExpression;
             }
             
-            var parsed = Enum.TryParse(enumType, right, out var enumValue);
-            if (!parsed) 
-            {
-                throw new InvalidOperationException($"Unsupported value '{right}' for type '{targetType.Name}'");
-            }
+            var enumValue = ConvertValue(right, enumType, () => Enum.Parse(enumType, right));
             return FilterValue.Create(enumValue, rawType);
         }
         
@@ -808,6 +825,33 @@ public static class FilterParser
         }
 
         throw new InvalidOperationException($"Unsupported value '{right}' for type '{targetType.Name}'");
+    }
+
+    // Converts one filter value. The parse methods throw FormatException or OverflowException, and Enum.Parse throws
+    // ArgumentException. CreateRightExpr adds the property name and throws ParsingException.
+    private static TValue ConvertValue<TValue>(string value, Type targetType, Func<TValue> convert)
+    {
+        try
+        {
+            return convert();
+        }
+        catch (Exception e) when (e is FormatException or OverflowException or ArgumentException)
+        {
+            throw new InvalidFilterValueException(value, targetType, e);
+        }
+    }
+
+    private sealed class InvalidFilterValueException : Exception
+    {
+        public InvalidFilterValueException(string value, Type targetType, Exception inner)
+            : base(null, inner)
+        {
+            Value = value;
+            TargetType = targetType;
+        }
+
+        public string Value { get; }
+        public Type TargetType { get; }
     }
 
     private static Type TransformTargetTypeIfNullable(Type targetType)
@@ -998,12 +1042,12 @@ public static class FilterParser
                         var leftExprForRightSide = guidConfig?.UsesConversion == true && guidConfig.ConversionTargetType == typeof(string)
                             ? guidStringExpr
                             : leftExpr;
-                        return temp.op.GetExpression<T>(guidStringExpr, CreateRightExpr(leftExprForRightSide, temp.right, temp.rightIsQuotedLiteral, temp.op, config, guidPropertyPath),
+                        return temp.op.GetExpression<T>(guidStringExpr, CreateRightExpr(leftExprForRightSide, temp.right, temp.rightIsQuotedLiteral, temp.op, temp.reference.Text, config, guidPropertyPath),
                             config?.DbContextType, ResolveCaseMode(guidPropertyPath, config));
                     }
 
                     // For non-string operators, use direct GUID comparison
-                    return temp.op.GetExpression<T>(leftExpr, CreateRightExpr(leftExpr, temp.right, temp.rightIsQuotedLiteral, temp.op, config, guidPropertyPath),
+                    return temp.op.GetExpression<T>(leftExpr, CreateRightExpr(leftExpr, temp.right, temp.rightIsQuotedLiteral, temp.op, temp.reference.Text, config, guidPropertyPath),
                         config?.DbContextType);
                 }
 
@@ -1128,7 +1172,7 @@ public static class FilterParser
                     }
                 }
 
-                var rightExpr = CreateRightExpr(leftExprForComparison, temp.right, temp.rightIsQuotedLiteral, temp.op, config, propertyPath);
+                var rightExpr = CreateRightExpr(leftExprForComparison, temp.right, temp.rightIsQuotedLiteral, temp.op, temp.reference.Text, config, propertyPath);
 
                 // Handle nested collection filtering
                 if (leftExprForComparison is MethodCallExpression methodCall && IsNestedCollectionExpression(methodCall))
@@ -1362,7 +1406,7 @@ public static class FilterParser
                         leftExpr = HandleGuidConversion(leftExpr, leftExpr.Type);
                     }
 
-                    var rightExpr = CreateRightExpr(leftExpr, temp.right, temp.rightIsQuotedLiteral, temp.op, config, fullPropPath, reference.Path);
+                    var rightExpr = CreateRightExpr(leftExpr, temp.right, temp.rightIsQuotedLiteral, temp.op, fullPropPath, config, fullPropPath, reference.Path);
                     var comparison = temp.op.GetExpression<T>(leftExpr, rightExpr, config?.DbContextType, ResolveCaseMode(reference.Path, config));
 
                     // Combine with AND for negative operators, OR for positive operators
