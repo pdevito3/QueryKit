@@ -9,6 +9,7 @@ public class FakeTestingPersonBuilder
         .RuleFor(x => x.FirstName, faker => faker.Name.FirstName())
         .RuleFor(x => x.LastName, faker => faker.Name.LastName())
         .RuleFor(x => x.Title, faker => faker.Lorem.Sentence())
+        .RuleFor(x => x.LocalDateTime, _ => null)
         .Generate();
     
     public FakeTestingPersonBuilder WithTitle(string? title)
@@ -68,6 +69,12 @@ public class FakeTestingPersonBuilder
     public FakeTestingPersonBuilder WithSpecificDateTime(DateTime dateTime)
     {
         _baseTestingPerson.SpecificDateTime = dateTime;
+        return this;
+    }
+
+    public FakeTestingPersonBuilder WithLocalDateTime(DateTime? dateTime)
+    {
+        _baseTestingPerson.LocalDateTime = dateTime;
         return this;
     }
 

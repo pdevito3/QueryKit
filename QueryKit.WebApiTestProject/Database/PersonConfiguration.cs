@@ -16,6 +16,9 @@ public sealed class PersonConfiguration : IEntityTypeConfiguration<TestingPerson
             .IsRequired(false);
 
         builder.Property(x => x.Nickname);
+
+        builder.Property(x => x.LocalDateTime)
+            .HasColumnType("timestamp without time zone");
         
         builder.OwnsOne(x => x.PhysicalAddress, opts =>
         {
