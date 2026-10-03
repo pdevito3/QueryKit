@@ -1,6 +1,7 @@
 namespace QueryKit.UnitTests;
 
 using Configuration;
+using Exceptions;
 using FluentAssertions;
 using WebApiTestProject.Entities;
 
@@ -167,7 +168,7 @@ public class HasConversionTests
     }
 
     [Fact]
-    public void child_property_of_converted_parent_with_query_name_compares_the_child()
+    public void child_property_of_converted_parent_with_query_name_compares_parent()
     {
         // Arrange
         var input = """Email.Value == "a@x.com" """;
@@ -185,8 +186,8 @@ public class HasConversionTests
         var filterWithoutQueryName = FilterParser.ParseFilter<TestingPerson>(input, configWithoutQueryName);
 
         // Assert
-        filterWithQueryName.ToDisplayString().Should().Be("""x => (x.Email.Value == "a@x.com")""");
-        filterWithoutQueryName.ToDisplayString().Should().Be("""x => (x.Email == new EmailAddress("a@x.com"))""");
+        filterWithQueryName.ToDisplayString().Should().Be("""x => (x.Email == new EmailAddress("a@x.com"))""");
+        filterWithQueryName.ToDisplayString().Should().Be(filterWithoutQueryName.ToDisplayString());
     }
 
     [Fact]
@@ -252,7 +253,7 @@ public class HasConversionTests
     }
 
     [Fact]
-    public void null_on_reference_type_with_has_conversion_matches_no_row()
+    public void can_filter_null_on_reference_type_with_has_conversion()
     {
         // Arrange
         var rows = EmailRows();
@@ -266,7 +267,8 @@ public class HasConversionTests
         var result = rows.ApplyQueryKitFilter("""Email == null""", config).ToList();
 
         // Assert
-        result.Should().BeEmpty();
+        result.Count.Should().Be(1);
+        result[0].Email.Should().BeNull();
     }
 
     [Fact]
@@ -362,8 +364,10 @@ public class HasConversionTests
         result[0].Name.Should().Be("two");
     }
 
-    [Fact]
-    public void int_with_query_name_and_has_conversion_compares_the_int()
+    [Theory]
+    [InlineData("count")]
+    [InlineData("Number")]
+    public void int_with_has_conversion_compares_the_int(string queryName)
     {
         // Arrange
         var rows = new List<NumberRow>
@@ -373,11 +377,11 @@ public class HasConversionTests
         };
         var config = new QueryKitConfiguration(config =>
         {
-            config.Property<NumberRow>(x => x.Number).HasQueryName("count").HasConversion<string>();
+            config.Property<NumberRow>(x => x.Number).HasQueryName(queryName).HasConversion<string>();
         });
 
         // Act
-        var result = rows.ApplyQueryKitFilter("""count == 2""", config).ToList();
+        var result = rows.ApplyQueryKitFilter($"{queryName} == 2", config).ToList();
 
         // Assert
         result.Count.Should().Be(1);
@@ -385,16 +389,65 @@ public class HasConversionTests
     }
 
     [Fact]
-    public void guid_with_query_name_and_has_conversion_compares_a_guid_constant()
+    public void nullable_int_with_query_name_and_has_conversion_compares_the_int()
+    {
+        // Arrange
+        var rows = new List<NullableNumberRow>
+        {
+            new() { Number = 1 },
+            new() { Number = 2 },
+            new() { Number = null }
+        };
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<NullableNumberRow>(x => x.Number).HasQueryName("count").HasConversion<string>();
+        });
+
+        // Act
+        var result = rows.ApplyQueryKitFilter("count == 2", config).ToList();
+
+        // Assert
+        result.Count.Should().Be(1);
+        result[0].Number.Should().Be(2);
+    }
+
+    [Theory]
+    [InlineData("level")]
+    [InlineData("Level")]
+    public void enum_with_has_conversion_compares_the_enum(string queryName)
+    {
+        // Arrange
+        var rows = new List<LevelRow>
+        {
+            new() { Level = LevelKind.Low },
+            new() { Level = LevelKind.High }
+        };
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<LevelRow>(x => x.Level).HasQueryName(queryName).HasConversion<string>();
+        });
+
+        // Act
+        var result = rows.ApplyQueryKitFilter($"{queryName} == High", config).ToList();
+
+        // Assert
+        result.Count.Should().Be(1);
+        result[0].Level.Should().Be(LevelKind.High);
+    }
+
+    [Theory]
+    [InlineData("identifier")]
+    [InlineData("Id")]
+    public void guid_with_has_conversion_compares_a_guid_constant(string queryName)
     {
         // Arrange
         var config = new QueryKitConfiguration(config =>
         {
-            config.Property<GuidRow>(x => x.Id).HasQueryName("identifier").HasConversion<string>();
+            config.Property<GuidRow>(x => x.Id).HasQueryName(queryName).HasConversion<string>();
         });
 
         // Act
-        var filter = FilterParser.ParseFilter<GuidRow>($"identifier == \"{KnownGuid}\"", config);
+        var filter = FilterParser.ParseFilter<GuidRow>($"{queryName} == \"{KnownGuid}\"", config);
 
         // Assert
         filter.ToDisplayString().Should().Be($"x => (x.Id == {KnownGuid})");
@@ -461,5 +514,21 @@ public class HasConversionTests
     private class NumberRow
     {
         public int Number { get; set; }
+    }
+
+    private class NullableNumberRow
+    {
+        public int? Number { get; set; }
+    }
+
+    private enum LevelKind
+    {
+        Low,
+        High
+    }
+
+    private class LevelRow
+    {
+        public LevelKind Level { get; set; }
     }
 }
