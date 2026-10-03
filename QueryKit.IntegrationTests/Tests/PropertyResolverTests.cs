@@ -209,6 +209,37 @@ public class PropertyResolverTests : TestBase
     }
 
     [Fact]
+    public async Task prevented_property_on_the_right_side_is_not_compared_when_another_query_name_matches_its_name()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var title = new Faker().Lorem.Sentence();
+        var fakePerson = new FakeTestingPersonBuilder()
+            .WithTitle(title)
+            .WithFirstName("Same")
+            .WithLastName("Same")
+            .WithAge(30)
+            .Build();
+        await testingServiceScope.InsertAsync(fakePerson);
+
+        var input = $"""Title == "{title}" && (FirstName == LastName || Age > 100)""";
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.IgnoredClauseBehavior = IgnoredClauseBehavior.Remove;
+            config.Property<TestingPerson>(x => x.FirstName!).HasQueryName("lastname");
+            config.Property<TestingPerson>(x => x.LastName!).PreventFilter();
+        });
+
+        // Act
+        var people = await testingServiceScope.DbContext().People
+            .ApplyQueryKitFilter(input, config)
+            .ToListAsync();
+
+        // Assert
+        people.Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task prevented_property_in_a_list_is_not_filtered_in_any_case()
     {
         // Arrange
@@ -357,6 +388,61 @@ public class PropertyResolverTests : TestBase
 
         // Assert
         people.Select(x => x.Id).Should().Equal(firstPerson.Id, secondPerson.Id);
+    }
+
+    [Fact]
+    public async Task query_name_in_a_property_list_is_filtered()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var title = new Faker().Lorem.Sentence();
+        var fakePerson = new FakeTestingPersonBuilder()
+            .WithTitle(title)
+            .WithFirstName("Paul")
+            .WithLastName("Other")
+            .Build();
+        await testingServiceScope.InsertAsync(fakePerson);
+
+        var input = $"""Title == "{title}" && (first, LastName) == "Paul" """;
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.FirstName!).HasQueryName("first");
+        });
+
+        // Act
+        var people = await testingServiceScope.DbContext().People
+            .ApplyQueryKitFilter(input, config)
+            .ToListAsync();
+
+        // Assert
+        people.Should().ContainSingle(x => x.Id == fakePerson.Id);
+    }
+
+    [Fact]
+    public async Task query_name_in_arithmetic_is_filtered()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var title = new Faker().Lorem.Sentence();
+        var fakePerson = new FakeTestingPersonBuilder()
+            .WithTitle(title)
+            .WithAge(30)
+            .Build();
+        await testingServiceScope.InsertAsync(fakePerson);
+
+        var input = $"""Title == "{title}" && (years + 0) > 20""";
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.Age!).HasQueryName("years");
+        });
+
+        // Act
+        var people = await testingServiceScope.DbContext().People
+            .ApplyQueryKitFilter(input, config)
+            .ToListAsync();
+
+        // Assert
+        people.Should().ContainSingle(x => x.Id == fakePerson.Id);
     }
 
     [Theory]

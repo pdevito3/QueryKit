@@ -2,18 +2,16 @@ namespace QueryKit.IntegrationTests.Tests;
 
 using System.Globalization;
 using Configuration;
-using Exceptions;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using SharedTestingHelper.Fakes;
 using WebApiTestProject.Entities;
 
-// Like v1.14.2, a query name matches with the case rules of the culture of each parse,
-// also when a parse in another culture used the same query name before.
+// A query name ignores case with the rules of the invariant culture, so the result does not depend on the culture of the parse.
 public class AliasCultureTests : TestBase
 {
     [Fact]
-    public async Task query_name_matches_in_en_us_after_a_tr_tr_parse()
+    public async Task query_name_with_i_matches_its_upper_case_in_tr_tr()
     {
         // Arrange
         var testingServiceScope = new TestingServiceScope();
@@ -37,10 +35,6 @@ public class AliasCultureTests : TestBase
         try
         {
             CultureInfo.CurrentCulture = new CultureInfo("tr-TR");
-            var turkish = () => testingServiceScope.DbContext().People.ApplyQueryKitFilter(input, config);
-            turkish.Should().Throw<UnknownFilterPropertyException>();
-
-            CultureInfo.CurrentCulture = new CultureInfo("en-US");
             appliedQueryable = testingServiceScope.DbContext().People.ApplyQueryKitFilter(input, config);
         }
         finally

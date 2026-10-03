@@ -57,9 +57,20 @@ internal static class PropertyResolver
 {
     internal static PropertyReference Resolve(Type rootType, string reference, IQueryKitConfiguration? config)
     {
-        config?.ValidatePropertyDepth(reference);
+        // A query name resolves to the property path of its mapping first
+        var path = config?.PropertyMappings?.GetPropertyInfoByQueryName(reference)?.Name ?? reference;
+        return Resolve(rootType, reference, path, config);
+    }
 
-        var memberPath = ResolveMemberPath(rootType, reference, out var unknownSegment);
+    // Resolves a property path without query names. On the right side of a comparison, a query name is a value, not a property.
+    internal static PropertyReference ResolveWithoutQueryName(Type rootType, string reference, IQueryKitConfiguration? config)
+        => Resolve(rootType, reference, reference, config);
+
+    private static PropertyReference Resolve(Type rootType, string reference, string path, IQueryKitConfiguration? config)
+    {
+        config?.ValidatePropertyDepth(path);
+
+        var memberPath = ResolveMemberPath(rootType, path, out var unknownSegment);
         if (memberPath != null)
         {
             return PropertyReference.Member(reference, memberPath, config?.PropertyMappings?.GetPropertyInfo(memberPath));
