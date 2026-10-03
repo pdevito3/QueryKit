@@ -41,6 +41,6 @@ Preconditions:
 
 - Without `--sort`, both targets return rows in seed order. The Postgres order comes from the `ORDER BY r."Id"` that EF Core adds, not from QueryKit.
 - An unquoted value such as `Title == salt` does not throw. QueryKit reads it as the literal `"salt"` and returns no rows.
-- `Title @= null` throws `System.ArgumentNullException` on the memory target. This is not a `QueryKitException`.
-- `Rating > "abc"` throws `System.FormatException`, not a `QueryKitException`. The driver exits `1`.
+- `Title @= null` throws `QueryKitParsingException` on both targets. The message tells the client to use `==` or `!=` for null.
+- `Rating > "abc"` throws `ParsingException` on both targets (see `error-handling.md`).
 - The case-insensitive operators use `lower()` in SQL by default. The `upper` preset changes this (see `configuration.md`).

@@ -9,6 +9,13 @@ public sealed class ParsingException : QueryKitException
     {
     }
 
+    // A filter value that does not convert to the type of its property. The client sent the value and the property,
+    // so the message can name them.
+    public ParsingException(string value, string propertyName, Type targetType, Exception exception)
+        : base($"The value '{value}' is not a valid {targetType.Name} for the filter property '{propertyName}'.", exception)
+    {
+    }
+
     private static string BuildMessage(Exception exception)
     {
         const string baseMessage = "There was a parsing failure, likely due to an invalid comparison or logical operator. You may also be missing double quotes surrounding a string or guid.";
