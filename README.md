@@ -255,6 +255,7 @@ Property list grouping is particularly useful for:
   * `DateTime`: `var filterInput = """Birthday == "2022-07-01" """;`
     * `var filterInput = """Birthday == "2022-07-01T00:00:03" """;` 
     * `var filterInput = """Birthday == "2022-07-01T00:00:03+01:00" """;` 
+    * QueryKit reads a value without an offset, for example `"2022-07-01T00:00:03"`, as UTC. A value with an offset becomes its UTC time. For a `timestamp without time zone` column, see [Date and Time Values Without an Offset](#date-and-time-values-without-an-offset).
 
   * `TimeOnly`: 
     * `var filterInput = """Time == "12:30:00" """;`
@@ -814,9 +815,31 @@ var config = new QueryKitConfiguration(config =>
 var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
 ```
 
+#### Date and Time Values Without an Offset
+
+`DateTimeKindForValuesWithoutOffset` sets the `DateTimeKind` of a `DateTime` filter value that has no offset, for example `"2024-01-15T08:00:00"`. The setting applies to a single value, a quoted value, a value in a `^^` list, and a custom operation value.
+
+| Value | A value without an offset | A value with an offset | Use it for |
+|---|---|---|---|
+| `DateTimeKind.Utc` (default) | UTC, same wall-clock time | Its UTC time, kind `Utc` | A `timestamp with time zone` (`timestamptz`) column |
+| `DateTimeKind.Unspecified` | Same wall-clock time, kind `Unspecified` | Its UTC time, kind `Unspecified` | A `timestamp without time zone` column |
+| `DateTimeKind.Local` | The server time zone, kind `Local` | Its server-local time, kind `Local` | The v1.14.2 behavior |
+
+Npgsql needs a `Utc` value for a `timestamptz` column and rejects a `Utc` value for a `timestamp without time zone` column. The setting applies to every `DateTime` property in the filter. Thus one filter cannot compare a `timestamptz` column and a `timestamp without time zone` column on Npgsql.
+
+```csharp
+var config = new QueryKitConfiguration(config =>
+{
+    config.DateTimeKindForValuesWithoutOffset = DateTimeKind.Unspecified;
+});
+var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
+```
+
+A `DateTimeOffset` value is always UTC. With `DateTimeKind.Local`, QueryKit reads a `DateTimeOffset` value without an offset in the server time zone and then converts it to UTC. With the other values, QueryKit reads it as UTC.
+
 #### Ignored Clause Behavior
 
-`IgnoredClauseBehavior` and `ParameterizeFilterValues` both come from the `IQueryKitFilterBehavior` interface. `QueryKitConfiguration` implements this interface, so a custom configuration class can implement `IQueryKitFilterBehavior` directly instead.
+`IgnoredClauseBehavior`, `ParameterizeFilterValues`, and `DateTimeKindForValuesWithoutOffset` all come from the `IQueryKitFilterBehavior` interface. `QueryKitConfiguration` implements this interface, so a custom configuration class can implement `IQueryKitFilterBehavior` directly instead.
 
 `IgnoredClauseBehavior` controls what QueryKit does with a clause on a property that has `PreventFilter`, or on an unknown property when `AllowUnknownProperties` is `true`. The default is `IgnoredClauseBehavior.Remove`, which drops the clause, so a logical operator with a removed side keeps only its other side. Set `IgnoredClauseBehavior` to `IgnoredClauseBehavior.ReplaceWithTrue` for the v1.14.2 behavior. This value replaces the clause with `true == true` so the rest of the expression keeps its shape. With `ReplaceWithTrue`, a property-list clause (for example `(FirstName, Title) @=* "x"`) where every property is prevented gives a plain `true` instead, not `true == true`.
 
