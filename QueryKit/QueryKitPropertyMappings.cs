@@ -14,6 +14,20 @@ public class QueryKitPropertyMappings
     internal IReadOnlyDictionary<string, QueryKitPropertyInfo> DerivedPropertyMappings => _derivedPropertyMappings;
     internal IReadOnlyDictionary<string, QueryKitPropertyInfo> CustomOperationMappings => _customOperationMappings;
 
+    // Every query name of a property
+    internal IEnumerable<string> PropertyQueryNames => QueryNamesOf(_propertyMappings.Values);
+
+    // Every query name of a derived property or a custom operation
+    internal IEnumerable<string> DerivedOrCustomOperationQueryNames
+        => QueryNamesOf(_derivedPropertyMappings.Values.Concat(_customOperationMappings.Values));
+
+    private static IEnumerable<string> QueryNamesOf(IEnumerable<QueryKitPropertyInfo> infos)
+        => infos
+            .Select(info => info.QueryName)
+            .Where(queryName => !string.IsNullOrEmpty(queryName))
+            .Select(queryName => queryName!)
+            .Distinct(StringComparer.InvariantCultureIgnoreCase);
+
     public QueryKitPropertyMapping<TModel> Property<TModel>(Expression<Func<TModel, object>>? propertySelector)
     {
         var fullPath = GetFullPropertyPath(propertySelector);
