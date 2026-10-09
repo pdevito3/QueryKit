@@ -896,16 +896,22 @@ public static class FilterParser
     }
     
     // Resolves each property in an arithmetic expression to its member path.
-    // Returns null when a property cannot be filtered, because then the parser removes the clause.
+    // Returns null when a property cannot be filtered or is an allowed unknown property, because then the parser removes the clause.
     private static ArithmeticExpression? ResolveArithmeticProperties(ArithmeticExpression expr, Type entityType, IQueryKitConfiguration? config)
     {
         switch (expr)
         {
             case PropertyArithmeticExpression property:
                 var reference = PropertyResolver.Resolve(entityType, property.PropertyPath, config);
+                // Arithmetic supports only members, so a derived property or a custom operation is unknown here
                 if (reference.Kind != PropertyReferenceKind.Member)
                 {
-                    return property;
+                    if (config?.AllowUnknownProperties == true)
+                    {
+                        return null;
+                    }
+
+                    throw new UnknownFilterPropertyException(reference.UnknownSegment ?? property.PropertyPath);
                 }
 
                 return reference.CanFilter ? new PropertyArithmeticExpression(reference.Path) : null;
