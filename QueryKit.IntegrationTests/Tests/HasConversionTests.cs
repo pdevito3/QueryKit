@@ -100,11 +100,19 @@ public class HasConversionTests : TestBase
     }
 
     [Fact]
-    public async Task email_value_with_query_name_and_has_conversion_compares_the_child()
+    public async Task can_filter_by_email_value_with_query_name_and_has_conversion()
     {
         // Arrange
         var testingServiceScope = new TestingServiceScope();
-        var input = """Email.Value == "a@x.com" """;
+        var testEmail = $"{Guid.NewGuid()}@example.com";
+        var person = new FakeTestingPersonBuilder()
+            .WithEmail(testEmail)
+            .Build();
+        var personTwo = new FakeTestingPersonBuilder().Build();
+
+        await testingServiceScope.InsertAsync(person, personTwo);
+
+        var input = $"""Email.Value == "{testEmail}" """;
         var config = new QueryKitConfiguration(config =>
         {
             config.Property<TestingPerson>(x => x.Email).HasQueryName("mail").HasConversion<string>();
@@ -113,11 +121,11 @@ public class HasConversionTests : TestBase
         // Act
         var queryablePeople = testingServiceScope.DbContext().People;
         var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input, config);
-        var act = () => appliedQueryable.ToListAsync();
+        var people = await appliedQueryable.ToListAsync();
 
         // Assert
-        await act.Should().ThrowExactlyAsync<InvalidOperationException>()
-            .WithMessage("The LINQ expression*could not be translated*");
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(person.Id);
     }
 
     [Fact]
@@ -154,7 +162,96 @@ public class HasConversionTests : TestBase
     }
 
     [Fact]
-    public async Task null_email_with_has_conversion_matches_no_row()
+    public async Task can_filter_by_nullable_int_with_query_name_and_has_conversion()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var title = Guid.NewGuid().ToString();
+        var person = new FakeTestingPersonBuilder()
+            .WithTitle(title)
+            .WithAge(41)
+            .Build();
+        var personTwo = new FakeTestingPersonBuilder()
+            .WithTitle(title)
+            .WithAge(42)
+            .Build();
+        await testingServiceScope.InsertAsync(person, personTwo);
+
+        var input = $"""Title == "{title}" && years == 41""";
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.Age).HasQueryName("years").HasConversion<string>();
+        });
+
+        // Act
+        var people = await testingServiceScope.DbContext().People
+            .ApplyQueryKitFilter(input, config)
+            .ToListAsync();
+
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(person.Id);
+    }
+
+    [Fact]
+    public async Task can_filter_by_enum_with_query_name_and_has_conversion()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var title = Guid.NewGuid().ToString();
+        var person = new FakeTestingPersonBuilder()
+            .WithTitle(title)
+            .WithBirthMonth(BirthMonthEnum.March)
+            .Build();
+        var personTwo = new FakeTestingPersonBuilder()
+            .WithTitle(title)
+            .WithBirthMonth(BirthMonthEnum.April)
+            .Build();
+        await testingServiceScope.InsertAsync(person, personTwo);
+
+        var input = $"""Title == "{title}" && month == March""";
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.BirthMonth).HasQueryName("month").HasConversion<string>();
+        });
+
+        // Act
+        var people = await testingServiceScope.DbContext().People
+            .ApplyQueryKitFilter(input, config)
+            .ToListAsync();
+
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(person.Id);
+    }
+
+    [Fact]
+    public async Task can_filter_by_guid_with_query_name_and_has_conversion()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var person = new FakeTestingPersonBuilder().Build();
+        var personTwo = new FakeTestingPersonBuilder().Build();
+        await testingServiceScope.InsertAsync(person, personTwo);
+
+        var input = $"""identifier == "{person.Id}" """;
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.Id).HasQueryName("identifier").HasConversion<string>();
+        });
+
+        // Act
+        var people = await testingServiceScope.DbContext().People
+            .ApplyQueryKitFilter(input, config)
+            .ToListAsync();
+
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(person.Id);
+    }
+
+    [Fact]
+    public async Task can_filter_by_null_email_with_has_conversion()
     {
         // Arrange
         var testingServiceScope = new TestingServiceScope();
@@ -182,7 +279,8 @@ public class HasConversionTests : TestBase
         var people = await appliedQueryable.ToListAsync();
 
         // Assert
-        people.Should().BeEmpty();
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(person.Id);
     }
 
     [Fact]
