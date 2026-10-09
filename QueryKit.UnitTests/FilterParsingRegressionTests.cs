@@ -87,12 +87,13 @@ public class FilterParsingRegressionTests
     }
 
     [Theory]
-    [InlineData("Title ^^ [\"Warm, with syrup\", \"a\\b\"]", new[] { "Warm", "with syrup", "a\\b" })]
-    [InlineData("Title !^^ [\"Warm, with syrup\", \"a\\b\"]", new[] { "Warm, with syrup" })]
-    [InlineData("Title ^^* [\"WARM, WITH SYRUP\"]", new[] { "Warm", "with syrup" })]
-    [InlineData("Title ^^ [\"\"\"Warm, with syrup\"\"\", \"Warm\"]", new[] { "Warm", "with syrup" })]
+    [InlineData("Title ^^ [\"Warm, with syrup\", \"a\\b\"]", new[] { "Warm, with syrup", "a\\b" })]
+    [InlineData("Title !^^ [\"Warm, with syrup\", \"a\\b\"]", new[] { "Warm", "with syrup" })]
+    [InlineData("Title ^^* [\"WARM, WITH SYRUP\"]", new[] { "Warm, with syrup" })]
+    [InlineData("Title ^^ [\"\"\"Warm, with syrup\"\"\", \"Warm\"]", new[] { "Warm, with syrup", "Warm" })]
     [InlineData("Title ^^ [\" Warm \", \"with syrup \"]", new[] { "Warm", "with syrup" })]
-    public void list_value_with_comma_is_split_into_items(string input, string[] expectedTitles)
+    [InlineData("Title !^^* [\"WARM, WITH SYRUP\"]", new[] { "Warm", "with syrup", "a\\b" })]
+    public void list_value_with_comma_is_one_item(string input, string[] expectedTitles)
     {
         var people = new[]
         {
@@ -105,6 +106,26 @@ public class FilterParsingRegressionTests
         var result = people.AsQueryable().ApplyQueryKitFilter(input).ToList();
 
         result.Select(x => x.Title).Should().BeEquivalentTo(expectedTitles);
+    }
+
+    [Theory]
+    [InlineData("tags ^^ [\"a\", \"b\", \"c\"]", "[a,b,c]")]
+    [InlineData("tags ^^ [a, b, c]", "[a,b,c]")]
+    [InlineData("tags ^^ [\"a\\b\"]", "[a\\b]")]
+    [InlineData("tags ^^ [\" a \", \"b\"]", "[ a ,b]")]
+    [InlineData("tags ^^ [\"Warm, with syrup\", \"Cold\"]", "[Warm, with syrup,Cold]")]
+    public void custom_operation_gets_list_text_without_escapes(string input, string expectedValue)
+    {
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.CustomOperation<TestingPerson>((x, op, value) => x.Title == (string)value).HasQueryName("tags");
+        });
+
+        var expression = FilterParser.ParseFilter<TestingPerson>(input, config);
+        var invocation = (InvocationExpression)expression.Body;
+        var received = ((ConstantExpression)invocation.Arguments[2]).Value;
+
+        received.Should().Be(expectedValue);
     }
 
     [Fact]
