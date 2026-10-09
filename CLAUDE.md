@@ -21,6 +21,7 @@ QueryKit is a .NET library for parsing and applying filtering and sorting operat
 - **Test Projects**: 
   - `/QueryKit.UnitTests/` - Unit tests using xUnit
   - `/QueryKit.IntegrationTests/` - Integration tests with Entity Framework and PostgreSQL via Testcontainers
+  - `/QueryKit.Net6Tests/` - Tests for the net6.0 build on the .NET 6 runtime. It is not in QueryKit.sln, because it needs the .NET 6 runtime
   - `/QueryKit.WebApiTestProject/` - Test web API for integration scenarios
   - `/SharedTestingHelper/` - Shared test utilities and data builders
 
@@ -40,6 +41,7 @@ dotnet test
 # Run specific test project
 dotnet test QueryKit.UnitTests/
 dotnet test QueryKit.IntegrationTests/
+dotnet test QueryKit.Net6Tests/   # needs the .NET 6 runtime
 
 # Run tests with coverage
 dotnet test --collect:"XPlat Code Coverage"
