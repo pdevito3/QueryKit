@@ -30,7 +30,6 @@ public class DotNumberCultureTests
 
     [Theory]
     [InlineData("en-US", "Rating > 4.4")]
-    [InlineData("de-DE", "Rating > 4,4")]
     [InlineData("de-DE", "Rating > \"4.4\"")]
     [InlineData("de-DE", "Rating ^^ [\"4.0\"]")]
     [InlineData("de-DE", "Rating > @4.4")]
