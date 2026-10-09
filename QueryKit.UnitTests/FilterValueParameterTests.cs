@@ -7,8 +7,8 @@ using WebApiTestProject.Entities;
 
 public class FilterValueParameterTests
 {
-    private static readonly QueryKitConfiguration ParameterizedConfig =
-        new(settings => settings.ParameterizeFilterValues = true);
+    private static readonly QueryKitConfiguration LiteralConfig =
+        new(settings => settings.ParameterizeFilterValues = false);
 
     [Theory]
     [InlineData("""Title == "lamb" """)]
@@ -31,7 +31,7 @@ public class FilterValueParameterTests
     [InlineData("(Age + 5) > 30")]
     public void filter_values_are_field_reads_so_ef_core_sends_them_as_parameters(string input)
     {
-        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, ParameterizedConfig);
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
 
         var constants = new ConstantCollector();
         constants.Visit(filterExpression);
@@ -50,9 +50,9 @@ public class FilterValueParameterTests
     [InlineData("Date == 2022-07-01", "x => (x.Date == new Nullable`1(new DateOnly(2022, 7, 1)))")]
     [InlineData("""Time == "00:00:03.123456" """, "x => (x.Time == new Nullable`1(new TimeOnly(0, 0, 3, 123, 456)))")]
     [InlineData("(Age + 5) > 30", "x => ((x.Age + Convert(5, Nullable`1)) > Convert(30, Nullable`1))")]
-    public void filter_values_are_constants_by_default(string input, string expected)
+    public void filter_values_are_constants_when_parameters_are_off(string input, string expected)
     {
-        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, LiteralConfig);
 
         filterExpression.ToString().Should().Be(expected);
     }
@@ -64,9 +64,9 @@ public class FilterValueParameterTests
     [InlineData("""Title ^^* ["lamb", "chicken"]""")]
     [InlineData("Age ^^ [18, 30]")]
     [InlineData("(Age + 5) > 30")]
-    public void filter_values_do_not_use_the_holder_by_default(string input)
+    public void filter_values_do_not_use_the_holder_when_parameters_are_off(string input)
     {
-        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input);
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>(input, LiteralConfig);
 
         var constants = new ConstantCollector();
         constants.Visit(filterExpression);
@@ -79,7 +79,7 @@ public class FilterValueParameterTests
     [Fact]
     public void filter_values_keep_their_value_and_type()
     {
-        var filterExpression = FilterParser.ParseFilter<TestingPerson>("""Time == "00:00:03.123456" """, ParameterizedConfig);
+        var filterExpression = FilterParser.ParseFilter<TestingPerson>("""Time == "00:00:03.123456" """);
 
         var comparison = (BinaryExpression)filterExpression.Body;
         var read = (MemberExpression)comparison.Right;

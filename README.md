@@ -813,12 +813,12 @@ The limit applies to every property path in a filter, also to a property path in
 
 #### Parameterize Filter Values
 
-By default (`ParameterizeFilterValues = false`), QueryKit writes each filter value into the SQL as a literal constant. Set `ParameterizeFilterValues` to `true` to send filter values as SQL parameters instead. Parameters let EF Core reuse one compiled query and one database plan across calls that differ only in their filter values.
+By default (`ParameterizeFilterValues = true`), QueryKit sends filter values as SQL parameters. Parameters let EF Core reuse one compiled query and one database plan across calls that differ only in their filter values. Set `ParameterizeFilterValues` to `false` to write each filter value into the SQL as a literal constant, like v1.14.2.
 
 ```csharp
 var config = new QueryKitConfiguration(config =>
 {
-    config.ParameterizeFilterValues = true;
+    config.ParameterizeFilterValues = false;
 });
 var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
 ```

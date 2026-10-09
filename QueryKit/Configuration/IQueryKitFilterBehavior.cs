@@ -2,7 +2,7 @@ namespace QueryKit.Configuration;
 
 /// <summary>
 /// The settings that control how the filter parser treats constant values and ignored clauses. A configuration
-/// that does not implement this interface uses the defaults: values sent as constants,
+/// that does not implement this interface uses the defaults: values sent as parameters,
 /// <see cref="Configuration.IgnoredClauseBehavior.Remove"/> for an ignored clause, and UTC for a date and time
 /// value without an offset.
 /// </summary>
