@@ -26,7 +26,7 @@ public static class FilterParser
         var parameter = Expression.Parameter(typeof(T), "x");
         Expression expr;
         var parameterizeBefore = FilterValue.Parameterize;
-        FilterValue.Parameterize = config is IQueryKitFilterBehavior { ParameterizeFilterValues: true };
+        FilterValue.Parameterize = (config as IQueryKitFilterBehavior)?.ParameterizeFilterValues ?? true;
         var maxNestingDepthBefore = _maxNestingDepth;
         var nestingDepthBefore = _nestingDepth;
         var queryNameOverUnknownBefore = _queryNameOverUnknown;
