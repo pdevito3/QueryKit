@@ -85,11 +85,15 @@ internal static class FilterValue
             : Expression.New(type.GetConstructor(new[] { underlying })!, created);
     }
 
-    // The TimeOnly constructor with microseconds needs .NET 7. On net6.0, Expression.New throws
-    // ArgumentNullException, the same as v1.14.2.
-    private static Expression NewTimeOnly(TimeOnly time)
+    // The TimeOnly constructor with microseconds needs .NET 7. Without it, the value is a constant.
+    private static Expression? NewTimeOnly(TimeOnly time)
     {
-        var ctor = typeof(TimeOnly).GetConstructor(new[] { typeof(int), typeof(int), typeof(int), typeof(int), typeof(int) })!;
+        var ctor = typeof(TimeOnly).GetConstructor(new[] { typeof(int), typeof(int), typeof(int), typeof(int), typeof(int) });
+        if (ctor == null)
+        {
+            return null;
+        }
+
         var fractionalTicks = time.Ticks % TimeSpan.TicksPerSecond;
         var millisecond = (int)(fractionalTicks / TimeSpan.TicksPerMillisecond);
         var microsecond = (int)(fractionalTicks % TimeSpan.TicksPerMillisecond / 10);
