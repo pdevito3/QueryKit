@@ -28,7 +28,7 @@ public class AliasCultureTests : TestBase
         var input = $"""ISIMDELTA == "{title}" """;
         var config = new QueryKitConfiguration(config =>
         {
-            config.Property<TestingPerson>(x => x.Title).HasQueryName("isimdelta");
+            config.Property<TestingPerson>(x => x.Title!).HasQueryName("isimdelta");
         });
 
         // Act
