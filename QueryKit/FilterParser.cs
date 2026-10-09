@@ -3,6 +3,7 @@
 using System.Globalization;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Text;
 using Configuration;
 using Exceptions;
 using Operators;
@@ -399,8 +400,51 @@ public static class FilterParser
         from openingBracket in Parse.Char('[')
         from content in SquareBracketValuesParser
         from closingBracket in Parse.Char(']')
-        select new RightSideValue("[" + string.Join(",", content.Select(x => x.Value)) + "]", false,
+        select new RightSideValue("[" + string.Join(",", content.Select(x => EscapeListItem(x.Value))) + "]", false,
             content.Any(x => x.IsDotOnlyNumber) ? "" : null);
+
+    // List items are joined with ',' so quoted items that contain ',' or '\' are escaped and split back with SplitListItems, which trims each item
+    private static string EscapeListItem(string item)
+        => item.Replace(@"\", @"\\").Replace(",", @"\,");
+
+    private static string UnescapeListText(string list)
+    {
+        var text = new StringBuilder(list.Length);
+        for (var i = 0; i < list.Length; i++)
+        {
+            if (list[i] == '\\' && i + 1 < list.Length)
+                i++;
+            text.Append(list[i]);
+        }
+
+        return text.ToString();
+    }
+
+    private static List<string> SplitListItems(string list)
+    {
+        var items = new List<string>();
+        var current = new StringBuilder();
+        var content = list.Substring(1, list.Length - 2);
+        for (var i = 0; i < content.Length; i++)
+        {
+            if (content[i] == '\\' && i + 1 < content.Length)
+            {
+                current.Append(content[++i]);
+            }
+            else if (content[i] == ',')
+            {
+                items.Add(current.ToString().Trim());
+                current.Clear();
+            }
+            else
+            {
+                current.Append(content[i]);
+            }
+        }
+        items.Add(current.ToString().Trim());
+
+        return items;
+    }
 
     private static readonly Parser<RightSideValue> RightSideValueChoiceParser =
         Parse.String("null").Text().Select(v => new RightSideValue(v, false))
@@ -675,7 +719,7 @@ public static class FilterParser
                 {
                     targetType = typeof(string);
                 }
-                var values = right.Trim('[', ']').Split(',').Select(x => x.Trim()).ToList();
+                var values = SplitListItems(right);
                 var elementType = targetType.IsArray ? targetType.GetElementType()! : targetType;
 
                 var expressions = values.Select(x =>
@@ -761,7 +805,7 @@ public static class FilterParser
             
             if (right.StartsWith("[") && right.EndsWith("]"))
             {
-                var values = right.Trim('[', ']').Split(',').Select(x => x.Trim()).ToList();
+                var values = SplitListItems(right);
                 var elementType = targetType.IsArray ? targetType.GetElementType() : targetType;
             
                 var expressions = values.Select<string, Expression>(x =>
@@ -1748,6 +1792,10 @@ public static class FilterParser
 
         // For custom operations, we need to convert the string value to the appropriate basic type
         // instead of trying to match it to the entity type
+        // A custom operation gets the list as text, so remove the escapes that EscapeListItem added
+        if (rightValue.StartsWith("[") && rightValue.EndsWith("]"))
+            rightValue = UnescapeListText(rightValue);
+
         object? convertedValue = ConvertStringToBasicType(rightValue);
         
         // Create the parameter expressions for the custom operation
