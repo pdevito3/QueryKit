@@ -68,6 +68,8 @@ public class FilterBehaviorInterfaceTests
         public string HasOperator { get; set; } = "^$";
         public string DoesNotHaveOperator { get; set; } = "!^$";
         public int? MaxPropertyDepth { get; set; }
+        public int MaxNestingDepth { get; set; } = QueryKitSettings.DefaultMaxNestingDepth;
+        public int MaxInputLength { get; set; } = QueryKitSettings.DefaultMaxInputLength;
         public CaseInsensitiveMode CaseInsensitiveComparison { get; set; } = CaseInsensitiveMode.Lower;
         public bool ParameterizeFilterValues { get; set; }
         public IgnoredClauseBehavior IgnoredClauseBehavior { get; set; }

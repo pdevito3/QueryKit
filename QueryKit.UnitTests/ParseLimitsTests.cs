@@ -113,30 +113,9 @@ public class ParseLimitsTests
     }
 
     [Fact]
-    public void configuration_that_implements_only_the_interface_uses_the_default_limits()
+    public void configuration_that_implements_the_interface_uses_its_own_limits()
     {
-        var config = new FilterBehaviorInterfaceTests.InterfaceOnlyConfiguration();
-
-        var filterExpression = FilterParser.ParseFilter<TestingPerson>("""Title == "salt" """, config);
-        filterExpression.Should().NotBeNull();
-
-        var tooDeep = new string('(', QueryKitSettings.DefaultMaxNestingDepth + 1)
-            + """Title == "salt" """
-            + new string(')', QueryKitSettings.DefaultMaxNestingDepth + 1);
-        var actDeep = () => FilterParser.ParseFilter<TestingPerson>(tooDeep, config);
-        actDeep.Should().Throw<QueryKitNestingDepthExceededException>()
-            .WithMessage($"*maximum allowed depth of {QueryKitSettings.DefaultMaxNestingDepth}*");
-
-        var tooLong = $"""Title == "{new string('a', QueryKitSettings.DefaultMaxInputLength)}" """;
-        var actLong = () => FilterParser.ParseFilter<TestingPerson>(tooLong, config);
-        actLong.Should().Throw<QueryKitInputLengthExceededException>()
-            .WithMessage($"*maximum allowed length of {QueryKitSettings.DefaultMaxInputLength}*");
-    }
-
-    [Fact]
-    public void configuration_that_implements_the_parse_limits_uses_its_own_limits()
-    {
-        var config = new InterfaceOnlyConfigurationWithLimits { MaxNestingDepth = 2, MaxInputLength = 100 };
+        var config = new FilterBehaviorInterfaceTests.InterfaceOnlyConfiguration { MaxNestingDepth = 2, MaxInputLength = 100 };
         var input = new string('(', 3) + """Title == "salt" """ + new string(')', 3);
 
         var act = () => FilterParser.ParseFilter<TestingPerson>(input, config);
@@ -249,6 +228,17 @@ public class ParseLimitsTests
             .Which.Message.Should().Contain("depth of 11");
     }
 
+    [Fact]
+    public void configuration_that_implements_the_interface_uses_its_own_input_length()
+    {
+        var config = new FilterBehaviorInterfaceTests.InterfaceOnlyConfiguration { MaxNestingDepth = 32, MaxInputLength = 10 };
+        var input = """Title == "salt and pepper" """;
+
+        var act = () => FilterParser.ParseFilter<TestingPerson>(input, config);
+        act.Should().Throw<QueryKitInputLengthExceededException>()
+            .WithMessage($"*length of {input.Length}*maximum allowed length of 10*");
+    }
+
     // A 256 KB stack overflowed on main at 212 clauses. A stack overflow ends the test process.
     [Theory]
     [InlineData("&&")]
@@ -338,10 +328,4 @@ public class ParseLimitsTests
 
     private static QueryKitConfiguration DepthLimit(int maxNestingDepth)
         => new(settings => settings.MaxNestingDepth = maxNestingDepth);
-
-    private sealed class InterfaceOnlyConfigurationWithLimits : FilterBehaviorInterfaceTests.InterfaceOnlyConfiguration, IQueryKitParseLimits
-    {
-        public int MaxNestingDepth { get; set; }
-        public int MaxInputLength { get; set; }
-    }
 }
