@@ -302,9 +302,12 @@ public class FilterParsingRegressionTests : TestBase
 
     [Theory]
     [InlineData("""Tags ^$ "sweet" """, new[] { "pancakes" })]
+    [InlineData("""Tags !^$ "sweet" """, new[] { "stew", "bread", "water" })]
     [InlineData("""Tags ^$* "WINNER" """, new[] { "bread" })]
+    [InlineData("""Tags !^$* "WINNER" """, new[] { "pancakes", "stew", "water" })]
     [InlineData("""Tags %^$ "dinner" """, new[] { "stew", "water" })]
-    public async Task has_returns_matching_rows(string input, string[] expectedTitles)
+    [InlineData("""Tags %!^$ "dinner" """, new[] { "pancakes", "bread" })]
+    public async Task has_and_does_not_have_return_matching_rows(string input, string[] expectedTitles)
     {
         // Arrange
         var testingServiceScope = new TestingServiceScope();
