@@ -91,8 +91,7 @@ internal static class PropertyResolver
         return PropertyReference.NotMember(PropertyReferenceKind.Unknown, reference, null, unknownSegment!);
     }
 
-    // Matches each segment to a member, ignoring case, in the order of Expression.PropertyOrField like v1.14.2:
-    // a public property, a public field, a non-public property, and then a non-public field. An indexer does not match.
+    // Matches each segment to a public member, ignoring case: a public property, and then a public field. An indexer does not match.
     // A segment after a collection resolves on the element type, with the same rules.
     private static string? ResolveMemberPath(Type rootType, string path, out string? unknownSegment)
     {
@@ -106,15 +105,13 @@ internal static class PropertyResolver
                 currentType = currentType.GetGenericArguments()[0];
             }
 
-            var member = (MemberInfo?)currentType.GetProperty(segment, PublicMemberFlags)
-                         ?? (MemberInfo?)currentType.GetField(segment, PublicMemberFlags)
-                         ?? (MemberInfo?)currentType.GetProperty(segment, NonPublicMemberFlags)
-                         ?? currentType.GetField(segment, NonPublicMemberFlags);
+            var member = (MemberInfo?)currentType.GetProperty(segment, MemberFlags)
+                         ?? currentType.GetField(segment, MemberFlags);
 
             if (member == null || member is PropertyInfo indexer && indexer.GetIndexParameters().Length > 0)
             {
-                // v1.14.2 named an unknown member by the name of the public property with that name, if there was one.
-                unknownSegment = currentType.GetProperty(segment, PublicMemberFlags)?.Name ?? segment;
+                // An indexer is named by its property name, like v1.14.2.
+                unknownSegment = member?.Name ?? segment;
                 return null;
             }
 
@@ -126,8 +123,7 @@ internal static class PropertyResolver
         return string.Join(".", memberNames);
     }
 
-    private const BindingFlags PublicMemberFlags = BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance;
-    private const BindingFlags NonPublicMemberFlags = BindingFlags.IgnoreCase | BindingFlags.NonPublic | BindingFlags.Instance;
+    private const BindingFlags MemberFlags = BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance;
 
     private static bool IsCollection(Type type)
         => type != typeof(string) && type.IsGenericType &&
