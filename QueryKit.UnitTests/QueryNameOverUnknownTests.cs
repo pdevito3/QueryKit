@@ -43,11 +43,11 @@ public class QueryNameOverUnknownTests
     }
 
     [Fact]
-    public void failure_before_the_query_name_throws_its_own_format_exception()
+    public void failure_before_the_query_name_throws_its_own_parsing_exception()
     {
         var act = () => FilterParser.ParseFilter<TestingPerson>("""Age > "x" && is adult == true""", Config);
 
-        act.Should().ThrowExactly<FormatException>();
+        act.Should().ThrowExactly<ParsingException>().WithInnerExceptionExactly<FormatException>();
     }
 
     [Fact]

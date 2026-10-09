@@ -34,11 +34,20 @@ public class DotNumberCultureTests
     [InlineData("de-DE", "Rating ^^ [\"4.0\"]")]
     [InlineData("de-DE", "Rating > @4.4")]
     [InlineData("de-DE", "HaveMadeItMyself == 4.4")]
-    public void number_that_v1_14_2_also_converted_throws_format_exception(string cultureName, string input)
+    public void number_that_v1_14_2_also_converted_throws_parsing_exception(string cultureName, string input)
     {
         var act = () => WithCulture(cultureName, () => FilterParser.ParseFilter<Recipe>(input));
 
-        act.Should().ThrowExactly<FormatException>();
+        act.Should().ThrowExactly<ParsingException>().WithInnerExceptionExactly<FormatException>();
+    }
+
+    [Fact]
+    public void dot_number_on_an_integer_property_names_the_value_in_a_comma_culture()
+    {
+        var act = () => WithCulture("de-DE", () => FilterParser.ParseFilter<Recipe>("Rating > 4.4"));
+
+        act.Should().ThrowExactly<ParsingException>()
+            .WithMessage("The value '4.4' is not a valid Int32 for the filter property 'Rating'.");
     }
 
     [Fact]

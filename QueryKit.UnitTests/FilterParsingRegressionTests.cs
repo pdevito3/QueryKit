@@ -3,6 +3,7 @@ namespace QueryKit.UnitTests;
 using System.Globalization;
 using System.Linq.Expressions;
 using System.Reflection;
+using Configuration;
 using Exceptions;
 using FluentAssertions;
 using Operators;
@@ -360,6 +361,62 @@ public class FilterParsingRegressionTests
         var act = () => FilterParser.ParseFilter<TestingPerson>(input);
 
         act.Should().Throw<QueryKitParsingException>();
+    }
+
+    [Theory]
+    [InlineData("""Age == "abc" """)]
+    [InlineData("""Age == abc""")]
+    [InlineData("""Rating > "abc" """)]
+    [InlineData("""Rating > abc""")]
+    [InlineData("""Age == 99999999999""")]
+    [InlineData("""Id == "abc" """)]
+    [InlineData("""SpecificDateTime == "abc" """)]
+    [InlineData("""Favorite == "abc" """)]
+    [InlineData("""Age ^^ ["abc"]""")]
+    [InlineData("""BirthMonth == "Bogus" """)]
+    [InlineData("""BirthMonth ^^ ["Bogus"]""")]
+    [InlineData("""BirthMonth ^^ [Bogus]""")]
+    public void invalid_value_throws_parsing_exception(string input)
+    {
+        var act = () => FilterParser.ParseFilter<TestingPerson>(input);
+
+        act.Should().Throw<ParsingException>();
+    }
+
+    [Theory]
+    [InlineData("""BirthMonth ^^ ["Bogus"]""", "Bogus", "BirthMonthEnum", "BirthMonth")]
+    [InlineData("""BirthMonth ^^ [Bogus]""", "Bogus", "BirthMonthEnum", "BirthMonth")]
+    [InlineData("""BirthMonth ^^ [January, Bogus]""", "Bogus", "BirthMonthEnum", "BirthMonth")]
+    [InlineData("""BirthMonth == "Bogus" """, "Bogus", "BirthMonthEnum", "BirthMonth")]
+    [InlineData("""BirthMonth == Bogus""", "Bogus", "BirthMonthEnum", "BirthMonth")]
+    [InlineData("""Age == "abc" """, "abc", "Int32", "Age")]
+    [InlineData("""Age == 99999999999""", "99999999999", "Int32", "Age")]
+    [InlineData("""Age ^^ [1, abc]""", "abc", "Int32", "Age")]
+    [InlineData("""Rating > abc""", "abc", "Decimal", "Rating")]
+    [InlineData("""Id == "abc" """, "abc", "Guid", "Id")]
+    [InlineData("""SpecificDateTime == "abc" """, "abc", "DateTime", "SpecificDateTime")]
+    [InlineData("""Favorite == "abc" """, "abc", "Boolean", "Favorite")]
+    public void invalid_value_message_names_the_value_the_type_and_the_property(string input, string value, string type, string property)
+    {
+        var act = () => FilterParser.ParseFilter<TestingPerson>(input);
+
+        act.Should().ThrowExactly<ParsingException>()
+            .WithMessage($"The value '{value}' is not a valid {type} for the filter property '{property}'.");
+    }
+
+    [Fact]
+    public void invalid_value_message_names_the_query_name()
+    {
+        var config = new QueryKitConfiguration(settings =>
+        {
+            settings.Property<TestingPerson>(x => x.BirthMonth!).HasQueryName("month");
+        });
+
+        var act = () => FilterParser.ParseFilter<TestingPerson>("""month ^^ ["Bogus"]""", config);
+
+        act.Should().ThrowExactly<ParsingException>()
+            .WithMessage("The value 'Bogus' is not a valid BirthMonthEnum for the filter property 'month'.")
+            .WithInnerExceptionExactly<ArgumentException>();
     }
 
     private static TResult WithCulture<TResult>(string cultureName, Func<TResult> action)
