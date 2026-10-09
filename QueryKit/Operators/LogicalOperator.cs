@@ -3,6 +3,7 @@ namespace QueryKit.Operators;
 using System.Linq.Expressions;
 using Ardalis.SmartEnum;
 using Configuration;
+using Exceptions;
 
 public abstract class LogicalOperator : SmartEnum<LogicalOperator>
 {
@@ -15,7 +16,7 @@ public abstract class LogicalOperator : SmartEnum<LogicalOperator>
         var logicalOperator = List.FirstOrDefault(x => x.Operator() == op);
         if (logicalOperator == null)
         {
-            throw new Exception($"Operator {op} is not supported");
+            throw new QueryKitParsingException($"Operator {op} is not supported");
         }
         return logicalOperator;
     }
