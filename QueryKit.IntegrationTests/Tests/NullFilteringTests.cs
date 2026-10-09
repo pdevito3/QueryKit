@@ -69,6 +69,46 @@ public class NullFilteringTests : TestBase
         people[0].Title.Should().NotBeNull();
     }
 
+    [Theory]
+    [InlineData("""Title == "null" """, "TextNull")]
+    [InlineData("""Title != "null" """, "RealNull,Other")]
+    [InlineData("""Title @= "null" """, "TextNull")]
+    [InlineData("""Title ^^ ["null"] """, "TextNull")]
+    [InlineData("""Title == null""", "RealNull")]
+    [InlineData("""Title != null""", "TextNull,Other")]
+    public async Task quoted_null_matches_the_text_null_and_unquoted_null_matches_null(string filter, string expectedFirstNames)
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var uniqueLastName = $"QuotedNullTest_{Guid.NewGuid()}";
+        var personWithNullTitle = new FakeTestingPersonBuilder()
+            .WithTitle(null)
+            .WithFirstName("RealNull")
+            .WithLastName(uniqueLastName)
+            .Build();
+        var personWithTextNullTitle = new FakeTestingPersonBuilder()
+            .WithTitle("null")
+            .WithFirstName("TextNull")
+            .WithLastName(uniqueLastName)
+            .Build();
+        var personWithOtherTitle = new FakeTestingPersonBuilder()
+            .WithTitle("Mr.")
+            .WithFirstName("Other")
+            .WithLastName(uniqueLastName)
+            .Build();
+        await testingServiceScope.InsertAsync(personWithNullTitle, personWithTextNullTitle, personWithOtherTitle);
+
+        var input = $"""({filter}) && LastName == "{uniqueLastName}" """;
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert
+        people.Select(x => x.FirstName).Should().BeEquivalentTo(expectedFirstNames.Split(','));
+    }
+
     [Fact]
     public async Task can_filter_nullable_int_equals_null()
     {

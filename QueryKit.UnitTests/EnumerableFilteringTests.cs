@@ -259,6 +259,29 @@ public class EnumerableFilteringTests()
         result.Select(x => x.Title).Should().Equal("high", "middle");
     }
 
+    [Theory]
+    [InlineData("""Email == "null" """, "Bob")]
+    [InlineData("""Email != "null" """, "Alice,Carol")]
+    [InlineData("""Email ^^ ["null"] """, "Bob")]
+    [InlineData("""Email == null""", "Alice")]
+    [InlineData("""Email != null""", "Bob,Carol")]
+    public void quoted_null_matches_the_text_null_and_unquoted_null_matches_null(string filter, string expectedNames)
+    {
+        // Arrange
+        var items = new List<PersonWithNullableEmail>
+        {
+            new() { Name = "Alice", Email = null },
+            new() { Name = "Bob", Email = "null" },
+            new() { Name = "Carol", Email = "carol@yahoo.com" }
+        };
+
+        // Act
+        var result = items.ApplyQueryKitFilter(filter).ToList();
+
+        // Assert
+        string.Join(",", result.Select(x => x.Name)).Should().Be(expectedNames);
+    }
+
     private class PersonWithNullableEmail
     {
         public string Name { get; set; } = null!;
