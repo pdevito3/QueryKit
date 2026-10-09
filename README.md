@@ -387,6 +387,7 @@ var input = "((Revenue - Expenses) / Revenue) > 0.1";
 - **Parentheses**: Use parentheses to control calculation order and group expressions
 - **Entity Framework Translation**: All arithmetic expressions are translated to efficient SQL queries
 - **Property-to-Property**: Can mix property references with literal values in the same expression
+- **Unknown Properties**: An unknown property in an arithmetic expression throws `UnknownFilterPropertyException`, like any other filter property. When `AllowUnknownProperties` is `true`, QueryKit ignores the clause. Arithmetic supports only entity members, so a derived property or a custom operation name is unknown here
 
 #### Examples
 
