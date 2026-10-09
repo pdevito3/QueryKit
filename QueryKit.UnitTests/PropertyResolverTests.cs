@@ -1005,35 +1005,22 @@ public class PropertyResolverTests
     }
 
     [Theory]
-    [InlineData("InternalScore > 30", "x => (x.InternalScore > 30)")]
-    [InlineData("internalscore > 30", "x => (x.InternalScore > 30)")]
-    [InlineData("""ProtectedNote == "a" """, """x => (x.ProtectedNote == "a")""")]
-    [InlineData("secretRank == 7", "x => (x.secretRank == 7)")]
-    [InlineData("""Owner.InternalAlias == "Ann" """, """x => (x.Owner.InternalAlias == "Ann")""")]
-    [InlineData("(InternalScore, Rating) > 3", "x => ((x.InternalScore > 3) OrElse (x.Rating > 3))")]
-    public void non_public_member_filters_like_a_public_member(string input, string expected)
+    [InlineData("InternalScore > 30", "InternalScore")]
+    [InlineData("internalscore > 30", "internalscore")]
+    [InlineData("""ProtectedNote == "a" """, "ProtectedNote")]
+    [InlineData("secretRank == 7", "secretRank")]
+    [InlineData("""Owner.InternalAlias == "Ann" """, "InternalAlias")]
+    [InlineData("(InternalScore, Rating) > 3", "InternalScore")]
+    public void non_public_member_is_an_unknown_property(string input, string unknownProperty)
     {
-        var filterExpression = FilterParser.ParseFilter<MemberLookupModel>(input);
+        var act = () => FilterParser.ParseFilter<MemberLookupModel>(input);
 
-        filterExpression.ToDisplayString().Should().Be(expected);
+        act.Should().ThrowExactly<UnknownFilterPropertyException>()
+            .WithMessage($"The filter property '{unknownProperty}' was not recognized.");
     }
 
     [Fact]
-    public void non_public_member_filters_the_rows()
-    {
-        var models = new List<MemberLookupModel>
-        {
-            new(internalScore: 50, rank: 7),
-            new(internalScore: 20, rank: 3),
-        };
-
-        var result = models.ApplyQueryKitFilter("InternalScore > 30 && secretRank == 7").ToList();
-
-        result.Should().ContainSingle().Which.Should().BeSameAs(models[0]);
-    }
-
-    [Fact]
-    public void non_public_member_filters_when_unknown_properties_are_allowed()
+    public void non_public_member_clause_is_removed_when_unknown_properties_are_allowed()
     {
         var input = """secretRank > 100 || Rating == 1""";
         var config = new QueryKitConfiguration(config =>
@@ -1043,11 +1030,11 @@ public class PropertyResolverTests
 
         var filterExpression = FilterParser.ParseFilter<MemberLookupModel>(input, config);
 
-        filterExpression.ToDisplayString().Should().Be("x => ((x.secretRank > 100) OrElse (x.Rating == 1))");
+        filterExpression.ToDisplayString().Should().Be("x => (x.Rating == 1)");
     }
 
     [Fact]
-    public void query_name_on_a_non_public_member_filters_by_that_member()
+    public void query_name_on_a_non_public_member_throws_unknown_property()
     {
         var input = """score > 30""";
         var config = new QueryKitConfiguration(config =>
@@ -1055,9 +1042,10 @@ public class PropertyResolverTests
             config.Property<MemberLookupModel>(x => x.InternalScore).HasQueryName("score");
         });
 
-        var filterExpression = FilterParser.ParseFilter<MemberLookupModel>(input, config);
+        var act = () => FilterParser.ParseFilter<MemberLookupModel>(input, config);
 
-        filterExpression.ToDisplayString().Should().Be("x => (x.InternalScore > 30)");
+        act.Should().ThrowExactly<UnknownFilterPropertyException>()
+            .WithMessage("The filter property 'InternalScore' was not recognized.");
     }
 
     [Fact]
