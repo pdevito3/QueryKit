@@ -787,6 +787,8 @@ var config = new QueryKitConfiguration(config =>
 // "Publisher.Address.City" throws (depth 2, exceeds global limit of 1)
 ```
 
+The override applies only to the property and the paths below it. For example, `HasMaxDepth` on `Address` does not apply to `AddressBackup.State`, so `AddressBackup.State` uses the global limit.
+
 **Depth Calculation:**
 - `Title` = depth 0 (root property)
 - `Author.Name` = depth 1 (one level of nesting)
