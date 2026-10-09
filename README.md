@@ -251,6 +251,7 @@ Property list grouping is particularly useful for:
   * `DateOnly`: `var filterInput = """Birthday == "2022-07-01" """;`
   * `DateTimeOffset`: 
     * `var filterInput = """Birthday == "2022-07-01T00:00:03Z" """;` 
+    * QueryKit converts a `DateTimeOffset` value to UTC. `"2022-07-01T00:00:03+01:00"` becomes the same instant with offset 0: `2022-06-30T23:00:03Z`.
   * `DateTime`: `var filterInput = """Birthday == "2022-07-01" """;`
     * `var filterInput = """Birthday == "2022-07-01T00:00:03" """;` 
     * `var filterInput = """Birthday == "2022-07-01T00:00:03+01:00" """;` 
