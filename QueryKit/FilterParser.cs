@@ -32,7 +32,7 @@ public static class FilterParser
         var queryNameOverUnknownBefore = _queryNameOverUnknown;
         var queryNameFallbackOffBefore = _queryNameFallbackOff;
         var dateTimeKindBefore = _dateTimeKindForValuesWithoutOffset;
-        _maxNestingDepth = (config as IQueryKitParseLimits)?.MaxNestingDepth ?? QueryKitSettings.DefaultMaxNestingDepth;
+        _maxNestingDepth = config?.MaxNestingDepth ?? QueryKitSettings.DefaultMaxNestingDepth;
         _nestingDepth = 0;
         _queryNameOverUnknown = false;
         _queryNameFallbackOff = false;
@@ -103,7 +103,7 @@ public static class FilterParser
     // QueryKitException instead of exhausting CPU and memory during parsing.
     private static void EnsureWithinInputLength(string input, IQueryKitConfiguration? config)
     {
-        var maxLength = (config as IQueryKitParseLimits)?.MaxInputLength ?? QueryKitSettings.DefaultMaxInputLength;
+        var maxLength = config?.MaxInputLength ?? QueryKitSettings.DefaultMaxInputLength;
         if (input.Length > maxLength)
         {
             throw new QueryKitInputLengthExceededException(input.Length, maxLength);
