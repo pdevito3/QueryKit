@@ -297,14 +297,12 @@ public static class FilterParser
     private static readonly Parser<string> DateTimeTimeParser = Parse.Regex(@"T\d{2}:\d{2}:\d{2}").Text().Optional().Select(x => x.GetOrElse(""));
     private static readonly Parser<string> DateTimeMicrosParser = Parse.Regex(@"\.\d{1,7}").Text().Optional().Select(x => x.GetOrElse(""));
     private static readonly Parser<string> DateTimeZoneParser = Parse.Regex(@"Z|[+-]\d{2}(:\d{2})?").Text().Optional().Select(x => x.GetOrElse(""));
-    // v1.14.2 read the zone before the fraction, so 2022-07-01T00:00:02Z.5 is a valid value. A zone after the fraction is also valid.
     private static readonly Parser<string> DateTimeFormatParser =
         from dateFormat in Parse.Regex(@"\d{4}-\d{2}-\d{2}").Text()
         from timeFormat in DateTimeTimeParser
-        from zoneBeforeMicros in DateTimeZoneParser
         from micros in DateTimeMicrosParser
-        from zoneAfterMicros in zoneBeforeMicros == "" ? DateTimeZoneParser : Parse.Return("")
-        select dateFormat + timeFormat + micros + zoneBeforeMicros + zoneAfterMicros;
+        from timeZone in DateTimeZoneParser
+        select dateFormat + timeFormat + micros + timeZone;
 
     // A number always uses the '.' decimal point, so a filter has the same meaning in every culture.
     private static readonly Parser<string> NumberParser =
