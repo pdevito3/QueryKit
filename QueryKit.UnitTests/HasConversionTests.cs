@@ -400,7 +400,7 @@ public class HasConversionTests
         };
         var config = new QueryKitConfiguration(config =>
         {
-            config.Property<NullableNumberRow>(x => x.Number).HasQueryName("count").HasConversion<string>();
+            config.Property<NullableNumberRow>(x => x.Number!).HasQueryName("count").HasConversion<string>();
         });
 
         // Act

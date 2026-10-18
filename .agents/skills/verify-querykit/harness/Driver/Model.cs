@@ -37,6 +37,7 @@ public class Recipe
     public string? Serving { get; set; }
     public TimeOnly? ServeTime { get; set; }
     public List<string> Tags { get; set; } = [];
+    public string[] Labels { get; set; } = [];
     public Guid AuthorId { get; set; }
     public Author Author { get; set; } = null!;
     public List<Ingredient> Ingredients { get; set; } = [];
@@ -104,6 +105,7 @@ public static class Seed
             Serving = serving,
             ServeTime = serveTime,
             Tags = tags,
+            Labels = tags.ToArray(),
             AuthorId = author.Id,
             Author = author,
             Ingredients = ingredients

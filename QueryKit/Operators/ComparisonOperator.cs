@@ -1,6 +1,5 @@
 namespace QueryKit.Operators;
 
-using System.Collections;
 using System.Linq.Expressions;
 using System.Reflection;
 using Ardalis.SmartEnum;
@@ -205,7 +204,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         public override bool IsCountOperator() => false; 
         public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType, CaseInsensitiveMode caseMode = CaseInsensitiveMode.Lower)
         {
-            if (left.Type.IsGenericType && left.Type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
+            if (ComparesElements(left, right))
             {
                 return GetCollectionExpression(left, right, Expression.Equal, UsesAll);
             }
@@ -244,9 +243,10 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         public override bool IsCountOperator() => false; 
         public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType, CaseInsensitiveMode caseMode = CaseInsensitiveMode.Lower)
         {
-            if (left.Type.IsGenericType && left.Type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
+            if (ComparesElements(left, right))
             {
-                return GetCollectionExpression(left, right, Expression.NotEqual, UsesAll);
+                // EF Core 10 with Npgsql can not translate Any(z => z != value) on a primitive collection. Any(z => !(z == value)) translates to the same SQL.
+                return GetCollectionExpression(left, right, (x, y) => Expression.Not(Expression.Equal(x, y)), UsesAll);
             }
     
             if (CaseInsensitive && left.Type == typeof(string) && right.Type == typeof(string))
@@ -283,7 +283,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         public override bool IsCountOperator() => false; 
         public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType, CaseInsensitiveMode caseMode = CaseInsensitiveMode.Lower)
         {
-            if (left.Type.IsGenericType && left.Type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
+            if (ComparesElements(left, right))
             {
                 return GetCollectionExpression(left, right, Expression.GreaterThan, UsesAll);
             }
@@ -304,7 +304,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         public override bool IsCountOperator() => false; 
         public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType, CaseInsensitiveMode caseMode = CaseInsensitiveMode.Lower)
         {
-            if (left.Type.IsGenericType && left.Type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
+            if (ComparesElements(left, right))
             {
                 return GetCollectionExpression(left, right, Expression.LessThan, UsesAll);
             }
@@ -324,7 +324,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         }
         public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType, CaseInsensitiveMode caseMode = CaseInsensitiveMode.Lower)
         {
-            if (left.Type.IsGenericType && left.Type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
+            if (ComparesElements(left, right))
             {
                 return GetCollectionExpression(left, right, Expression.GreaterThanOrEqual, UsesAll);
             }
@@ -344,7 +344,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         public override bool IsCountOperator() => false; 
         public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType, CaseInsensitiveMode caseMode = CaseInsensitiveMode.Lower)
         {
-            if (left.Type.IsGenericType && left.Type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
+            if (ComparesElements(left, right))
             {
                 return GetCollectionExpression(left, right, Expression.LessThanOrEqual, UsesAll);
             }
@@ -367,7 +367,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         {
             EnsureStringValueIsNotNull(right, Operator());
 
-            if (left.Type.IsGenericType && left.Type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
+            if (ComparesElements(left, right))
             {
                 return GetCollectionExpression(left, right, "Contains", false, UsesAll);
             }
@@ -404,7 +404,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         {
             EnsureStringValueIsNotNull(right, Operator());
 
-            if (left.Type.IsGenericType && left.Type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
+            if (ComparesElements(left, right))
             {
                 return GetCollectionExpression(left, right, "StartsWith", false, UsesAll);
             }
@@ -441,7 +441,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         {
             EnsureStringValueIsNotNull(right, Operator());
 
-            if (left.Type.IsGenericType && left.Type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
+            if (ComparesElements(left, right))
             {
                 return GetCollectionExpression(left, right, "EndsWith", false, UsesAll);
             }
@@ -478,7 +478,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         {
             EnsureStringValueIsNotNull(right, Operator());
 
-            if (left.Type.IsGenericType && left.Type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
+            if (ComparesElements(left, right))
             {
                 return GetCollectionExpression(left, right, "Contains", true, UsesAll);
             }
@@ -515,7 +515,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         {
             EnsureStringValueIsNotNull(right, Operator());
 
-            if (left.Type.IsGenericType && left.Type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
+            if (ComparesElements(left, right))
             {
                 return GetCollectionExpression(left, right, "StartsWith", true, UsesAll);
             }
@@ -552,7 +552,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         {
             EnsureStringValueIsNotNull(right, Operator());
 
-            if (left.Type.IsGenericType && left.Type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
+            if (ComparesElements(left, right))
             {
                 return GetCollectionExpression(left, right, "EndsWith", true, UsesAll);
             }
@@ -787,11 +787,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         public override bool IsCountOperator() => false; 
         public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType, CaseInsensitiveMode caseMode = CaseInsensitiveMode.Lower)
         {
-            if (left.Type.IsGenericType && 
-                (left.Type.GetGenericTypeDefinition() == typeof(List<>) || 
-                 left.Type.GetGenericTypeDefinition() == typeof(ICollection<>) ||
-                 left.Type.GetGenericTypeDefinition() == typeof(IList<>) ||
-                 typeof(IEnumerable<>).IsAssignableFrom(left.Type.GetGenericTypeDefinition())))
+            if (ComparesElements(left, right))
             {
                 return GetCollectionExpression(left, right, Expression.Equal, UsesAll);
             }
@@ -810,11 +806,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         public override bool IsCountOperator() => false; 
         public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType, CaseInsensitiveMode caseMode = CaseInsensitiveMode.Lower)
         {
-            if (left.Type.IsGenericType && 
-                (left.Type.GetGenericTypeDefinition() == typeof(List<>) || 
-                 left.Type.GetGenericTypeDefinition() == typeof(ICollection<>) ||
-                 left.Type.GetGenericTypeDefinition() == typeof(IList<>) ||
-                 typeof(IEnumerable<>).IsAssignableFrom(left.Type.GetGenericTypeDefinition())))
+            if (ComparesElements(left, right))
             {
                 return Expression.Not(GetCollectionExpression(left, right, Expression.Equal, UsesAll));
             }
@@ -1012,9 +1004,13 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         return matches;
     }
     
+    // A comparison on a collection compares each element with the right side. A right side of the collection type itself (a null) compares the whole collection.
+    private static bool ComparesElements(Expression left, Expression right)
+        => left.Type.IsCollection() && right.Type != left.Type;
+
     private Expression GetCollectionExpression(Expression left, Expression right, Func<Expression, Expression, Expression> comparisonFunction, bool usesAll)
     {
-        var xParameter = Expression.Parameter(left.Type.GetGenericArguments()[0], "z");
+        var xParameter = Expression.Parameter(left.Type.GetCollectionElementType()!, "z");
         Expression body;
 
         if (CaseInsensitive && xParameter.Type == typeof(string) && right.Type == typeof(string))
@@ -1033,14 +1029,14 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         var anyMethod = typeof(Enumerable)
             .GetMethods()
             .Single(m => m.Name == (usesAll ? "All" : "Any") && m.GetParameters().Length == 2)
-            .MakeGenericMethod(left.Type.GetGenericArguments()[0]);
+            .MakeGenericMethod(left.Type.GetCollectionElementType()!);
 
         return Expression.Call(anyMethod, left, anyLambda);
     }
 
     private Expression GetCollectionExpression(Expression left, Expression right, string methodName, bool negate, bool usesAll)
     {
-        var xParameter = Expression.Parameter(left.Type.GetGenericArguments()[0], "z");
+        var xParameter = Expression.Parameter(left.Type.GetCollectionElementType()!, "z");
         Expression body;
 
         if (CaseInsensitive && xParameter.Type == typeof(string) && right.Type == typeof(string))
@@ -1059,7 +1055,7 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         var anyMethod = typeof(Enumerable)
             .GetMethods()
             .Single(m => m.Name == (usesAll ? "All" : "Any") && m.GetParameters().Length == 2)
-            .MakeGenericMethod(left.Type.GetGenericArguments()[0]);
+            .MakeGenericMethod(left.Type.GetCollectionElementType()!);
 
         return negate
             ? Expression.Not(Expression.Call(anyMethod, left, anyLambda))
@@ -1068,13 +1064,12 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
 
     private Expression GetCountExpression(Expression left, Expression right, string methodName)
     {
-        var leftAsEnumerableType = left.Type.GetInterface(nameof(IEnumerable));
-        if (leftAsEnumerableType == null)
+        var leftGenericType = left.Type.GetCollectionElementType();
+        if (leftGenericType == null)
         {
             throw new QueryKitParsingException("Left expression should be of type IEnumerable<T>");
         }
 
-        var leftGenericType = left.Type.GetGenericArguments()[0];
         var rightType = right.Type;
 
         if (rightType != typeof(int))

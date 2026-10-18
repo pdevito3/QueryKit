@@ -101,9 +101,9 @@ internal static class PropertyResolver
 
         foreach (var segment in path.Split('.'))
         {
-            while (IsCollection(currentType))
+            while (currentType.IsCollection())
             {
-                currentType = currentType.GetGenericArguments()[0];
+                currentType = currentType.GetCollectionElementType()!;
             }
 
             var member = (MemberInfo?)currentType.GetProperty(segment, PublicMemberFlags)
@@ -128,9 +128,4 @@ internal static class PropertyResolver
 
     private const BindingFlags PublicMemberFlags = BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance;
     private const BindingFlags NonPublicMemberFlags = BindingFlags.IgnoreCase | BindingFlags.NonPublic | BindingFlags.Instance;
-
-    private static bool IsCollection(Type type)
-        => type != typeof(string) && type.IsGenericType &&
-           (type.GetGenericTypeDefinition() == typeof(IEnumerable<>) ||
-            type.GetInterfaces().Any(x => x.IsGenericType && x.GetGenericTypeDefinition() == typeof(IEnumerable<>)));
 }
