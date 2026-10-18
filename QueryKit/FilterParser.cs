@@ -599,6 +599,13 @@ public static class FilterParser
             }
         }
 
+        // == null and != null on a collection property compare the property with null. On a nested path (a Select), they compare each element with null.
+        if (right == "null" && !rightIsQuotedLiteral && leftExpr is MemberExpression && targetType.IsCollection()
+            && (op.Name == ComparisonOperator.EqualsOperator().Name || op.Name == ComparisonOperator.NotEqualsOperator().Name))
+        {
+            return Expression.Constant(null, targetType);
+        }
+
         // Check if this property uses HasConversion. QueryKit reads a type that it knows (a number, an enum, a Guid) by its own type,
         // like v1.14.2 did for a property with a query name, so the conversion applies only to a type that it can not read.
         if (config?.PropertyMappings != null && !string.IsNullOrEmpty(propertyPath) && !CanCreateRightExprFromType(targetType))
@@ -638,12 +645,12 @@ public static class FilterParser
     private static bool CanCreateRightExprFromType(Type type)
     {
         var targetType = TransformTargetTypeIfNullable(type);
-        return IsEnumerable(type) || TypeConversionFunctions.ContainsKey(targetType) || targetType.IsEnum || targetType == typeof(object);
+        return type.IsCollection() || TypeConversionFunctions.ContainsKey(targetType) || targetType.IsEnum || targetType == typeof(object);
     }
 
     private static Expression CreateRightExprFromType(Type leftExprType, string right, bool rightIsQuotedLiteral, ComparisonOperator op)
     {
-        var isEnumerable = IsEnumerable(leftExprType);
+        var isEnumerable = leftExprType.IsCollection();
         var targetType = leftExprType;
         if (isEnumerable)
         {
@@ -651,7 +658,7 @@ public static class FilterParser
             {
                 return FilterValue.Create(intVal, typeof(int));
             }
-            targetType = targetType.GetGenericArguments()[0];
+            targetType = targetType.GetCollectionElementType()!;
             return CreateRightExprFromType(targetType, right, rightIsQuotedLiteral, op);
         }
         
@@ -848,17 +855,6 @@ public static class FilterParser
         }
 
         return targetType;
-    }
-
-    private static bool IsEnumerable(Type targetType)
-    {
-        if (targetType == typeof(string))
-        {
-            return false;
-        }
-        return targetType.IsGenericType && targetType.GetGenericTypeDefinition() == typeof(IEnumerable<>) ||
-               targetType.GetInterfaces()
-                   .Any(x => x.IsGenericType && x.GetGenericTypeDefinition() == typeof(IEnumerable<>));
     }
 
     // New arithmetic-aware comparison parser - only matches expressions in parentheses with arithmetic operators
@@ -1280,16 +1276,16 @@ public static class FilterParser
     {
         return memberPath.Split('.').Aggregate((Expression)parameter, (expr, memberName) =>
         {
-            if (expr is MemberExpression member && IsEnumerable(member.Type))
+            if (expr is MemberExpression member && member.Type.IsCollection())
             {
-                var genericArgType = member.Type.GetGenericArguments()[0];
+                var genericArgType = member.Type.GetCollectionElementType()!;
                 var innerParameter = Expression.Parameter(genericArgType, "y");
                 Expression lambdaBody = Expression.PropertyOrField(innerParameter, memberName);
                 var propertyType = lambdaBody.Type;
 
-                if (IsEnumerable(propertyType))
+                if (propertyType.IsCollection())
                 {
-                    propertyType = propertyType.GetGenericArguments()[0];
+                    propertyType = propertyType.GetCollectionElementType()!;
 
                     var selectManyMethod = typeof(Enumerable).GetMethods()
                         .First(m => m.Name == "SelectMany" && m.GetParameters().Length == 2)
@@ -1325,8 +1321,8 @@ public static class FilterParser
                 var lambdaBody = Expression.PropertyOrField(innerParameter, memberName);
 
                 var propertyType = lambdaBody.Type;
-                var linqMethod = IsEnumerable(propertyType) ? "SelectMany" : "Select";
-                var resultType = IsEnumerable(propertyType) ? propertyType.GetGenericArguments()[0] : propertyType;
+                var linqMethod = propertyType.IsCollection() ? "SelectMany" : "Select";
+                var resultType = propertyType.IsCollection() ? propertyType.GetCollectionElementType()! : propertyType;
 
                 var selectMethod = typeof(Enumerable).GetMethods()
                     .First(m => m.Name == linqMethod && m.GetParameters().Length == 2)
@@ -1416,12 +1412,12 @@ public static class FilterParser
     
     private static Type? GetInnerGenericType(Type type)
     {
-        if (!IsEnumerable(type))
+        if (!type.IsCollection())
         {
             return type;
         }
 
-        var innerGenericType = type.GetGenericArguments()[0];
+        var innerGenericType = type.GetCollectionElementType()!;
         return GetInnerGenericType(innerGenericType);
     }
     

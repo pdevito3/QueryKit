@@ -58,7 +58,7 @@ public class AliasCultureTests
     {
         var config = new QueryKitConfiguration(settings =>
         {
-            settings.Property<Recipe>(x => x.Rating).HasQueryName(queryName);
+            settings.Property<Recipe>(x => x.Rating!).HasQueryName(queryName);
         });
 
         var turkish = () => WithCulture("tr-TR", () => FilterParser.ParseFilter<Recipe>(input, config));

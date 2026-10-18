@@ -607,7 +607,7 @@ public class FilterParserTests
         var input = """Ingredients.Name != "flour" """;
         var filterExpression = FilterParser.ParseFilter<Recipe>(input);
         filterExpression.ToDisplayString().Should()
-            .Be(""""x => x.Ingredients.Select(y => y.Name).Any(z => (z != "flour"))"""");
+            .Be(""""x => x.Ingredients.Select(y => y.Name).Any(z => Not((z == "flour")))"""");
     }
 
     [Fact]
@@ -616,7 +616,7 @@ public class FilterParserTests
         var input = """Ingredients.Name !=* "flour" """;
         var filterExpression = FilterParser.ParseFilter<Recipe>(input);
         filterExpression.ToDisplayString().Should()
-            .Be(""""x => x.Ingredients.Select(y => y.Name).Any(z => (z.ToLower() != "flour".ToLower()))"""");
+            .Be(""""x => x.Ingredients.Select(y => y.Name).Any(z => Not((z.ToLower() == "flour".ToLower())))"""");
     }
 
     [Fact]

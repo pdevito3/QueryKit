@@ -12,7 +12,7 @@ In the commands below, `qk` means `.agents/skills/verify-querykit/qk`.
 
 ## Seed data
 
-The driver model is `Recipe`. Every recipe has one `Author` and zero or more `Ingredients`. The seed data is fixed in `harness/Driver/Model.cs`.
+The driver model is `Recipe`. Every recipe has one `Author` and zero or more `Ingredients`. `Labels` is a `string[]` (a Postgres `text[]` column) with the same values as `Tags`, which is a `List<string>`. The seed data is fixed in `harness/Driver/Model.cs`.
 
 | Title | Author.Name | Rating | Price | IsVegetarian | Visibility | CreatedAt (UTC) | DateOfOrigin | Sku | Serving | ServeTime | Directions | Tags | Ingredients (Name:Stock) |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
