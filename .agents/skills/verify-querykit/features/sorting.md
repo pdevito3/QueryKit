@@ -8,6 +8,7 @@ A developer passes a comma-separated sort string to `ApplyQueryKitSort`, or pass
 - `sort-sieve-prefix` sorts descending with a `-` prefix (`-Rating`).
 - `sort-multi` sorts on more than one key, including a nested property (`Author.Name`).
 - `sort-aggregate` applies a filter, a sort, and a configuration in one `ApplyQueryKit(QueryKitData)` call.
+- `sort-collection-rejected` rejects a sort on a collection property (`Tags`, `Labels`, `Ingredients`) with `SortParsingException`.
 
 ## How to get to it (user POV)
 
@@ -26,9 +27,11 @@ Preconditions:
 - **Nested key and Sieve prefix.** Run `qk run sorting-multi --sort 'Author.Name, -Rating'`. Both targets give `["Plain Water", "Beef Stew", "Pancakes", "Salt Bread"]`.
 - **Filter then sort.** Run `qk run sorting-filter-then-sort --filter 'Author.Name == "Julia Child"' --sort 'Title desc'`. Both targets give `["Salt Bread", "Pancakes"]`.
 - **Aggregate with a configuration.** Run `qk run sorting-aggregate --aggregate --config aliases --filter 'chef == "Julia Child"' --sort 'name desc'`. The `input.api` is `ApplyQueryKit(QueryKitData)`. Both targets give `["Salt Bread", "Pancakes"]`.
+- **Collection rejected.** Run `qk run sorting-collection --sort 'Title, Tags'`. Both targets give `error.type` `QueryKit.Exceptions.SortParsingException` with `isQueryKitException` true. The message says that `Tags` is a collection. Run it again with `Labels` (a `string[]`) and with `Ingredients` (a navigation collection). Each gives the same error.
 
 ## Gotchas
 
 - EF Core adds `r."Id"` and `a."Id"` after the QueryKit sort keys, because the driver uses split-query mode. Only the keys before them come from QueryKit.
 - A sort on a property with `PreventSort()` is ignored without an error. The rows come back in source order (see `configuration.md`).
 - An unknown sort property throws `SortParsingException` (see `error-handling.md`).
+- Postgres can order by an array column, but QueryKit rejects the sort before the query runs. The same sort fails in memory, so QueryKit rejects it on every target.
