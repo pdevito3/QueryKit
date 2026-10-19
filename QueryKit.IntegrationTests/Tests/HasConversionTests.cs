@@ -180,7 +180,7 @@ public class HasConversionTests : TestBase
         var input = $"""Title == "{title}" && years == 41""";
         var config = new QueryKitConfiguration(config =>
         {
-            config.Property<TestingPerson>(x => x.Age).HasQueryName("years").HasConversion<string>();
+            config.Property<TestingPerson>(x => x.Age!).HasQueryName("years").HasConversion<string>();
         });
 
         // Act
@@ -212,7 +212,7 @@ public class HasConversionTests : TestBase
         var input = $"""Title == "{title}" && month == March""";
         var config = new QueryKitConfiguration(config =>
         {
-            config.Property<TestingPerson>(x => x.BirthMonth).HasQueryName("month").HasConversion<string>();
+            config.Property<TestingPerson>(x => x.BirthMonth!).HasQueryName("month").HasConversion<string>();
         });
 
         // Act
