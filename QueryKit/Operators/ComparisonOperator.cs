@@ -587,6 +587,20 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         public override bool IsCountOperator() => false; 
         public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType, CaseInsensitiveMode caseMode = CaseInsensitiveMode.Lower)
         {
+            ThrowIfNotList(right);
+
+            // On a collection, the filter matches when any element is in the list, or all elements with %.
+            if (left.Type.IsCollection())
+            {
+                var element = Expression.Parameter(left.Type.GetCollectionElementType()!, "z");
+                var elementInList = GetExpression<T>(element, right, dbContextType, caseMode);
+                var anyOrAll = typeof(Enumerable)
+                    .GetMethods()
+                    .Single(m => m.Name == (UsesAll ? "All" : "Any") && m.GetParameters().Length == 2)
+                    .MakeGenericMethod(element.Type);
+                return Expression.Call(anyOrAll, left, Expression.Lambda(elementInList, element));
+            }
+
             var leftType = left.Type;
             object? values = null;
 
@@ -825,6 +839,14 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         public override bool IsCountOperator() => false; 
         public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType, CaseInsensitiveMode caseMode = CaseInsensitiveMode.Lower)
         {
+            ThrowIfNotList(right);
+
+            // On a collection, not in is the negation of in: no element is in the list.
+            if (left.Type.IsCollection())
+            {
+                return Expression.Not(new InType(CaseInsensitive, UsesAll).GetExpression<T>(left, right, dbContextType, caseMode));
+            }
+
             var leftType = left.Type;
             object? values = null;
 
@@ -1004,6 +1026,15 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         return matches;
     }
     
+    // The in operators compare with a list, for example ["a", "b"]. One value is a parsing error.
+    private void ThrowIfNotList(Expression right)
+    {
+        if (!right.Type.IsCollection())
+        {
+            throw new QueryKitParsingException($"The {Operator()} operator needs a list value, for example [\"a\", \"b\"].");
+        }
+    }
+
     // A comparison on a collection compares each element with the right side. A right side of the collection type itself (a null) compares the whole collection.
     private static bool ComparesElements(Expression left, Expression right)
         => left.Type.IsCollection() && right.Type != left.Type;
