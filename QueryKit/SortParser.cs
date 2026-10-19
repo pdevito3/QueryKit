@@ -76,6 +76,12 @@ public static class SortParser
                 IsAscending = true
             };
         }
+
+        // A collection has no single sort order. A byte[] is one binary value, for example a SQL Server rowversion, so a database can sort it.
+        if (sortExpressionBody.Type.IsCollection() && sortExpressionBody.Type != typeof(byte[]))
+        {
+            throw SortParsingException.ForCollection(propertyName);
+        }
         
         var isAscending = direction == Ascending;
         return new SortExpressionInfo<T>

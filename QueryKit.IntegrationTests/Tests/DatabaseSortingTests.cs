@@ -462,4 +462,22 @@ public class DatabaseSortingTests : TestBase
         recipes[1].Title.Should().Be($"RecipeZ_{uniqueId}"); // Zoe
         recipes[2].Title.Should().Be($"RecipeA_{uniqueId}"); // Alice
     }
+
+    [Theory]
+    [InlineData("Tags")]
+    [InlineData("Tags desc")]
+    [InlineData("Ingredients")]
+    public async Task sort_on_a_collection_property_throws_sort_parsing_exception(string input)
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var queryableRecipes = testingServiceScope.DbContext().Recipes;
+
+        // Act
+        var act = () => queryableRecipes.ApplyQueryKitSort(input).ToListAsync();
+
+        // Assert
+        await act.Should().ThrowAsync<SortParsingException>()
+            .WithMessage("*is a collection, and a collection has no single sort order.");
+    }
 }
