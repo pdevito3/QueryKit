@@ -801,7 +801,7 @@ This is particularly useful when:
 - Database indexes are defined on uppercase column values (e.g., `CREATE INDEX ON people (UPPER(email))`)
 - You need SARGable queries for better performance
 
-**Per-property override** — you can also control the mode per property, overriding the global setting:
+**Per-property override.** You can also set the mode for one property. This setting overrides the global setting:
 
 ```csharp
 var config = new QueryKitConfiguration(settings =>
