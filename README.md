@@ -1041,6 +1041,17 @@ any exception thrown by QueryKit.
 * A `QueryKitInputLengthExceededException` will be thrown when a filter string exceeds the configured `MaxInputLength` limit.
 * A `QueryKitNestingDepthExceededException` will be thrown when a filter string exceeds the configured `MaxNestingDepth` limit.
 
+Read the data of an exception from its properties, not from its message. A message can change in a later version.
+
+| Exception | Properties |
+|---|---|
+| `UnknownFilterPropertyException` | `PropertyName` |
+| `SortParsingException` | `PropertyName` |
+| `ParsingException` | `PropertyName`, `TargetType`, and `Value` for a value that does not convert. `Line` and `Column` for a syntax failure. |
+| `QueryKitParsingException` | `Reason` (a `QueryKitParsingReason`, for example `NeedsList` or `RefusesNull`) and `Operator` |
+
+`ParsingException.Value` is the text that the client sent. Treat it as user input, for example before you write it to a log.
+
 ## SoundEx
 
 The `Sounds Like` and `Does Not Sound Like` operators require a soundex configuration on any `DbContext` that contain your `DbSet` being filtered on. Something like the below should work. The `SoundsLike` method does not need to implement anything and is just used as a pointer to the db method.

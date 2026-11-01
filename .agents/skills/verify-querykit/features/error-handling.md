@@ -25,6 +25,7 @@ Preconditions:
 - **Missing parenthesis.** Run `qk run error-handling-missing-paren --filter '(Rating > 1'`. Exit `2`. Both targets have `ParsingException`. The message contains `expected )`.
 - **Bad value.** Run `qk run error-handling-bad-value --filter 'Visibility ^^ [Public, Bogus]'`. Exit `2`. Both targets have `ParsingException` with the message `The value 'Bogus' is not a valid Visibility for the filter property 'Visibility'.` Also drive `Rating == "abc"` (the type is `Int32`).
 - **Unknown filter property.** Run `qk run error-handling-unknown-property --filter 'Nope == 1'`. Exit `2`. Both targets have `QueryKit.Exceptions.UnknownFilterPropertyException` with the message `The filter property 'Nope' was not recognized.`
+- **Exception data.** Run `qk run error-handling-data --filter 'Rating == "x"'`. Both targets have `error.data` `{"PropertyName":"Rating","TargetType":"Int32","Value":"x","Line":null,"Column":null}`. Also drive `Title ==` (`Line` 1, `Column` 9), `Title ^^ "a"` (`Reason` `NeedsList`, `Operator` `^^`), and `--sort 'Nope desc'` (`PropertyName` `Nope`).
 - **Unknown sort property.** Run `qk run error-handling-unknown-sort --sort 'Nope desc'`. Exit `2`. Both targets have `QueryKit.Exceptions.SortParsingException` with the message `Parsing failed during sorting. 'Nope' was not recognized.`
 
 ## Gotchas

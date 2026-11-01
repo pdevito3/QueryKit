@@ -194,5 +194,24 @@ void AddError(JsonObject result, Exception e)
         ["type"] = e.GetType().FullName,
         ["isQueryKitException"] = isQueryKit,
         ["message"] = e.Message,
+        ["data"] = isQueryKit ? ExceptionData(e) : null,
     };
+}
+
+// The public properties that the exception type declares, which a consumer app reads instead of the message.
+JsonObject ExceptionData(Exception e)
+{
+    var data = new JsonObject();
+    foreach (var property in e.GetType().GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.DeclaredOnly))
+    {
+        var value = property.GetValue(e);
+        data[property.Name] = value switch
+        {
+            null => null,
+            int number => number,
+            Type type => type.Name,
+            _ => value.ToString(),
+        };
+    }
+    return data;
 }

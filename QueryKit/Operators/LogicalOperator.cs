@@ -16,7 +16,7 @@ public abstract class LogicalOperator : SmartEnum<LogicalOperator>
         var logicalOperator = List.FirstOrDefault(x => x.Operator() == op);
         if (logicalOperator == null)
         {
-            throw new QueryKitParsingException($"Operator {op} is not supported");
+            throw new QueryKitParsingException($"Operator {op} is not supported", QueryKitParsingReason.UnsupportedOperator, op);
         }
         return logicalOperator;
     }

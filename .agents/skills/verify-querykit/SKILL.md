@@ -24,7 +24,7 @@ One `qk run` executes one driver process. The process runs the same input agains
 - `memory` uses the `IEnumerable<T>` overloads on a `List<Recipe>`.
 - `postgres` uses the `IQueryable<T>` overloads through EF Core and Npgsql. It returns the SQL (`ToQueryString()`) and the rows that Postgres returned.
 
-The driver prints one JSON document with the input, the parsed LINQ expression, and one result per target. Each result holds `count`, `titles` (in result order), and `rows`, or an `error` with the exception type and message.
+The driver prints one JSON document with the input, the parsed LINQ expression, and one result per target. Each result holds `count`, `titles` (in result order), and `rows`, or an `error` with the exception type, the message, and `data`. For a QueryKit exception, `data` holds the public properties that its type declares.
 
 ## Launch
 
