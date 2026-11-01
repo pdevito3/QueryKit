@@ -27,6 +27,7 @@ public class QuotedListValueTests
     [InlineData("""Title ^^ "[abc]" """, new[] { "abc" })]
     [InlineData("""Title !^^ "[abc]" """, new[] { "[a]", "[a, b]" })]
     [InlineData("""Title ^^* "[ABC]" """, new[] { "abc" })]
+    [InlineData(""""Title ^^ """["abc", "[a]"]""" """", new[] { "abc", "[a]" })]
     [InlineData("""Score ^^ "[1, 3]" """, new[] { "abc", "[a, b]" })]
     [InlineData("""Size ^^ "[Small]" """, new[] { "[a]" })]
     public void in_operator_reads_a_quoted_list_as_a_list(string input, string[] expected)
