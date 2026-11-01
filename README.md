@@ -252,6 +252,25 @@ Property list grouping is particularly useful for:
     var input = """""""""Title == """"lamb is great on a "gee-ro" not a "gy-ro" sandwich"""" """"""""";
     ```
 
+  * The full run of quotes at the start of the value is the opening delimiter. The closing delimiter has the same number of quotes. Thus a quote at the start of the value becomes part of the delimiter. For example, `""""hi""""` is the value `hi` with a delimiter of four quotes. It is not the value `"hi"`.
+
+  * To write a value that starts or ends with a double quote, put one space between each delimiter and the value. If the value starts with a space, ends with a space, and has a character that is not a space, QueryKit removes one space from each end. Only the space character counts. QueryKit does not remove tabs. The rule applies to every operator and to the items of a list, for example `Title ^^ [""" "a" """, "b"]`.
+
+    | Value in the filter | Value that QueryKit uses |
+    | ------------------- | ------------------------ |
+    | `""" "hi" """` | `"hi"` |
+    | `""" "hi" now """` | `"hi" now` |
+    | `""" say "hi" """` | `say "hi"` |
+    | `"""  x  """` | `x` with one space on each side |
+    | `""" x"""` | `x` with one space before it. Only one end has a space, so QueryKit removes no space. |
+    | `"""   """` | Three spaces. QueryKit does not change a value of only spaces. |
+
+    ```c#
+    var input = """"Title == """ "hi" """ """";
+    ```
+
+  * Before version 1.17.1, QueryKit kept the spaces. `""" x """` was `x` with one space on each side. Now it is `x`.
+
 * Dates and times use ISO 8601 format and should be surrounded by double quotes:
 
   * `DateOnly`: `var filterInput = """Birthday == "2022-07-01" """;`
