@@ -47,6 +47,34 @@ public class FilterParsingRegressionTests : TestBase
     }
 
     [Fact]
+    public async Task padded_raw_string_matches_a_value_that_starts_and_ends_with_a_quote()
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var unquotedTitle = Guid.NewGuid().ToString();
+        var quotedTitle = $"\"{unquotedTitle}\"";
+        var fakePersonOne = new FakeTestingPersonBuilder()
+            .WithTitle(quotedTitle)
+            .Build();
+        var fakePersonTwo = new FakeTestingPersonBuilder()
+            .WithTitle(unquotedTitle)
+            .Build();
+        await testingServiceScope.InsertAsync(fakePersonOne, fakePersonTwo);
+
+        var input = $""""{nameof(TestingPerson.Title)} == """ {quotedTitle} """ """";
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input);
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert
+        people.Count.Should().Be(1);
+        people[0].Id.Should().Be(fakePersonOne.Id);
+        people[0].Title.Should().Be(quotedTitle);
+    }
+
+    [Fact]
     public async Task decimal_value_uses_invariant_culture()
     {
         // Arrange

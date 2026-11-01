@@ -368,7 +368,12 @@ public static class FilterParser
         let count = openingQuotes.Length
         from content in Parse.AnyChar.Except(Parse.Char('"').Repeat(count)).Many().Text()
         from closingQuotes in Parse.Char('"').Repeat(count).Text()
-        select content;
+        select RemoveRawStringPadding(content);
+
+    private static string RemoveRawStringPadding(string content)
+        => content.StartsWith(' ') && content.EndsWith(' ') && content.Trim(' ').Length > 0
+            ? content[1..^1]
+            : content;
 
     // Carries whether the right-hand value was written as a quoted string literal (e.g. "id").
     // This is needed to disambiguate a literal from a bare property reference (property-to-property
@@ -696,7 +701,7 @@ public static class FilterParser
 
                 var expressions = values.Select(x =>
                 {
-                    if (elementType == typeof(string) && x.StartsWith("\"") && x.EndsWith("\""))
+                    if (rightIsQuotedLiteral && elementType == typeof(string) && x.StartsWith("\"") && x.EndsWith("\""))
                     {
                         x = x.Trim('"');
                     }
@@ -709,11 +714,6 @@ public static class FilterParser
                 return newArrayExpression;
             }
 
-            if (targetType == typeof(string))
-            {
-                right = right.Trim('"');
-            }
-            
             if (targetType == typeof(DateTime))
             {
                 var dtStyle = right.EndsWith("Z") ? DateTimeStyles.AdjustToUniversal : DateTimeStyles.AssumeLocal;

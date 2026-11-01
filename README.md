@@ -252,6 +252,25 @@ Property list grouping is particularly useful for:
     var input = """""""""Title == """"lamb is great on a "gee-ro" not a "gy-ro" sandwich"""" """"""""";
     ```
 
+  * The full run of quotes at the start of the value is the opening delimiter. The closing delimiter has the same number of quotes. Thus a quote at the start of the value becomes part of the delimiter. For example, `""""hi""""` is the value `hi` with a delimiter of four quotes. It is not the value `"hi"`.
+
+  * To write a value that starts or ends with a double quote, put one space between each delimiter and the value. If the value starts with a space, ends with a space, and has a character that is not a space, QueryKit removes one space from each end. Only the space character counts. QueryKit does not remove tabs. The rule applies to every operator and to the items of a list, for example `Title ^^ [""" "a" """, "b"]`. In a list, QueryKit also removes all whitespace from the start and end of each item. Thus the table below is true only for a single value.
+
+    | Value in the filter | Value that QueryKit uses |
+    | ------------------- | ------------------------ |
+    | `""" "hi" """` | `"hi"` |
+    | `""" "hi" now """` | `"hi" now` |
+    | `""" say "hi" """` | `say "hi"` |
+    | `"""  x  """` | `x` with one space on each side |
+    | `""" x"""` | `x` with one space before it. Only one end has a space, so QueryKit removes no space. |
+    | `"""   """` | Three spaces. QueryKit does not change a value of only spaces. |
+
+    ```c#
+    var input = """"Title == """ "hi" """ """";
+    ```
+
+  * Before version 1.17.1, QueryKit kept the spaces. `""" x """` was `x` with one space on each side. Now it is `x`. Also, a raw string list item lost its edge quotes. `[""" "a" """]` was the item `a`. Now it is `"a"`.
+
 * Dates and times use ISO 8601 format and should be surrounded by double quotes:
 
   * `DateOnly`: `var filterInput = """Birthday == "2022-07-01" """;`
@@ -782,7 +801,7 @@ This is particularly useful when:
 - Database indexes are defined on uppercase column values (e.g., `CREATE INDEX ON people (UPPER(email))`)
 - You need SARGable queries for better performance
 
-**Per-property override** — you can also control the mode per property, overriding the global setting:
+**Per-property override.** You can also set the mode for one property. This setting overrides the global setting:
 
 ```csharp
 var config = new QueryKitConfiguration(settings =>
