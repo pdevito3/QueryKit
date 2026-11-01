@@ -412,6 +412,10 @@ public static class FilterParser
         return text.ToString();
     }
 
+    // A quoted value in the form [...] is a string, except for the in operators, which have always read it as a list.
+    private static bool IsListValue(string right, bool rightIsQuotedLiteral, ComparisonOperator op)
+        => right.StartsWith("[") && right.EndsWith("]") && (!rightIsQuotedLiteral || op.TakesList());
+
     private static List<string> SplitListItems(string list)
     {
         var items = new List<string>();
@@ -679,7 +683,7 @@ public static class FilterParser
                 return Expression.Constant(null, leftExprType);
             }
             
-            if (right.StartsWith("[") && right.EndsWith("]"))
+            if (IsListValue(right, rightIsQuotedLiteral, op))
             {
                 // Only convert GUID arrays to string arrays for string operators (Contains, etc.)
                 // For other operators like 'in', keep as GUID array for proper type matching
@@ -777,7 +781,7 @@ public static class FilterParser
                 return Expression.Constant(null, rawType);
             }
             
-            if (right.StartsWith("[") && right.EndsWith("]"))
+            if (IsListValue(right, rightIsQuotedLiteral, op))
             {
                 var values = SplitListItems(right);
                 var elementType = targetType.IsArray ? targetType.GetElementType() : targetType;
@@ -1760,7 +1764,7 @@ public static class FilterParser
         // For custom operations, we need to convert the string value to the appropriate basic type
         // instead of trying to match it to the entity type
         // A custom operation gets the list as text, so remove the escapes that EscapeListItem added
-        if (rightValue.StartsWith("[") && rightValue.EndsWith("]"))
+        if (!rightIsQuotedLiteral && rightValue.StartsWith("[") && rightValue.EndsWith("]"))
             rightValue = UnescapeListText(rightValue);
 
         object? convertedValue = ConvertStringToBasicType(rightValue, rightIsQuotedLiteral);

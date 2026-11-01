@@ -188,6 +188,8 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
             or EndsWithType or NotEndsWithType or SoundsLikeType or DoesNotSoundLikeType;
     }
 
+    internal bool TakesList() => this is InType or NotInType;
+
     protected ComparisonOperator(string name, int value, bool caseInsensitive = false, bool usesAll = false) : base(name, value)
     {
         CaseInsensitive = caseInsensitive;
