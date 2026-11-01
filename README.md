@@ -269,8 +269,6 @@ Property list grouping is particularly useful for:
     var input = """"Title == """ "hi" """ """";
     ```
 
-  * Before version 1.17.1, QueryKit kept the spaces. `""" x """` was `x` with one space on each side. Now it is `x`. Also, a raw string list item lost its edge quotes. `[""" "a" """]` was the item `a`. Now it is `"a"`.
-
 * Dates and times use ISO 8601 format and should be surrounded by double quotes:
 
   * `DateOnly`: `var filterInput = """Birthday == "2022-07-01" """;`
