@@ -204,6 +204,12 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         public override bool IsCountOperator() => false; 
         public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType, CaseInsensitiveMode caseMode = CaseInsensitiveMode.Lower)
         {
+            // On a collection, a null of the collection type compares the whole collection, so only a null string is refused.
+            if (CaseInsensitive && right.Type == typeof(string))
+            {
+                EnsureStringValueIsNotNull(right, Operator());
+            }
+
             if (ComparesElements(left, right))
             {
                 return GetCollectionExpression(left, right, Expression.Equal, UsesAll);
@@ -243,6 +249,12 @@ public abstract class ComparisonOperator : SmartEnum<ComparisonOperator>
         public override bool IsCountOperator() => false; 
         public override Expression GetExpression<T>(Expression left, Expression right, Type? dbContextType, CaseInsensitiveMode caseMode = CaseInsensitiveMode.Lower)
         {
+            // On a collection, a null of the collection type compares the whole collection, so only a null string is refused.
+            if (CaseInsensitive && right.Type == typeof(string))
+            {
+                EnsureStringValueIsNotNull(right, Operator());
+            }
+
             if (ComparesElements(left, right))
             {
                 // EF Core 10 with Npgsql can not translate Any(z => z != value) on a primitive collection. Any(z => !(z == value)) translates to the same SQL.

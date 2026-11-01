@@ -393,6 +393,38 @@ public class FilterParsingRegressionTests
     }
 
     [Theory]
+    [InlineData("Title ==* null", "==*")]
+    [InlineData("Title !=* null", "!=*")]
+    public void case_insensitive_equality_with_null_value_throws_querykit_exception(string input, string op)
+    {
+        var act = () => FilterParser.ParseFilter<TestingPerson>(input);
+
+        act.Should().Throw<QueryKitParsingException>()
+            .WithMessage($"The '{op}' operator does not accept a null value. Use '==' or '!=' to compare with null.");
+    }
+
+    [Theory]
+    [InlineData("Ingredients.Name ==* null", "==*")]
+    [InlineData("Ingredients.Name !=* null", "!=*")]
+    public void case_insensitive_equality_with_null_value_on_a_collection_path_throws_querykit_exception(string input, string op)
+    {
+        var act = () => FilterParser.ParseFilter<Recipe>(input);
+
+        act.Should().Throw<QueryKitParsingException>()
+            .WithMessage($"The '{op}' operator does not accept a null value. Use '==' or '!=' to compare with null.");
+    }
+
+    [Theory]
+    [InlineData("Tags ==* null")]
+    [InlineData("Tags !=* null")]
+    public void case_insensitive_equality_with_null_on_a_collection_property_compares_the_property(string input)
+    {
+        var act = () => FilterParser.ParseFilter<Recipe>(input);
+
+        act.Should().NotThrow();
+    }
+
+    [Theory]
     [InlineData("""Age == "abc" """)]
     [InlineData("""Age == abc""")]
     [InlineData("""Rating > "abc" """)]
