@@ -122,6 +122,8 @@ var input = """(Age ^^ [20, 30, 40]) && (BirthMonth ^^* ["January", "February", 
 
 A quoted list item can hold a comma. For example, `Title ^^ ["Warm, with syrup", "Cold"]` has two items: `Warm, with syrup` and `Cold`.
 
+The in operators also read a quoted list as a list, so `Title ^^ "[Pancakes, Beef Stew]"` has two items. For every other operator, a quoted `[...]` is text. For example, `Title == "[draft]"` compares `Title` with the text `[draft]`.
+
 ### Property List Grouping
 
 Property list grouping allows you to apply a single comparison operation across multiple properties, making it easy to search for a value in any of several fields without writing repetitive conditions.
@@ -239,6 +241,8 @@ Property list grouping is particularly useful for:
 * `string` and `guid` properties should be wrapped in double quotes
 
   * `null` doesn't need quotes: `var input = "Title == null";`
+
+  * `==*` and `!=*` do not accept `null`, because a null value has no case. `Title ==* null` throws a `QueryKitParsingException`. Use `==` or `!=` to compare with null.
 
   * Double quotes can be escaped by using a similar syntax to raw-string literals introduced in C#11:
 
@@ -755,7 +759,8 @@ var config = new QueryKitConfiguration(config =>
 ```
 
 - A mapping allows only its own path. `Author.Name` does not allow `Author` or `Author.Id`, and `CreatedAt` does not allow `CreatedAt.Year`.
-- A property that is not on the list is unknown. A filter on it throws `UnknownFilterPropertyException`, and a sort on it throws `SortParsingException`. When `AllowUnknownProperties` is `true`, `IgnoredClauseBehavior` decides what happens to the clause.
+- A property that is not on the list is unknown. A filter on it throws `UnknownFilterPropertyException`, and a sort on it throws `SortParsingException`. For a filter, when `AllowUnknownProperties` is `true`, `IgnoredClauseBehavior` decides what happens to the clause.
+- A sort on a custom operation throws `SortParsingException`, because a custom operation has no sort expression.
 - `PreventFilter` and `PreventSort` still apply to a property on the list. For example, `Rating` above can filter but cannot sort.
 - On the right side of a comparison, one word that is not on the list is text, the same as any unknown word. `Title == Sku` compares `Title` with the text `Sku`.
 
@@ -1057,6 +1062,7 @@ any exception thrown by QueryKit.
 * A `ParsingException` will be thrown when there is an invalid operator or bad syntax is used. Note that an unquoted string value, such as `Title == salt`, does not throw. QueryKit reads it as the literal text `salt`.
 * An `UnknownFilterPropertyException` will be thrown if a property is not recognized during filtering
 * A `SortParsingException` will be thrown if a property or operation is not recognized during sorting
+* A `PreventedPropertyException` will be thrown for a filter or sort on a prevented property when `IgnoredClauseBehavior` is `Throw`. See [Ignored Clause Behavior](#ignored-clause-behavior).
 * A `QueryKitDbContextTypeException` will be thrown when trying to use a `DbContext` specific workflow without passing that context (e.g. SoundEx)
 * A `SoundsLikeNotImplementedException` will be thrown when trying to use `soundex` on a `DbContext` that doesn't have it implemented.
 * A `QueryKitParsingException` is a more generic error that will include specific details on a more granular error in the parsing pipeline.
@@ -1070,6 +1076,7 @@ Read the data of an exception from its properties, not from its message. A messa
 |---|---|
 | `UnknownFilterPropertyException` | `PropertyName` |
 | `SortParsingException` | `PropertyName` |
+| `PreventedPropertyException` | `PropertyName` |
 | `ParsingException` | `PropertyName`, `TargetType`, and `Value` for a value that does not convert. `Line` and `Column` for a syntax failure. |
 | `QueryKitParsingException` | `Reason` (a `QueryKitParsingReason`, for example `NeedsList` or `RefusesNull`) and `Operator` |
 
