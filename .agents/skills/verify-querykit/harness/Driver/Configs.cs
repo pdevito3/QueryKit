@@ -88,6 +88,15 @@ public static class Configs
                 s.Property<Recipe>(x => x.Rating).PreventFilter();
             })),
 
+        ["throw-ignored"] = ("IgnoredClauseBehavior = Throw, AllowUnknownProperties = true, Rating PreventFilter, Price PreventFilter and PreventSort with HasQueryName(\"cost\").",
+            () => new QueryKitConfiguration(s =>
+            {
+                s.IgnoredClauseBehavior = IgnoredClauseBehavior.Throw;
+                s.AllowUnknownProperties = true;
+                s.Property<Recipe>(x => x.Rating).PreventFilter();
+                s.Property<Recipe>(x => x.Price).HasQueryName("cost").PreventFilter().PreventSort();
+            })),
+
         ["small-limits"] = ("MaxInputLength = 100, MaxNestingDepth = 3.",
             () => new QueryKitConfiguration(s =>
             {

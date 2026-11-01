@@ -828,6 +828,8 @@ var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
 
 `IgnoredClauseBehavior` controls what QueryKit does with a clause on a property that has `PreventFilter`, or on an unknown property when `AllowUnknownProperties` is `true`. The default is `IgnoredClauseBehavior.ReplaceWithTrue`, which replaces the clause with `true == true` so the rest of the expression keeps its shape. A property-list clause (for example `(FirstName, Title) @=* "x"`) where every property is prevented gives a plain `true` instead, not `true == true`. Set `IgnoredClauseBehavior` to `IgnoredClauseBehavior.Remove` to drop the clause instead, so a logical operator with a removed side keeps only its other side.
 
+With the default, a client that filters on a prevented property gets every row under an `||`, and gets no error. Set `IgnoredClauseBehavior` to `IgnoredClauseBehavior.Throw` to refuse the filter instead. A clause on a property that has `PreventFilter` then throws a `PreventedPropertyException`, and a sort on a property that has `PreventSort` throws the same exception. Its `PropertyName` holds the property as the client wrote it. A clause on an unknown property throws `UnknownFilterPropertyException`, also when `AllowUnknownProperties` is `true`.
+
 ```csharp
 var config = new QueryKitConfiguration(config =>
 {

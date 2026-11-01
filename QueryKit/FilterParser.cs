@@ -882,7 +882,7 @@ public static class FilterParser
                 var rightArithmetic = ResolveArithmeticProperties(temp.rightSide, typeof(T), config);
                 if (leftArithmetic == null || rightArithmetic == null)
                 {
-                    return IgnoredClause(config);
+                    return IgnoredClauseExpression(config);
                 }
 
                 var leftExpr = leftArithmetic.ToLinqExpression(parameter, typeof(T));
@@ -904,7 +904,7 @@ public static class FilterParser
                 // Arithmetic supports only members, so a derived property or a custom operation is unknown here
                 if (reference.Kind != PropertyReferenceKind.Member)
                 {
-                    if (config?.AllowUnknownProperties == true)
+                    if (config?.AllowUnknownProperties == true && !ThrowsForIgnoredClauses(config))
                     {
                         return null;
                     }
@@ -912,7 +912,13 @@ public static class FilterParser
                     throw new UnknownFilterPropertyException(reference.UnknownSegment ?? property.PropertyPath);
                 }
 
-                return reference.CanFilter ? new PropertyArithmeticExpression(reference.Path) : null;
+                if (!reference.CanFilter)
+                {
+                    ThrowIfIgnoredClausesThrow(config, reference);
+                    return null;
+                }
+
+                return new PropertyArithmeticExpression(reference.Path);
             case BinaryArithmeticExpression binary:
                 var left = ResolveArithmeticProperties(binary.Left, entityType, config);
                 var right = ResolveArithmeticProperties(binary.Right, entityType, config);
@@ -997,7 +1003,7 @@ public static class FilterParser
                 {
                     if (!temp.reference.CanFilter)
                     {
-                        return IgnoredClause(config);
+                        return IgnoredClause(config, temp.reference);
                     }
 
                     return CreateCustomOperationExpression<T>(parameter, temp.reference.Mapping!, temp.op, temp.right, temp.rightIsQuotedLiteral);
@@ -1005,13 +1011,13 @@ public static class FilterParser
 
                 if (temp.reference.Kind == PropertyReferenceKind.Unknown)
                 {
-                    return IgnoredClause(config);
+                    return IgnoredClause(config, temp.reference);
                 }
 
                 var leftExpr = CreateLeftExpr(parameter, temp.reference, config);
                 if (leftExpr is RemovedClauseExpression)
                 {
-                    return IgnoredClause(config);
+                    return IgnoredClause(config, temp.reference);
                 }
 
                 if (leftExpr.Type == typeof(Guid) || leftExpr.Type == typeof(Guid?))
@@ -1052,7 +1058,7 @@ public static class FilterParser
                     var rightReference = PropertyResolver.ResolveWithoutQueryName(parameter.Type, temp.right, config);
                     if (!rightReference.CanFilter)
                     {
-                        return IgnoredClause(config);
+                        return IgnoredClause(config, rightReference);
                     }
 
                     var rightPropertyExpr = rightReference.Kind == PropertyReferenceKind.Member
@@ -1374,12 +1380,13 @@ public static class FilterParser
                     var reference = PropertyResolver.Resolve(parameter.Type, fullPropPath, config);
                     if (!reference.CanFilter)
                     {
+                        ThrowIfIgnoredClausesThrow(config, reference);
                         continue;
                     }
 
                     if (reference.Kind is PropertyReferenceKind.Unknown or PropertyReferenceKind.CustomOperation)
                     {
-                        if (config?.AllowUnknownProperties == true)
+                        if (config?.AllowUnknownProperties == true && !ThrowsForIgnoredClauses(config))
                         {
                             continue;
                         }
@@ -1484,8 +1491,32 @@ public static class FilterParser
     private static bool RemovesIgnoredClauses(IQueryKitConfiguration? config)
         => config is IQueryKitFilterBehavior { IgnoredClauseBehavior: IgnoredClauseBehavior.Remove };
 
+    private static bool ThrowsForIgnoredClauses(IQueryKitConfiguration? config)
+        => config is IQueryKitFilterBehavior { IgnoredClauseBehavior: IgnoredClauseBehavior.Throw };
+
+    private static void ThrowIfIgnoredClausesThrow(IQueryKitConfiguration? config, PropertyReference reference)
+    {
+        if (!ThrowsForIgnoredClauses(config))
+        {
+            return;
+        }
+
+        if (reference.Kind == PropertyReferenceKind.Unknown)
+        {
+            throw new UnknownFilterPropertyException(reference.UnknownSegment ?? reference.Text);
+        }
+
+        throw PreventedPropertyException.ForFilter(reference.Text);
+    }
+
     // A clause on a prevented or unknown property. By default it becomes true == true, the same as v1.14.2.
-    private static Expression IgnoredClause(IQueryKitConfiguration? config)
+    private static Expression IgnoredClause(IQueryKitConfiguration? config, PropertyReference reference)
+    {
+        ThrowIfIgnoredClausesThrow(config, reference);
+        return IgnoredClauseExpression(config);
+    }
+
+    private static Expression IgnoredClauseExpression(IQueryKitConfiguration? config)
         => RemovesIgnoredClauses(config)
             ? RemovedClauseExpression.Instance
             : Expression.Equal(Expression.Constant(true), Expression.Constant(true));

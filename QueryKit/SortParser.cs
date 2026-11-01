@@ -58,6 +58,11 @@ public static class SortParser
         var reference = PropertyResolver.Resolve(typeof(T), propertyName, config);
         if (reference.Kind != PropertyReferenceKind.CustomOperation && !reference.CanSort)
         {
+            if (config is IQueryKitFilterBehavior { IgnoredClauseBehavior: IgnoredClauseBehavior.Throw })
+            {
+                throw PreventedPropertyException.ForSort(propertyName);
+            }
+
             return new SortExpressionInfo<T>
             {
                 Expression = null,
