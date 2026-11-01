@@ -77,6 +77,20 @@ public class CollectionSortTests
         result.Select(x => x.Name).Should().Equal("b", "a");
     }
 
+    [Theory]
+    [InlineData("List.Count desc")]
+    [InlineData("Array.Length desc")]
+    [InlineData("Version.Length desc")]
+    [InlineData("Parent.Tags.Count desc")]
+    public void sort_on_a_member_of_a_collection_sorts(string input)
+    {
+        Row[] rows = [new("a", ["x"], [1], [1]), new("b", ["x", "y"], [2], [2, 2])];
+
+        var result = rows.ApplyQueryKitSort(input).ToList();
+
+        result.Select(x => x.Name).Should().Equal("b", "a");
+    }
+
     // A database sorts a byte array as one binary value, for example a SQL Server rowversion. In memory, byte[] is not IComparable.
     [Fact]
     public void sort_on_a_byte_array_parses()

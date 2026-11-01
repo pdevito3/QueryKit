@@ -62,6 +62,12 @@ public class QueryKitSettings
     /// </summary>
     public IgnoredClauseBehavior IgnoredClauseBehavior { get; set; } = IgnoredClauseBehavior.ReplaceWithTrue;
 
+    /// <summary>
+    /// When true, a filter or a sort can use only a property that has a Property mapping, a derived property, or a
+    /// custom operation. Any other property is unknown. The default is false.
+    /// </summary>
+    public bool UseAllowList { get; set; }
+
     public QueryKitPropertyMapping<TModel> Property<TModel>(Expression<Func<TModel, object>>? propertySelector)
     {
         return PropertyMappings.Property(propertySelector);

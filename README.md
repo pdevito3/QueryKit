@@ -740,6 +740,27 @@ var config = new QueryKitConfiguration(config =>
 var filterExpression = FilterParser.ParseFilter<Recipe>(input, config);
 ```
 
+#### Allow List
+
+By default, a filter or a sort can use every member of the type. This includes a member of a member, such as `StartsAt.Ticks`, and a private property. Set `UseAllowList` to `true` to limit filters and sorts to the properties that your configuration names. A property is on the list when it has a `Property` mapping, or when it is a derived property or a custom operation.
+
+```csharp
+var config = new QueryKitConfiguration(config =>
+{
+    config.UseAllowList = true;
+    config.Property<Recipe>(x => x.Title);
+    config.Property<Recipe>(x => x.Rating).PreventSort();
+    config.Property<Recipe>(x => x.Author.Name).HasQueryName("chef");
+});
+```
+
+- A mapping allows only its own path. `Author.Name` does not allow `Author` or `Author.Id`, and `CreatedAt` does not allow `CreatedAt.Year`.
+- A property that is not on the list is unknown. A filter on it throws `UnknownFilterPropertyException`, and a sort on it throws `SortParsingException`. When `AllowUnknownProperties` is `true`, `IgnoredClauseBehavior` decides what happens to the clause.
+- `PreventFilter` and `PreventSort` still apply to a property on the list. For example, `Rating` above can filter but cannot sort.
+- On the right side of a comparison, one word that is not on the list is text, the same as any unknown word. `Title == Sku` compares `Title` with the text `Sku`.
+
+`UseAllowList` comes from the `IQueryKitAllowList` interface, so a custom configuration class can implement it directly.
+
 #### Case-Insensitive Comparison Mode
 
 By default, QueryKit uses `ToLower()` (which EF Core translates to `LOWER()` in SQL) for case-insensitive string operators like `@=*`, `_=*`, `==*`, etc. If your data is normalized to uppercase, you can switch to `ToUpper()` / `UPPER()` to maintain index efficiency.

@@ -97,6 +97,17 @@ public static class Configs
                 s.Property<Recipe>(x => x.Price).HasQueryName("cost").PreventFilter().PreventSort();
             })),
 
+        ["allow-list"] = ("UseAllowList = true. Allowed: Title, Rating (PreventSort), Author.Name->chef, Ingredients.Name, derived top_rated = Rating >= 4.",
+            () => new QueryKitConfiguration(s =>
+            {
+                s.UseAllowList = true;
+                s.Property<Recipe>(x => x.Title);
+                s.Property<Recipe>(x => x.Rating).PreventSort();
+                s.Property<Recipe>(x => x.Author.Name).HasQueryName("chef");
+                s.Property<Recipe>(x => x.Ingredients.Select(i => i.Name));
+                s.DerivedProperty<Recipe>(x => x.Rating >= 4).HasQueryName("top_rated");
+            })),
+
         ["small-limits"] = ("MaxInputLength = 100, MaxNestingDepth = 3.",
             () => new QueryKitConfiguration(s =>
             {

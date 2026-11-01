@@ -56,6 +56,14 @@ public static class SortParser
         }
 
         var reference = PropertyResolver.Resolve(typeof(T), propertyName, config);
+        // The sort finds a member such as Tags.Count with its own lookup, so only the allow-list refuses an unknown reference.
+        // A custom operation has no sort expression, and the lookup would sort an unlisted member with the same name.
+        if (config is IQueryKitAllowList { UseAllowList: true }
+            && reference.Kind is PropertyReferenceKind.Unknown or PropertyReferenceKind.CustomOperation)
+        {
+            throw new SortParsingException(propertyName);
+        }
+
         if (reference.Kind != PropertyReferenceKind.CustomOperation && !reference.CanSort)
         {
             if (config is IQueryKitFilterBehavior { IgnoredClauseBehavior: IgnoredClauseBehavior.Throw })

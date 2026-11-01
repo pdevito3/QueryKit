@@ -73,7 +73,13 @@ internal static class PropertyResolver
         var memberPath = ResolveMemberPath(rootType, path, out var unknownSegment);
         if (memberPath != null)
         {
-            return PropertyReference.Member(reference, memberPath, config?.PropertyMappings?.GetPropertyInfo(memberPath));
+            var mapping = config?.PropertyMappings?.GetPropertyInfo(memberPath);
+            if (mapping != null || config is not IQueryKitAllowList { UseAllowList: true })
+            {
+                return PropertyReference.Member(reference, memberPath, mapping);
+            }
+
+            unknownSegment = reference;
         }
 
         var customOperationInfo = config?.PropertyMappings?.GetCustomOperationInfoByQueryName(reference);

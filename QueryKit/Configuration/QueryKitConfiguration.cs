@@ -36,7 +36,7 @@ public interface IQueryKitConfiguration
     public CaseInsensitiveMode CaseInsensitiveComparison { get; set; }
 }
 
-public class QueryKitConfiguration : IQueryKitConfiguration, IQueryKitParseLimits, IQueryKitFilterBehavior
+public class QueryKitConfiguration : IQueryKitConfiguration, IQueryKitParseLimits, IQueryKitFilterBehavior, IQueryKitAllowList
 {
     public QueryKitPropertyMappings PropertyMappings { get; }
     public string EqualsOperator { get; set; }
@@ -74,6 +74,7 @@ public class QueryKitConfiguration : IQueryKitConfiguration, IQueryKitParseLimit
     public CaseInsensitiveMode CaseInsensitiveComparison { get; set; }
     public bool ParameterizeFilterValues { get; set; }
     public IgnoredClauseBehavior IgnoredClauseBehavior { get; set; }
+    public bool UseAllowList { get; set; }
 
     public QueryKitConfiguration(Action<QueryKitSettings> configureSettings)
     {
@@ -117,5 +118,6 @@ public class QueryKitConfiguration : IQueryKitConfiguration, IQueryKitParseLimit
         CaseInsensitiveComparison = settings.CaseInsensitiveComparison;
         ParameterizeFilterValues = settings.ParameterizeFilterValues;
         IgnoredClauseBehavior = settings.IgnoredClauseBehavior;
+        UseAllowList = settings.UseAllowList;
     }
 }
