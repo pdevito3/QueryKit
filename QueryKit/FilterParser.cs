@@ -637,6 +637,15 @@ public static class FilterParser
                     var stringCtor = (underlyingType ?? leftExpr.Type).GetConstructor(new[] { typeof(string) });
                     if (stringCtor != null)
                     {
+                        if (op.TakesList() && IsListValue(right, rightIsQuotedLiteral, op))
+                        {
+                            var constructedType = underlyingType ?? leftExpr.Type;
+                            var items = SplitListItems(right).Select(item => Expression.Constant(
+                                ConvertValue(item, constructedType, () => stringCtor.Invoke(BindingFlags.DoNotWrapExceptions, null, new object[] { item }, null)),
+                                leftExpr.Type));
+                            return Expression.NewArrayInit(leftExpr.Type, items);
+                        }
+
                         Expression constructed = Expression.New(stringCtor, FilterValue.Create(right, typeof(string)));
                         return underlyingType == null ? constructed : Expression.Convert(constructed, leftExpr.Type);
                     }

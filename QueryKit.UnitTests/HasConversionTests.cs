@@ -536,8 +536,10 @@ public class HasConversionTests
         result.Select(x => x.Email?.Value).Should().BeEquivalentTo(expectedEmails);
     }
 
-    [Fact]
-    public void quoted_text_in_brackets_stays_one_value_for_equals_with_has_conversion()
+    [Theory]
+    [InlineData("""Email == "[a]" """)]
+    [InlineData("""Email == [a]""")]
+    public void text_in_brackets_stays_one_value_for_equals_with_has_conversion(string input)
     {
         // Arrange
         var rows = EmailRows();
@@ -548,7 +550,7 @@ public class HasConversionTests
         });
 
         // Act
-        var result = rows.ApplyQueryKitFilter("""Email == "[a]" """, config).ToList();
+        var result = rows.ApplyQueryKitFilter(input, config).ToList();
 
         // Assert
         result.Select(x => x.Email!.Value).Should().BeEquivalentTo("[a]");
