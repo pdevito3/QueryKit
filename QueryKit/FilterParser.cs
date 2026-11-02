@@ -626,6 +626,12 @@ public static class FilterParser
                 // by constructing it from the string value using a constructor that takes the target type
                 if (propertyConfig.ConversionTargetType == typeof(string))
                 {
+                    // An in/not-in list has to stay an array of constants, so each item is converted on its own.
+                    if (IsArrayLiteral(right) && CreateStringConversionArrayExpr(leftExpr.Type, right) is { } arrayExpr)
+                    {
+                        return arrayExpr;
+                    }
+
                     // A null literal compares against null instead of being passed to the constructor
                     var underlyingType = Nullable.GetUnderlyingType(leftExpr.Type);
                     if (right == "null" && (!leftExpr.Type.IsValueType || underlyingType != null))
@@ -648,6 +654,40 @@ public static class FilterParser
         }
 
         return CreateRightExprFromType(targetType, right, rightIsQuotedLiteral, op);
+    }
+
+    private static bool IsArrayLiteral(string right)
+        => right.StartsWith("[") && right.EndsWith("]");
+
+    // Builds the right side of an in/not-in filter for a property with HasConversion<string>(). The in operator
+    // reads an array of constants, so every item is constructed from its string with the (string) constructor.
+    private static Expression? CreateStringConversionArrayExpr(Type leftType, string right)
+    {
+        var underlyingType = Nullable.GetUnderlyingType(leftType);
+        var stringCtor = (underlyingType ?? leftType).GetConstructor(new[] { typeof(string) });
+        if (stringCtor == null)
+        {
+            return null;
+        }
+
+        var items = right.Length == 2 ? new List<string>() : SplitListItems(right);
+
+        var constants = items.Select(item =>
+        {
+            if (item == "null")
+            {
+                return Expression.Constant(null, leftType);
+            }
+
+            if (item.Length >= 2 && item.StartsWith("\"") && item.EndsWith("\""))
+            {
+                item = item.Substring(1, item.Length - 2);
+            }
+
+            return Expression.Constant(stringCtor.Invoke(new object[] { item }), leftType);
+        }).ToArray();
+
+        return Expression.NewArrayInit(leftType, constants);
     }
 
     // True when CreateRightExprFromType can read a value of the type. For other types it throws.

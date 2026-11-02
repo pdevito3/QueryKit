@@ -453,6 +453,115 @@ public class HasConversionTests
         filter.ToDisplayString().Should().Be($"x => (x.Id == {KnownGuid})");
     }
 
+    [Fact]
+    public void can_filter_struct_with_in_operator_and_has_conversion()
+    {
+        // Arrange
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<WrappedIdRow>(x => x.Id).HasConversion<string>();
+        });
+
+        // Act
+        var result = WrappedIdRows().ApplyQueryKitFilter("""Id ^^ ["2","3"]""", config).ToList();
+
+        // Assert
+        result.Count.Should().Be(1);
+        result[0].Name.Should().Be("two");
+    }
+
+    [Fact]
+    public void can_filter_struct_with_not_in_operator_and_has_conversion()
+    {
+        // Arrange
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<WrappedIdRow>(x => x.Id).HasConversion<string>();
+        });
+
+        // Act
+        var result = WrappedIdRows().ApplyQueryKitFilter("""Id !^^ ["2","3"]""", config).ToList();
+
+        // Assert
+        result.Count.Should().Be(1);
+        result[0].Name.Should().Be("one");
+    }
+
+    [Fact]
+    public void can_filter_struct_with_in_operator_query_name_and_has_conversion()
+    {
+        // Arrange
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<WrappedIdRow>(x => x.Id).HasQueryName("wrappedid").HasConversion<string>();
+        });
+
+        // Act
+        var result = WrappedIdRows().ApplyQueryKitFilter("""wrappedid ^^ ["1","2"]""", config).ToList();
+
+        // Assert
+        result.Select(x => x.Name).Should().BeEquivalentTo("one", "two");
+    }
+
+    [Fact]
+    public void can_filter_nullable_struct_with_in_operator_and_has_conversion()
+    {
+        // Arrange
+        var rows = new List<NullableWrappedIdRow>
+        {
+            new() { Id = new WrappedId(1) },
+            new() { Id = new WrappedId(2) },
+            new() { Id = null }
+        };
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<NullableWrappedIdRow>(x => x.Id!).HasConversion<string>();
+        });
+
+        // Act
+        var result = rows.ApplyQueryKitFilter("""Id ^^ ["2","3"]""", config).ToList();
+
+        // Assert
+        result.Count.Should().Be(1);
+        result[0].Id.Should().Be(new WrappedId(2));
+    }
+
+    [Fact]
+    public void can_filter_reference_type_with_in_operator_and_has_conversion()
+    {
+        // Arrange
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<EmailRow>(x => x.Email!).HasConversion<string>();
+        });
+
+        // Act
+        var result = EmailRows().ApplyQueryKitFilter("""Email ^^ ["b@x.com","c@x.com"]""", config).ToList();
+
+        // Assert
+        result.Count.Should().Be(1);
+        result[0].Email!.Value.Should().Be("b@x.com");
+    }
+
+    [Fact]
+    public void can_filter_reference_type_with_in_operator_and_comma_in_quoted_item_and_has_conversion()
+    {
+        // Arrange
+        var rows = EmailRows();
+        rows.Add(new EmailRow { Email = new EmailAddressRecord("a,b@x.com") });
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<EmailRow>(x => x.Email!).HasConversion<string>();
+        });
+
+        // Act
+        var result = rows.ApplyQueryKitFilter("""Email ^^ ["a,b@x.com","c@x.com"]""", config).ToList();
+
+        // Assert
+        result.Count.Should().Be(1);
+        result[0].Email!.Value.Should().Be("a,b@x.com");
+    }
+
     private static List<WrappedIdRow> WrappedIdRows() => new()
     {
         new() { Id = new WrappedId(1), Name = "one" },
