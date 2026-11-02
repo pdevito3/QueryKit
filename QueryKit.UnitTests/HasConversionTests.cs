@@ -453,6 +453,128 @@ public class HasConversionTests
         filter.ToDisplayString().Should().Be($"x => (x.Id == {KnownGuid})");
     }
 
+    [Theory]
+    [InlineData("""Id ^^ ["2","3"]""", new[] { "two" })]
+    [InlineData("""Id !^^ ["2","3"]""", new[] { "one" })]
+    [InlineData("""Id ^^ [2, 3]""", new[] { "two" })]
+    public void struct_with_has_conversion_reads_a_list_for_the_in_operators(string input, string[] expectedNames)
+    {
+        // Arrange
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<WrappedIdRow>(x => x.Id).HasConversion<string>();
+        });
+
+        // Act
+        var result = WrappedIdRows().ApplyQueryKitFilter(input, config).ToList();
+
+        // Assert
+        result.Select(x => x.Name).Should().BeEquivalentTo(expectedNames);
+    }
+
+    [Fact]
+    public void struct_with_query_name_and_has_conversion_reads_a_list_for_the_in_operator()
+    {
+        // Arrange
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<WrappedIdRow>(x => x.Id).HasQueryName("wrappedid").HasConversion<string>();
+        });
+
+        // Act
+        var result = WrappedIdRows().ApplyQueryKitFilter("""wrappedid ^^ ["1","2"]""", config).ToList();
+
+        // Assert
+        result.Select(x => x.Name).Should().BeEquivalentTo("one", "two");
+    }
+
+    [Fact]
+    public void nullable_struct_with_has_conversion_reads_a_list_for_the_in_operator()
+    {
+        // Arrange
+        var rows = new List<NullableWrappedIdRow>
+        {
+            new() { Id = new WrappedId(1) },
+            new() { Id = new WrappedId(2) },
+            new() { Id = null }
+        };
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<NullableWrappedIdRow>(x => x.Id!).HasConversion<string>();
+        });
+
+        // Act
+        var result = rows.ApplyQueryKitFilter("""Id ^^ ["2","3"]""", config).ToList();
+
+        // Assert
+        result.Select(x => x.Id).Should().BeEquivalentTo(new WrappedId?[] { new WrappedId(2) });
+    }
+
+    [Theory]
+    [InlineData("""Email ^^ ["b@x.com","c@x.com"]""", new[] { "b@x.com" })]
+    [InlineData("""Email ^^ ["a,b@x.com"]""", new[] { "a,b@x.com" })]
+    [InlineData("""Email ^^ ["null"]""", new[] { "null" })]
+    [InlineData(""""Email ^^ [""" "q" """]"""", new[] { "\"q\"" })]
+    public void reference_type_with_has_conversion_reads_each_list_item_as_text(string input, string[] expectedEmails)
+    {
+        // Arrange
+        var rows = EmailRows();
+        rows.Add(new EmailRow { Email = new EmailAddressRecord("a,b@x.com") });
+        rows.Add(new EmailRow { Email = new EmailAddressRecord("null") });
+        rows.Add(new EmailRow { Email = new EmailAddressRecord("\"q\"") });
+        rows.Add(new EmailRow { Email = new EmailAddressRecord("q") });
+        rows.Add(new EmailRow { Email = null });
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<EmailRow>(x => x.Email!).HasConversion<string>();
+        });
+
+        // Act
+        var result = rows.ApplyQueryKitFilter(input, config).ToList();
+
+        // Assert
+        result.Select(x => x.Email?.Value).Should().BeEquivalentTo(expectedEmails);
+    }
+
+    [Theory]
+    [InlineData("""Email == "[a]" """)]
+    [InlineData("""Email == [a]""")]
+    public void text_in_brackets_stays_one_value_for_equals_with_has_conversion(string input)
+    {
+        // Arrange
+        var rows = EmailRows();
+        rows.Add(new EmailRow { Email = new EmailAddressRecord("[a]") });
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<EmailRow>(x => x.Email!).HasConversion<string>();
+        });
+
+        // Act
+        var result = rows.ApplyQueryKitFilter(input, config).ToList();
+
+        // Assert
+        result.Select(x => x.Email!.Value).Should().BeEquivalentTo("[a]");
+    }
+
+    [Fact]
+    public void list_item_that_does_not_convert_with_has_conversion_throws_parsing_exception()
+    {
+        // Arrange
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<WrappedIdRow>(x => x.Id).HasConversion<string>();
+        });
+
+        // Act
+        var act = () => WrappedIdRows().ApplyQueryKitFilter("""Id ^^ ["2","abc"]""", config).ToList();
+
+        // Assert
+        var exception = act.Should().Throw<ParsingException>().Which;
+        exception.Value.Should().Be("abc");
+        exception.PropertyName.Should().Be("Id");
+        exception.TargetType.Should().Be(typeof(WrappedId));
+    }
+
     private static List<WrappedIdRow> WrappedIdRows() => new()
     {
         new() { Id = new WrappedId(1), Name = "one" },

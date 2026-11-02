@@ -392,4 +392,36 @@ public class HasConversionTests : TestBase
         people.Count.Should().Be(1);
         people[0].Id.Should().Be(person.Id);
     }
+
+    [Theory]
+    [InlineData("^^")]
+    [InlineData("!^^")]
+    public async Task can_filter_by_email_with_in_operators_and_has_conversion(string op)
+    {
+        // Arrange
+        var testingServiceScope = new TestingServiceScope();
+        var emailOne = $"{Guid.NewGuid()}@example.com";
+        var emailTwo = $"{Guid.NewGuid()}@example.com";
+        var personOne = new FakeTestingPersonBuilder().WithEmail(emailOne).Build();
+        var personTwo = new FakeTestingPersonBuilder().WithEmail(emailTwo).Build();
+        var personThree = new FakeTestingPersonBuilder().Build();
+
+        await testingServiceScope.InsertAsync(personOne, personTwo, personThree);
+
+        var input = $"""Email {op} ["{emailOne}", "{emailTwo}"]""";
+        var config = new QueryKitConfiguration(config =>
+        {
+            config.Property<TestingPerson>(x => x.Email).HasConversion<string>();
+        });
+        var ids = new[] { personOne.Id, personTwo.Id, personThree.Id };
+
+        // Act
+        var queryablePeople = testingServiceScope.DbContext().People;
+        var appliedQueryable = queryablePeople.ApplyQueryKitFilter(input, config).Where(x => ids.Contains(x.Id));
+        var people = await appliedQueryable.ToListAsync();
+
+        // Assert
+        var expectedIds = op == "^^" ? new[] { personOne.Id, personTwo.Id } : new[] { personThree.Id };
+        people.Select(x => x.Id).Should().BeEquivalentTo(expectedIds);
+    }
 }
