@@ -5,25 +5,9 @@ using QueryKit.Operators;
 
 public class ArithmeticOperatorTests
 {
-    [Theory]
-    [InlineData("+", "+")]
-    [InlineData("-", "-")]
-    [InlineData("*", "*")]
-    [InlineData("/", "/")]
-    [InlineData("%", "%")]
-    public void from_symbol_returns_the_operator_for_the_symbol(string symbol, string expectedSymbol)
-    {
-        var op = ArithmeticOperator.FromSymbol(symbol);
-
-        op.Should().NotBeNull();
-        op!.Symbol.Should().Be(expectedSymbol);
-    }
-
     [Fact]
-    public void from_symbol_returns_null_for_an_unknown_symbol()
+    public void from_symbol_is_not_part_of_the_public_api()
     {
-        var op = ArithmeticOperator.FromSymbol("^");
-
-        op.Should().BeNull();
+        typeof(ArithmeticOperator).GetMethod("FromSymbol").Should().BeNull();
     }
 }
