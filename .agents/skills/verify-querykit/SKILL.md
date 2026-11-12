@@ -30,7 +30,7 @@ The driver prints one JSON document with the input, the parsed LINQ expression, 
 
 The launch model is a short-lived CLI plus one private Postgres container for each run. Build the driver once for each run, then start a new driver process for each drive.
 
-Requirements: a .NET 10 SDK and a running Docker daemon.
+Requirements: a .NET 11 SDK and a running Docker daemon.
 
 1. Start a run from the repo root:
 
