@@ -49,7 +49,7 @@ dotnet test --collect:"XPlat Code Coverage"
 
 ### Packaging
 ```bash
-# Pack NuGet package (already configured for multi-targeting: net6.0, net7.0, net8.0, net9.0, net10.0)
+# Pack NuGet package (already configured for multi-targeting: net6.0, net7.0, net8.0, net9.0, net10.0, net11.0)
 dotnet pack --configuration Release
 ```
 
@@ -60,7 +60,7 @@ dotnet pack --configuration Release
 
 ## Development Notes
 
-- The library supports multiple .NET versions (net6.0 through net10.0)
+- The library supports multiple .NET versions (net6.0 through net11.0)
 - Integration tests use PostgreSQL via Testcontainers for realistic database scenarios  
 - Filter syntax supports complex expressions with parentheses, logical operators (&&, ||), and extensive comparison operators
 - Property mappings allow aliasing entity properties to different query names

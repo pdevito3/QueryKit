@@ -38,7 +38,7 @@ require_run() {
 }
 
 build_driver() {
-  echo "qk: building driver (QueryKit project reference, net10.0)..." >&2
+  echo "qk: building driver (QueryKit project reference, net11.0)..." >&2
   # MSBuild skips the driver compile when the QueryKit reference assembly is unchanged, so the driver dll keeps
   # its old mtime. The stale check in 'qk doctor' compares against this stamp from the start of the build instead.
   touch "$STATE_DIR/build-started"
@@ -55,7 +55,7 @@ cmd_up() {
   if [[ "${1:-}" == "--run" ]]; then run="${2:?--run needs a value}"; fi
   [[ -n "$run" ]] || run="qk-$(date +%Y%m%d-%H%M%S)-$$"
   command -v dotnet >/dev/null || die "dotnet is not on PATH."
-  dotnet --list-sdks | grep -q '^10\.' || die "a .NET 10 SDK is required."
+  dotnet --list-sdks | grep -q '^11\.' || die "a .NET 11 SDK is required."
   docker info >/dev/null 2>&1 || die "Docker is not running."
 
   STATE_DIR="$STATE_ROOT/$run"
