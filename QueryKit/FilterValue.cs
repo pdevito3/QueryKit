@@ -17,21 +17,13 @@ internal sealed class FilterValue<T>
 
 internal static class FilterValue
 {
-    // The parser sets this for one parse when ParameterizeFilterValues is on. Parsing is synchronous,
-    // so the value belongs to the thread that parses.
-    [ThreadStatic] private static bool _parameterize;
-
-    public static bool Parameterize
-    {
-        get => _parameterize;
-        set => _parameterize = value;
-    }
+    private static bool Parameterize => FilterParseScope.Current?.Parameterize == true;
 
     // Returns a field read on a FilterValue<T> holder when parameters are on. Otherwise returns the
     // same literal expression as v1.14.2.
     public static Expression Create(object? value, Type type)
     {
-        if (!_parameterize)
+        if (!Parameterize)
         {
             return Literal(value, type);
         }
@@ -46,7 +38,7 @@ internal static class FilterValue
     public static Expression CreateList(object list, Type elementType)
     {
         var listType = typeof(List<>).MakeGenericType(elementType);
-        if (_parameterize)
+        if (Parameterize)
         {
             return Create(list, listType);
         }

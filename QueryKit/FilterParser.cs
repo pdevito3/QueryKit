@@ -25,28 +25,21 @@ public static class FilterParser
         
         var parameter = Expression.Parameter(typeof(T), "x");
         Expression expr;
-        var parameterizeBefore = FilterValue.Parameterize;
-        FilterValue.Parameterize = config is IQueryKitFilterBehavior { ParameterizeFilterValues: true };
-        var maxNestingDepthBefore = _maxNestingDepth;
-        var nestingDepthBefore = _nestingDepth;
-        var queryNameOverUnknownBefore = _queryNameOverUnknown;
-        var queryNameFallbackOffBefore = _queryNameFallbackOff;
-        _maxNestingDepth = (config as IQueryKitParseLimits)?.MaxNestingDepth ?? QueryKitSettings.DefaultMaxNestingDepth;
-        _nestingDepth = 0;
-        _queryNameOverUnknown = false;
-        _queryNameFallbackOff = false;
+        using var scope = FilterParseScope.Begin(
+            config is IQueryKitFilterBehavior { ParameterizeFilterValues: true },
+            (config as IQueryKitParseLimits)?.MaxNestingDepth ?? QueryKitSettings.DefaultMaxNestingDepth);
         try
         {
             try
             {
                 expr = ExprParser<T>(parameter, config).End().Parse(input);
             }
-            catch (Exception) when (_queryNameOverUnknown)
+            catch (Exception) when (scope.QueryNameHidUnknownIdentifier)
             {
                 // v1.14.2 threw UnknownFilterPropertyException where a query name now reads an unknown identifier.
                 // A filter that fails now also failed in v1.14.2, so parse it again without the query names to get the v1.14.2 exception.
-                _queryNameFallbackOff = true;
-                _nestingDepth = 0;
+                scope.RetryingForLegacyException = true;
+                scope.NestingDepth = 0;
                 expr = ExprParser<T>(parameter, config).End().Parse(input);
             }
 
@@ -74,14 +67,6 @@ public static class FilterParser
         {
             throw new ParsingException(e);
         }
-        finally
-        {
-            FilterValue.Parameterize = parameterizeBefore;
-            _maxNestingDepth = maxNestingDepthBefore;
-            _nestingDepth = nestingDepthBefore;
-            _queryNameOverUnknown = queryNameOverUnknownBefore;
-            _queryNameFallbackOff = queryNameFallbackOffBefore;
-        }
 
         return Expression.Lambda<Func<T, bool>>(expr, parameter);
     }
@@ -107,16 +92,6 @@ public static class FilterParser
         }
     }
 
-    // The nesting depth limit of the parse on this thread, and the number of parenthesized groups
-    // that the parser is in now. Parsing is synchronous, so the values belong to the thread that parses.
-    [ThreadStatic] private static int _maxNestingDepth;
-    [ThreadStatic] private static int _nestingDepth;
-
-    // Set when a derived property or custom operation query name reads text where v1.14.2 read an unknown identifier.
-    // When the fallback is off, the parser throws for the unknown identifier like v1.14.2.
-    [ThreadStatic] private static bool _queryNameOverUnknown;
-    [ThreadStatic] private static bool _queryNameFallbackOff;
-
     // Parses '(' inner ')' and counts the group against MaxNestingDepth. The grammar does the count,
     // so a '(' or ')' inside a quoted value cannot change it. The parser recurses once for each group,
     // so the limit also limits the depth of the call stack.
@@ -124,19 +99,20 @@ public static class FilterParser
     {
         Parser<TResult> counted = input =>
         {
+            var scope = FilterParseScope.Current!;
             try
             {
-                _nestingDepth++;
-                if (_nestingDepth > _maxNestingDepth)
+                scope.NestingDepth++;
+                if (scope.NestingDepth > scope.MaxNestingDepth)
                 {
-                    throw new QueryKitNestingDepthExceededException(_nestingDepth, _maxNestingDepth);
+                    throw new QueryKitNestingDepthExceededException(scope.NestingDepth, scope.MaxNestingDepth);
                 }
 
                 return inner(input);
             }
             finally
             {
-                _nestingDepth--;
+                scope.NestingDepth--;
             }
         };
 
@@ -1217,8 +1193,9 @@ public static class FilterParser
                 var identifierReference = identifier.WasSuccessful ? PropertyResolver.Resolve(entityType, identifier.Value, config) : null;
                 if (identifierReference?.Kind == PropertyReferenceKind.Unknown && config?.AllowUnknownProperties != true)
                 {
-                    _queryNameOverUnknown = true;
-                    if (_queryNameFallbackOff)
+                    var scope = FilterParseScope.Current!;
+                    scope.QueryNameHidUnknownIdentifier = true;
+                    if (scope.RetryingForLegacyException)
                     {
                         throw new UnknownFilterPropertyException(identifierReference.UnknownSegment!);
                     }
